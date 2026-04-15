@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
-import * as Linking from 'expo-linking';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -21,23 +20,21 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 });
 
 /**
- * Called after Google OAuth redirects back to the app.
- * Extracts access_token + refresh_token from the redirect URL
- * and hands them to Supabase to establish a session.
+ * After Firebase sign-in, exchange the Firebase ID token for a Supabase
+ * session. This lets Supabase RLS policies use auth.uid() = Firebase UID.
+ * Call this every time Firebase reports a signed-in user.
  */
-export async function createSessionFromUrl(url) {
-  // Supabase returns tokens in the URL fragment (#) or query string
-  const parsed = Linking.parse(url);
-  const params = { ...parsed.queryParams, ...parsed.fragment };
+export async function syncFirebaseToSupabase(firebaseUser) {
+  if (!firebaseUser) {
+    await supabase.auth.signOut();
+    return null;
+  }
 
-  const accessToken  = params?.access_token;
-  const refreshToken = params?.refresh_token;
+  const idToken = await firebaseUser.getIdToken();
 
-  if (!accessToken) return null;
-
-  const { data, error } = await supabase.auth.setSession({
-    access_token:  accessToken,
-    refresh_token: refreshToken,
+  const { data, error } = await supabase.auth.signInWithIdToken({
+    provider: 'firebase',
+    token:    idToken,
   });
 
   if (error) throw error;
