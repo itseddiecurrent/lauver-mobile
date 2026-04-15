@@ -38,7 +38,7 @@ function MainTabs() {
 }
 
 export default function RootNavigator() {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -51,7 +51,7 @@ export default function RootNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
-        {session
+        {user
           ? <Stack.Screen name="Main"  component={MainTabs}   />
           : <Stack.Screen name="Login" component={LoginScreen} />
         }

@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  SafeAreaView, ScrollView, Dimensions,
+  SafeAreaView, ScrollView, Dimensions, Image,
 } from 'react-native';
 
 const { height } = Dimensions.get('window');
@@ -31,6 +31,11 @@ export default function LandingScreen({ navigation }) {
       {/* ── HERO (dark) ─────────────────────────── */}
       <View style={styles.hero}>
         <SafeAreaView>
+          <Image
+            source={require('../../assets/lauver-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.pill}>AI-Powered Athletic Community · Beta</Text>
 
           <Text style={styles.h1}>
@@ -125,6 +130,12 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     minHeight: height * 0.46,
     justifyContent: 'flex-end',
+  },
+  logo: {
+    width: 120,
+    height: 40,
+    marginBottom: 24,
+    tintColor: '#fff',
   },
   pill: {
     color: ORANGE,

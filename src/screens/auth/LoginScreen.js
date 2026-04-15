@@ -1,7 +1,7 @@
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   SafeAreaView, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator,
+  ScrollView, ActivityIndicator, Image,
 } from 'react-native';
 import { useState } from 'react';
 import {
@@ -29,6 +29,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState('');
 
   // Google OAuth via expo-auth-session
   // Needs EXPO_PUBLIC_GOOGLE_CLIENT_ID (web), IOS_CLIENT_ID, ANDROID_CLIENT_ID
@@ -43,6 +44,7 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     setError('');
+    setSuccess('');
     if (!email || !password) { setError('Please enter your email and password.'); return; }
     setLoading(true);
     try {
@@ -52,6 +54,7 @@ export default function LoginScreen() {
         if (!name.trim()) { setError('Please enter your name.'); setLoading(false); return; }
         const { user } = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
         await updateProfile(user, { displayName: name.trim() });
+        setSuccess('Account created! Signing you in…');
       }
       // onAuthStateChanged in useAuth handles navigation automatically
     } catch (e) {
@@ -95,7 +98,11 @@ export default function LoginScreen() {
         >
           {/* Brand */}
           <View style={styles.brand}>
-            <Text style={styles.brandName}>lauver<Text style={styles.brandDot}>.</Text></Text>
+            <Image
+              source={require('../../../assets/lauver-logo.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.brandTag}>AI-Powered Athletic Community</Text>
           </View>
 
@@ -166,8 +173,9 @@ export default function LoginScreen() {
               />
             </View>
 
-            {/* Error */}
-            {!!error && <Text style={styles.error}>{error}</Text>}
+            {/* Feedback */}
+            {!!error   && <Text style={styles.error}>{error}</Text>}
+            {!!success && <Text style={styles.successMsg}>{success}</Text>}
 
             {/* Submit */}
             <TouchableOpacity
@@ -230,10 +238,9 @@ const styles = StyleSheet.create({
   root:   { flex: 1, backgroundColor: BG },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 24 },
 
-  brand:    { alignItems: 'center', marginBottom: 32 },
-  brandName:{ fontSize: 40, fontWeight: '900', color: DARK, letterSpacing: -1 },
-  brandDot: { color: ORANGE },
-  brandTag: { fontSize: 13, color: '#888', marginTop: 4 },
+  brand:     { alignItems: 'center', marginBottom: 32 },
+  brandLogo: { width: 550, height: 180, marginBottom: 6 },
+  brandTag:  { fontSize: 13, color: '#888' },
 
   card: { backgroundColor: CARD_BG, borderRadius: 24, padding: 24 },
 
@@ -253,7 +260,8 @@ const styles = StyleSheet.create({
     fontSize: 15, color: DARK,
   },
 
-  error: { fontSize: 13, color: ORANGE, marginBottom: 12, fontWeight: '500', lineHeight: 18 },
+  error:      { fontSize: 13, color: ORANGE,    marginBottom: 12, fontWeight: '500', lineHeight: 18 },
+  successMsg: { fontSize: 13, color: '#2E9E5B', marginBottom: 12, fontWeight: '500', lineHeight: 18 },
 
   submitBtn: {
     backgroundColor: ORANGE, borderRadius: 14, paddingVertical: 15, alignItems: 'center',

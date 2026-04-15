@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, Dimensions,
+  TouchableOpacity, SafeAreaView, Dimensions, Image,
 } from 'react-native';
 
 const ORANGE  = '#E8602C';
@@ -110,7 +110,11 @@ export default function DashboardScreen({ navigation }) {
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>DASHBOARD</Text>
+        <Image
+          source={require('../../../assets/lauver-logo.png')}
+          style={styles.headerLogo}
+          resizeMode="contain"
+        />
         <TouchableOpacity style={styles.logBtn} activeOpacity={0.85}>
           <Text style={styles.logBtnText}>+ Log Activity</Text>
         </TouchableOpacity>
@@ -194,11 +198,9 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: BG,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: DARK,
-    letterSpacing: 1,
+  headerLogo: {
+    width: 100,
+    height: 32,
   },
   logBtn: {
     backgroundColor: ORANGE,
