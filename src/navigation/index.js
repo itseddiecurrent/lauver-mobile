@@ -1,14 +1,11 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { ActivityIndicator, View } from 'react-native';
 
-import LandingScreen from '../screens/LandingScreen';
+import { useAuth } from '../hooks/useAuth';
 
-// Auth screens (accessible from landing but not required)
-import LoginScreen  from '../screens/auth/LoginScreen';
-import SignupScreen from '../screens/auth/SignupScreen';
-
-// Main app screens
+import LoginScreen          from '../screens/auth/LoginScreen';
 import DashboardScreen      from '../screens/dashboard/DashboardScreen';
 import ActivitiesScreen     from '../screens/activities/ActivitiesScreen';
 import ActivityDetailScreen from '../screens/activities/ActivityDetailScreen';
@@ -22,8 +19,8 @@ const Tab   = createBottomTabNavigator();
 function ActivitiesStack() {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="ActivitiesList"  component={ActivitiesScreen}     options={{ title: 'Activities' }} />
-      <Stack.Screen name="ActivityDetail"  component={ActivityDetailScreen} options={{ title: 'Activity' }} />
+      <Stack.Screen name="ActivitiesList" component={ActivitiesScreen}     options={{ title: 'Activities' }} />
+      <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} options={{ title: 'Activity' }} />
     </Stack.Navigator>
   );
 }
@@ -41,13 +38,23 @@ function MainTabs() {
 }
 
 export default function RootNavigator() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F7F5F2' }}>
+        <ActivityIndicator size="large" color="#E8602C" />
+      </View>
+    );
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Landing" component={LandingScreen} />
-        <Stack.Screen name="Main"    component={MainTabs}      />
-        <Stack.Screen name="Login"   component={LoginScreen}   />
-        <Stack.Screen name="Signup"  component={SignupScreen}  />
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        {session
+          ? <Stack.Screen name="Main"  component={MainTabs}   />
+          : <Stack.Screen name="Login" component={LoginScreen} />
+        }
       </Stack.Navigator>
     </NavigationContainer>
   );

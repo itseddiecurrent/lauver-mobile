@@ -3,6 +3,7 @@ import {
   SafeAreaView, TextInput,
 } from 'react-native';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 
 const ORANGE  = '#E8602C';
 const DARK    = '#1C1A18';
@@ -246,7 +247,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Sign out */}
-        <TouchableOpacity style={styles.signOutBtn}>
+        <TouchableOpacity style={styles.signOutBtn} onPress={() => supabase.auth.signOut()}>
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
