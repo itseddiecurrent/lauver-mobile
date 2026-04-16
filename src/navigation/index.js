@@ -28,7 +28,7 @@ function ActivitiesStack() {
 function MainTabs() {
   return (
     <Tab.Navigator>
-      <Tab.Screen name="Dashboard"  component={DashboardScreen} />
+      <Tab.Screen name="Dashboard"  component={DashboardScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Activities" component={ActivitiesStack} options={{ headerShown: false }} />
       <Tab.Screen name="Community"  component={CommunityScreen} />
       <Tab.Screen name="Match"      component={MatchScreen}     />

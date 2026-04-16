@@ -1,54 +1,31 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, Dimensions,
+  SafeAreaView, ActivityIndicator,
 } from 'react-native';
 import { useState } from 'react';
+import { useMatch } from '../../hooks/useMatch';
 
-const { width } = Dimensions.get('window');
 const ORANGE  = '#E8602C';
 const DARK    = '#1C1A18';
 const BG      = '#F0EDE8';
 const CARD_BG = '#EAE6DF';
 
-// ─── Mock data ──────────────────────────────────────────────────────────────────
-
-const ATHLETES = [
-  {
-    id: '1', icon: '🏃', initial: 'M', color: ORANGE,
-    name: 'Marco Oliveira', location: '📍 0.6 km away · 29',
-    sports: ['🏃 Running', '🥾 Hiking', '🧗 Climbing'],
-    pace: '4:50/km', avail: 'Weekends · Evenings', skill: 'Advanced',
-  },
-  {
-    id: '2', icon: '🚴', initial: 'P', color: '#5a9e6f',
-    name: 'Priya Mehta', location: '📍 1.8 km away · 31',
-    sports: ['🚴 Cycling', '🏊 Swimming', '🤸 Yoga'],
-    pace: '28 km/h', avail: 'Mornings · Weekdays', skill: 'Intermediate',
-  },
-  {
-    id: '3', icon: '🏋️', initial: 'C', color: '#7b5ea7',
-    name: 'Chris Park', location: '📍 2.4 km away · 28',
-    sports: ['🏋️ Lifting', '🏃 Running'],
-    pace: '5:20/km', avail: 'Early Mornings', skill: 'Advanced',
-  },
-];
-
-const CHECKLIST = [
-  { label: 'Account created',               done: true  },
-  { label: 'Email verified',                done: true  },
-  { label: 'Profile photo uploaded',        done: false },
-  { label: 'Sports & skill level set',      done: false },
-  { label: 'Location & availability set',   done: false },
-];
-
 const SPORT_FILTERS = ['🏃 Running', '🚴 Cycling', '🧗 Climbing', '🏊 Swimming', '🥾 Hiking', '🤸 Yoga'];
 const SKILL_FILTERS = ['Beginner', 'Intermediate', 'Advanced'];
 const AVAIL_FILTERS = ['Weekends', 'Weekdays', 'Mornings', 'Evenings'];
 
-const YOUR_MATCHES = [
-  { initial: 'M', color: ORANGE },
-  { initial: 'S', color: '#5a9e6f' },
-];
+const SPORT_ICONS = {
+  running: '🏃', cycling: '🚴', swimming: '🏊',
+  climbing: '🧗', hiking: '🥾', skiing: '⛷️',
+  gym: '🏋️', yoga: '🤸',
+};
+
+function avatarColor(name = '') {
+  const colors = ['#E8602C', '#5a9e6f', '#7b5ea7', '#3a7ec8', '#c07a3a'];
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return colors[h % colors.length];
+}
 
 // ─── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -70,48 +47,50 @@ function FilterChipGroup({ options, active, onToggle }) {
 }
 
 function AthleteCard({ athlete, onPass, onLike, onStar }) {
+  const name    = athlete.display_name || 'Athlete';
+  const initial = name.charAt(0).toUpperCase();
+  const color   = avatarColor(name);
+  const sports  = (athlete.sports || []).map(s => `${SPORT_ICONS[s] ?? '🏅'} ${s.charAt(0).toUpperCase() + s.slice(1)}`);
+
   return (
     <View style={styles.athleteCard}>
-      {/* Big icon area */}
-      <View style={[styles.cardHero, { backgroundColor: athlete.color + '22' }]}>
-        <View style={[styles.cardAvatar, { backgroundColor: athlete.color }]}>
-          <Text style={styles.cardAvatarText}>{athlete.initial}</Text>
+      <View style={[styles.cardHero, { backgroundColor: color + '22' }]}>
+        <View style={[styles.cardAvatar, { backgroundColor: color }]}>
+          <Text style={styles.cardAvatarText}>{initial}</Text>
         </View>
-        <Text style={styles.cardIcon}>{athlete.icon}</Text>
       </View>
 
-      {/* Info */}
       <View style={styles.cardBody}>
-        <Text style={styles.cardName}>{athlete.name}</Text>
-        <Text style={styles.cardLocation}>{athlete.location}</Text>
+        <Text style={styles.cardName}>{name}</Text>
+        {athlete.location_name ? (
+          <Text style={styles.cardLocation}>📍 {athlete.location_name}</Text>
+        ) : null}
 
-        <View style={styles.sportTags}>
-          {athlete.sports.map(s => (
-            <View key={s} style={styles.sportTag}>
-              <Text style={styles.sportTagText}>{s}</Text>
-            </View>
-          ))}
-        </View>
+        {sports.length > 0 && (
+          <View style={styles.sportTags}>
+            {sports.map(s => (
+              <View key={s} style={styles.sportTag}>
+                <Text style={styles.sportTagText}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <View style={styles.cardDetails}>
           <View style={styles.cardDetail}>
             <Text style={styles.cardDetailLabel}>SKILL</Text>
-            <Text style={styles.cardDetailVal}>{athlete.skill}</Text>
-          </View>
-          <View style={styles.cardDetailDivider} />
-          <View style={styles.cardDetail}>
-            <Text style={styles.cardDetailLabel}>PACE</Text>
-            <Text style={styles.cardDetailVal}>{athlete.pace}</Text>
+            <Text style={styles.cardDetailVal}>{athlete.skill_level || '—'}</Text>
           </View>
           <View style={styles.cardDetailDivider} />
           <View style={styles.cardDetail}>
             <Text style={styles.cardDetailLabel}>AVAILABLE</Text>
-            <Text style={styles.cardDetailVal}>{athlete.avail}</Text>
+            <Text style={styles.cardDetailVal} numberOfLines={1}>
+              {(athlete.availability || []).join(' · ') || '—'}
+            </Text>
           </View>
         </View>
       </View>
 
-      {/* Action buttons */}
       <View style={styles.swipeRow}>
         <TouchableOpacity style={[styles.swipeBtn, styles.swipeBtnPass]} onPress={onPass} activeOpacity={0.8}>
           <Text style={styles.swipeBtnTextPass}>✕</Text>
@@ -129,25 +108,39 @@ function AthleteCard({ athlete, onPass, onLike, onStar }) {
 
 // ─── Main screen ────────────────────────────────────────────────────────────────
 
-export default function MatchScreen() {
-  const [unlocked, setUnlocked]   = useState(false);
-  const [cardIndex, setCardIndex] = useState(0);
-  const [sports, setSports]   = useState(['🏃 Running', '🚴 Cycling']);
-  const [skills, setSkills]   = useState(['Intermediate', 'Advanced']);
-  const [avails, setAvails]   = useState(['Weekends', 'Evenings']);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+export default function MatchScreen({ navigation }) {
+  const {
+    readiness, isReady,
+    candidates, matches,
+    loading,
+    sportFilters, setSportFilters,
+    skillFilters, setSkillFilters,
+    handleSwipe,
+  } = useMatch();
+
+  const [cardIndex,    setCardIndex]    = useState(0);
+  const [filtersOpen,  setFiltersOpen]  = useState(false);
+  const [avails,       setAvails]       = useState([]);
 
   const toggleItem = (list, setList, item) =>
     setList(list.includes(item) ? list.filter(i => i !== item) : [...list, item]);
 
-  const currentAthlete = ATHLETES[cardIndex % ATHLETES.length];
-
-  const handlePass = () => setCardIndex(i => i + 1);
-  const handleLike = () => setCardIndex(i => i + 1);
-  const handleStar = () => setCardIndex(i => i + 1);
+  // ── Loading state ──
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>FIND YOUR PACK</Text>
+        </View>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={ORANGE} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   // ── Gate state ──
-  if (!unlocked) {
+  if (!isReady) {
     return (
       <SafeAreaView style={styles.root}>
         <View style={styles.header}>
@@ -162,8 +155,8 @@ export default function MatchScreen() {
             </Text>
 
             <View style={styles.checklist}>
-              {CHECKLIST.map(c => (
-                <View key={c.label} style={styles.checkRow}>
+              {readiness.map(c => (
+                <View key={c.key} style={styles.checkRow}>
                   <View style={[styles.checkDot, c.done && styles.checkDotDone]}>
                     {c.done && <Text style={styles.checkMark}>✓</Text>}
                   </View>
@@ -172,12 +165,8 @@ export default function MatchScreen() {
               ))}
             </View>
 
-            <TouchableOpacity style={styles.completeBtn} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.completeBtn} activeOpacity={0.85} onPress={() => navigation.navigate('Profile')}>
               <Text style={styles.completeBtnText}>Complete My Profile</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => setUnlocked(true)} style={{ marginTop: 12 }}>
-              <Text style={styles.previewLink}>or <Text style={styles.previewLinkBold}>preview matching (demo)</Text></Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -186,6 +175,12 @@ export default function MatchScreen() {
   }
 
   // ── Unlocked state ──
+  const currentAthlete = candidates[cardIndex % Math.max(candidates.length, 1)];
+
+  const handlePass = () => { if (currentAthlete) handleSwipe(currentAthlete.id, 'pass'); setCardIndex(i => i + 1); };
+  const handleLike = () => { if (currentAthlete) handleSwipe(currentAthlete.id, 'like'); setCardIndex(i => i + 1); };
+  const handleStar = () => { if (currentAthlete) handleSwipe(currentAthlete.id, 'star'); setCardIndex(i => i + 1); };
+
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
@@ -202,45 +197,76 @@ export default function MatchScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.unlockedScroll}>
 
-        {/* Sub-header */}
-        <Text style={styles.matchSub}>8 athletes near you match your sports</Text>
+        <Text style={styles.matchSub}>
+          {candidates.length > 0
+            ? `${candidates.length} athlete${candidates.length !== 1 ? 's' : ''} near you match your sports`
+            : 'No more candidates — check back later'}
+        </Text>
 
         {/* ── Athlete card ── */}
-        <AthleteCard
-          athlete={currentAthlete}
-          onPass={handlePass}
-          onLike={handleLike}
-          onStar={handleStar}
-        />
-
-        {/* ── Filters panel (collapsible) ── */}
-        {filtersOpen && (
-          <View style={styles.filtersPanel}>
-            <Text style={styles.filterSectionLabel}>SPORTS</Text>
-            <FilterChipGroup options={SPORT_FILTERS} active={sports} onToggle={o => toggleItem(sports, setSports, o)} />
-
-            <Text style={styles.filterSectionLabel}>SKILL LEVEL</Text>
-            <FilterChipGroup options={SKILL_FILTERS} active={skills} onToggle={o => toggleItem(skills, setSkills, o)} />
-
-            <Text style={styles.filterSectionLabel}>AVAILABILITY</Text>
-            <FilterChipGroup options={AVAIL_FILTERS} active={avails} onToggle={o => toggleItem(avails, setAvails, o)} />
+        {currentAthlete ? (
+          <AthleteCard
+            athlete={currentAthlete}
+            onPass={handlePass}
+            onLike={handleLike}
+            onStar={handleStar}
+          />
+        ) : (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyIcon}>🏅</Text>
+            <Text style={styles.emptyTitle}>You've seen everyone!</Text>
+            <Text style={styles.emptyBody}>New athletes join every day — check back soon.</Text>
           </View>
         )}
 
-        {/* ── Your Matches ── */}
+        {/* ── Filters panel ── */}
+        {filtersOpen && (
+          <View style={styles.filtersPanel}>
+            <Text style={styles.filterSectionLabel}>SPORTS</Text>
+            <FilterChipGroup
+              options={SPORT_FILTERS}
+              active={sportFilters}
+              onToggle={o => toggleItem(sportFilters, setSportFilters, o)}
+            />
+
+            <Text style={styles.filterSectionLabel}>SKILL LEVEL</Text>
+            <FilterChipGroup
+              options={SKILL_FILTERS}
+              active={skillFilters}
+              onToggle={o => toggleItem(skillFilters, setSkillFilters, o)}
+            />
+
+            <Text style={styles.filterSectionLabel}>AVAILABILITY</Text>
+            <FilterChipGroup
+              options={AVAIL_FILTERS}
+              active={avails}
+              onToggle={o => toggleItem(avails, setAvails, o)}
+            />
+          </View>
+        )}
+
+        {/* ── Mutual matches ── */}
         <View style={styles.mutualCard}>
           <Text style={styles.mutualTitle}>Your Matches</Text>
-          <Text style={styles.mutualSub}>Complete your profile to see mutual matches.</Text>
-          <View style={styles.mutualAvatars}>
-            {YOUR_MATCHES.map(m => (
-              <View key={m.initial} style={[styles.mutualAvatar, { backgroundColor: m.color }]}>
-                <Text style={styles.mutualAvatarText}>{m.initial}</Text>
-              </View>
-            ))}
-            <View style={[styles.mutualAvatar, { backgroundColor: '#D9D0C7' }]}>
-              <Text style={[styles.mutualAvatarText, { color: '#888' }]}>+5</Text>
+          {matches.length === 0 ? (
+            <Text style={styles.mutualSub}>Like or star athletes to find mutual matches.</Text>
+          ) : (
+            <View style={styles.mutualAvatars}>
+              {matches.slice(0, 5).map(m => {
+                const n = m.display_name || '?';
+                return (
+                  <View key={m.id} style={[styles.mutualAvatar, { backgroundColor: avatarColor(n) }]}>
+                    <Text style={styles.mutualAvatarText}>{n.charAt(0).toUpperCase()}</Text>
+                  </View>
+                );
+              })}
+              {matches.length > 5 && (
+                <View style={[styles.mutualAvatar, { backgroundColor: '#D9D0C7' }]}>
+                  <Text style={[styles.mutualAvatarText, { color: '#888' }]}>+{matches.length - 5}</Text>
+                </View>
+              )}
             </View>
-          </View>
+          )}
         </View>
 
       </ScrollView>
@@ -251,7 +277,8 @@ export default function MatchScreen() {
 // ─── Styles ──────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: BG },
+  root:        { flex: 1, backgroundColor: BG },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
@@ -282,8 +309,6 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch', alignItems: 'center',
   },
   completeBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-  previewLink:     { fontSize: 13, color: '#888' },
-  previewLinkBold: { color: ORANGE, fontWeight: '700' },
 
   // Unlocked
   filterToggle: {
@@ -307,7 +332,6 @@ const styles = StyleSheet.create({
   cardHero:       { height: 160, justifyContent: 'center', alignItems: 'center' },
   cardAvatar:     { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center' },
   cardAvatarText: { color: '#fff', fontSize: 28, fontWeight: '900' },
-  cardIcon:       { fontSize: 28, position: 'absolute', bottom: 16, right: 24 },
   cardBody:       { padding: 16 },
   cardName:       { fontSize: 20, fontWeight: '900', color: DARK },
   cardLocation:   { fontSize: 13, color: '#888', marginTop: 2, marginBottom: 12 },
@@ -333,6 +357,15 @@ const styles = StyleSheet.create({
   swipeBtnTextStar:{ fontSize: 22, color: '#FFD700' },
   swipeBtnTextLike:{ fontSize: 22, color: '#fff' },
 
+  // Empty state
+  emptyCard: {
+    backgroundColor: CARD_BG, borderRadius: 16,
+    marginHorizontal: 16, padding: 32, alignItems: 'center', marginBottom: 12,
+  },
+  emptyIcon:  { fontSize: 36, marginBottom: 12, opacity: 0.4 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: DARK, marginBottom: 6 },
+  emptyBody:  { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 20 },
+
   // Filters panel
   filtersPanel: {
     backgroundColor: CARD_BG, borderRadius: 16,
@@ -354,8 +387,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16, padding: 16, marginBottom: 12,
   },
   mutualTitle:      { fontSize: 14, fontWeight: '800', color: DARK, marginBottom: 4 },
-  mutualSub:        { fontSize: 12, color: '#888', marginBottom: 12 },
-  mutualAvatars:    { flexDirection: 'row', gap: 8 },
+  mutualSub:        { fontSize: 12, color: '#888', marginBottom: 4 },
+  mutualAvatars:    { flexDirection: 'row', gap: 8, marginTop: 8 },
   mutualAvatar:     { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   mutualAvatarText: { color: '#fff', fontWeight: '900', fontSize: 16 },
 });
