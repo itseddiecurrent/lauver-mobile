@@ -13,7 +13,7 @@ const CARD_BG = '#EAE6DF';
 // Mock detail data keyed by id
 const DETAIL = {
   '1': {
-    icon: '🏃', sport: 'Running', title: 'Morning Run — Riverside Trail',
+    sport: 'Running', title: 'Morning Run — Riverside Trail',
     date: 'Today, Apr 14 · 6:42 am', source: 'Garmin Forerunner 265',
     stats: [
       { val: '8.3',   lbl: 'DISTANCE (KM)' },
@@ -30,7 +30,7 @@ const DETAIL = {
     ],
   },
   '2': {
-    icon: '🚴', sport: 'Cycling', title: 'Evening Ride — City Loop',
+    sport: 'Cycling', title: 'Evening Ride — City Loop',
     date: 'Yesterday · 5:30 pm', source: 'Garmin Edge 540',
     stats: [
       { val: '24.6',    lbl: 'DISTANCE (KM)' },
@@ -43,7 +43,7 @@ const DETAIL = {
     splits: [],
   },
   '3': {
-    icon: '🧗', sport: 'Climbing', title: 'Bouldering Session — The Cave',
+    sport: 'Climbing', title: 'Bouldering Session — The Cave',
     date: '2 days ago · 7:00 pm', source: 'Manual entry',
     stats: [
       { val: '14',     lbl: 'ROUTES COMPLETED' },
@@ -53,7 +53,7 @@ const DETAIL = {
     splits: [],
   },
   '4': {
-    icon: '🏊', sport: 'Swimming', title: 'Lap Swim — Municipal Pool',
+    sport: 'Swimming', title: 'Lap Swim — Municipal Pool',
     date: '3 days ago · 7:15 am', source: 'Apple Health',
     stats: [
       { val: '2.4',    lbl: 'DISTANCE (KM)' },
@@ -63,7 +63,7 @@ const DETAIL = {
     splits: [],
   },
   '5': {
-    icon: '🥾', sport: 'Hiking', title: 'Trail Hike — North Ridge',
+    sport: 'Hiking', title: 'Trail Hike — North Ridge',
     date: '5 days ago · 8:00 am', source: 'Garmin Forerunner 265',
     stats: [
       { val: '12.1',   lbl: 'DISTANCE (KM)' },
@@ -77,7 +77,7 @@ const DETAIL = {
 export default function ActivityDetailScreen({ route, navigation }) {
   const { id, title } = route.params;
   const d = DETAIL[id] ?? {
-    icon: '🏃', sport: 'Activity', title: title ?? 'Activity',
+    sport: 'Activity', title: title ?? 'Activity',
     date: '', source: '', stats: [], splits: [],
   };
 
@@ -98,14 +98,11 @@ export default function ActivityDetailScreen({ route, navigation }) {
         {/* Title card */}
         <View style={styles.titleCard}>
           <View style={styles.titleRow}>
-            <View style={styles.iconWrap}>
-              <Text style={styles.icon}>{d.icon}</Text>
-            </View>
             <View style={styles.titleInfo}>
               <Text style={styles.title}>{d.title}</Text>
               <Text style={styles.date}>{d.date}</Text>
               <View style={styles.sourceBadge}>
-                <Text style={styles.sourceText}>⌚ {d.source}</Text>
+                <Text style={styles.sourceText}>{d.source}</Text>
               </View>
             </View>
           </View>
@@ -113,7 +110,6 @@ export default function ActivityDetailScreen({ route, navigation }) {
 
         {/* Map placeholder */}
         <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapIcon}>🗺️</Text>
           <Text style={styles.mapLabel}>Route map</Text>
           <Text style={styles.mapSub}>OpenStreetMap / Mapbox coming soon</Text>
         </View>

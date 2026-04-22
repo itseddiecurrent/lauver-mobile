@@ -102,6 +102,30 @@
  *   create policy "users manage own rsvps"  on event_rsvps for all using (auth.uid() = user_id);
  */
 
+/**
+ * Additional table for user-created communities:
+ *
+ *   create table communities (
+ *     id             uuid primary key default gen_random_uuid(),
+ *     name           text not null,
+ *     contact        text,
+ *     founders       text,
+ *     location       text,
+ *     cause          text,
+ *     community_type text not null default 'in-person',  -- 'online' | 'in-person' | 'hybrid'
+ *     privacy        text not null default 'public',     -- 'public' | 'private'
+ *     join_policy    text not null default 'open',       -- 'open' | 'approval' | 'invite'
+ *     tags           text[] default '{}',
+ *     creator_id     uuid references profiles(id) on delete cascade not null,
+ *     member_count   integer default 1,
+ *     created_at     timestamptz default now()
+ *   );
+ *   alter table communities enable row level security;
+ *   create policy "communities are public"      on communities for select using (true);
+ *   create policy "users create communities"    on communities for insert with check (auth.uid() = creator_id);
+ *   create policy "creators manage communities" on communities for all using (auth.uid() = creator_id);
+ */
+
 import { supabase } from './supabase';
 
 // ─── Feed ─────────────────────────────────────────────────────────────────────
@@ -231,6 +255,21 @@ export async function getUpcomingEvents(userId, limit = 5) {
 
   const rsvpedIds = new Set((rsvpsRes.data || []).map(r => r.event_id));
   return (eventsRes.data || []).map(e => ({ ...e, hasRsvp: rsvpedIds.has(e.id) }));
+}
+
+// ─── Communities ──────────────────────────────────────────────────────────────
+
+/**
+ * Create a new community.
+ */
+export async function createCommunity(fields) {
+  const { data, error } = await supabase
+    .from('communities')
+    .insert(fields)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 /**

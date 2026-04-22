@@ -1,9 +1,10 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View } from 'react-native';
 
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 
 import LoginScreen          from '../screens/auth/LoginScreen';
 import DashboardScreen      from '../screens/dashboard/DashboardScreen';
@@ -26,8 +27,18 @@ function ActivitiesStack() {
 }
 
 function MainTabs() {
+  const { colors: c } = useTheme();
   return (
-    <Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={{
+        tabBarStyle:            { backgroundColor: c.BG, borderTopColor: c.DIVIDER },
+        tabBarActiveTintColor:  c.ORANGE,
+        tabBarInactiveTintColor:c.TEXT_MUTED,
+        headerStyle:            { backgroundColor: c.BG },
+        headerTintColor:        c.TEXT,
+        headerShadowVisible:    false,
+      }}
+    >
       <Tab.Screen name="Dashboard"  component={DashboardScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Activities" component={ActivitiesStack} options={{ headerShown: false }} />
       <Tab.Screen name="Community"  component={CommunityScreen} />
@@ -39,17 +50,22 @@ function MainTabs() {
 
 export default function RootNavigator() {
   const { user, loading } = useAuth();
+  const { colors: c, isDark } = useTheme();
+
+  const navTheme = isDark
+    ? { ...DarkTheme,    colors: { ...DarkTheme.colors,    background: c.BG, card: c.BG, border: c.DIVIDER, text: c.TEXT } }
+    : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: c.BG, card: c.BG, border: c.DIVIDER, text: c.TEXT } };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F7F5F2' }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: c.BG }}>
         <ActivityIndicator size="large" color="#E8602C" />
       </View>
     );
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {user
           ? <Stack.Screen name="Main"  component={MainTabs}   />

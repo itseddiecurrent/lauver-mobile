@@ -7,16 +7,7 @@ const { height } = Dimensions.get('window');
 const ORANGE = '#E8602C';
 const DARK   = '#1C1A18';
 
-const SPORTS = [
-  { icon: '🏃', label: 'Running' },
-  { icon: '🚴', label: 'Cycling' },
-  { icon: '🏊', label: 'Swimming' },
-  { icon: '🧗', label: 'Climbing' },
-  { icon: '🥾', label: 'Hiking' },
-  { icon: '⛷️', label: 'Skiing' },
-  { icon: '🏋️', label: 'Gym' },
-  { icon: '🧘', label: 'Yoga' },
-];
+const SPORTS = ['Running', 'Cycling', 'Swimming', 'Climbing', 'Hiking', 'Skiing', 'Gym', 'Yoga'];
 
 const STATS = [
   { value: '50+',       label: 'Sports' },
@@ -70,9 +61,8 @@ export default function LandingScreen({ navigation }) {
           contentContainerStyle={styles.pillsScroll}
         >
           {SPORTS.map(s => (
-            <View key={s.label} style={styles.sportPill}>
-              <Text style={styles.sportIcon}>{s.icon}</Text>
-              <Text style={styles.sportLabel}>{s.label}</Text>
+            <View key={s} style={styles.sportPill}>
+              <Text style={styles.sportLabel}>{s}</Text>
             </View>
           ))}
         </ScrollView>
@@ -80,14 +70,11 @@ export default function LandingScreen({ navigation }) {
         {/* Value props */}
         <View style={styles.props}>
           {[
-            { icon: '🎯', title: 'Smart Matching',   desc: 'AI pairs you with athletes who match your pace, schedule, and vibe.' },
-            { icon: '📍', title: 'Local Community',  desc: 'Discover group rides, trail runs, and gym sessions near you.' },
-            { icon: '📊', title: 'Track Everything', desc: 'Log activities from Garmin, Apple Watch, or manually.' },
+            { title: 'Smart Matching',   desc: 'AI pairs you with athletes who match your pace, schedule, and vibe.' },
+            { title: 'Local Community',  desc: 'Discover group rides, trail runs, and gym sessions near you.' },
+            { title: 'Track Everything', desc: 'Log activities from Garmin, Apple Watch, or manually.' },
           ].map(p => (
             <View key={p.title} style={styles.propRow}>
-              <View style={styles.propIcon}>
-                <Text style={styles.propIconText}>{p.icon}</Text>
-              </View>
               <View style={styles.propText}>
                 <Text style={styles.propTitle}>{p.title}</Text>
                 <Text style={styles.propDesc}>{p.desc}</Text>

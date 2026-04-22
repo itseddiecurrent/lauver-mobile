@@ -2,22 +2,13 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, ActivityIndicator,
 } from 'react-native';
+import { useMemo } from 'react';
 import { useActivities } from '../../hooks/useActivities';
+import { useTheme } from '../../context/ThemeContext';
 
-const ORANGE  = '#E8602C';
-const DARK    = '#1C1A18';
-const BG      = '#F0EDE8';
-const CARD_BG = '#EAE6DF';
-
-const FILTERS = ['All', '🏃 Run', '🚴 Ride', '🧗 Climb', '🏊 Swim'];
+const FILTERS = ['All', 'Run', 'Ride', 'Climb', 'Swim'];
 const PERIODS  = ['Month', '3 Months', 'Year'];
 const BAR_MAX_H = 80;
-
-const SPORT_ICONS = {
-  running: '🏃', cycling: '🚴', swimming: '🏊',
-  climbing: '🧗', hiking: '🥾', skiing: '⛷️',
-  gym: '🏋️', yoga: '🧘',
-};
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
@@ -45,7 +36,7 @@ function relativeDate(iso) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({ label, value, sub }) {
+function StatCard({ label, value, sub, styles }) {
   const isEmpty = value === '0' || value === '—';
   return (
     <View style={styles.statCard}>
@@ -56,11 +47,11 @@ function StatCard({ label, value, sub }) {
   );
 }
 
-function DistanceChart({ data, loading }) {
+function DistanceChart({ data, loading, styles, c }) {
   if (loading) {
     return (
       <View style={styles.chartEmpty}>
-        <ActivityIndicator size="small" color={ORANGE} />
+        <ActivityIndicator size="small" color={c.ORANGE} />
       </View>
     );
   }
@@ -69,7 +60,6 @@ function DistanceChart({ data, loading }) {
   if (!hasData) {
     return (
       <View style={styles.chartEmpty}>
-        <Text style={styles.chartEmptyIcon}>📊</Text>
         <Text style={styles.chartEmptyText}>No data yet — log activities to see your distance chart</Text>
       </View>
     );
@@ -77,19 +67,15 @@ function DistanceChart({ data, loading }) {
 
   const max = Math.max(...data.map(b => b.km), 1);
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={styles.chartScroll}
-    >
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chartScroll}>
       {data.map((b, i) => {
-        const h       = Math.max(6, (b.km / max) * BAR_MAX_H);
-        const isLast  = i === data.length - 1;
+        const h      = Math.max(6, (b.km / max) * BAR_MAX_H);
+        const isLast = i === data.length - 1;
         return (
           <View key={b.label} style={styles.barCol}>
             <Text style={styles.barKm}>{b.km > 0 ? b.km : ''}</Text>
             <View style={styles.barTrack}>
-              <View style={[styles.bar, { height: h }, isLast ? styles.barActive : styles.barDefault]} />
+              <View style={[styles.bar, { height: h }, isLast ? { backgroundColor: c.ORANGE } : { backgroundColor: c.BAR_ACTIVE }]} />
             </View>
             <Text style={styles.barLabel}>{b.label}</Text>
           </View>
@@ -99,17 +85,13 @@ function DistanceChart({ data, loading }) {
   );
 }
 
-function ActivityCard({ item, onPress }) {
-  const icon  = SPORT_ICONS[item.sport] ?? '🏅';
+function ActivityCard({ item, onPress, styles, c }) {
   const sport = item.sport.charAt(0).toUpperCase() + item.sport.slice(1);
   const time  = new Date(item.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <TouchableOpacity style={styles.actCard} activeOpacity={0.8} onPress={onPress}>
       <View style={styles.actTop}>
-        <View style={styles.actIconWrap}>
-          <Text style={styles.actIcon}>{icon}</Text>
-        </View>
         <View style={styles.actInfo}>
           <Text style={styles.actTitle} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.actDate}>{relativeDate(item.started_at)} · {time}</Text>
@@ -149,6 +131,8 @@ function ActivityCard({ item, onPress }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ActivitiesScreen({ navigation }) {
+  const { colors: c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
   const {
     allTimeStats, chartData, activities,
     loading, chartLoading,
@@ -167,40 +151,18 @@ export default function ActivitiesScreen({ navigation }) {
 
       {loading ? (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={ORANGE} />
+          <ActivityIndicator size="large" color={c.ORANGE} />
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-          {/* All-time stat cards */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.statsScroll}
-          >
-            <StatCard
-              label="TOTAL ACTIVITIES"
-              value={String(allTimeStats.count)}
-              sub="all time"
-            />
-            <StatCard
-              label="TOTAL DISTANCE"
-              value={allTimeStats.totalDistanceKm > 0 ? String(allTimeStats.totalDistanceKm) : '0'}
-              sub="km all time"
-            />
-            <StatCard
-              label="LONGEST"
-              value={allTimeStats.longestKm != null ? `${allTimeStats.longestKm} km` : '—'}
-              sub={allTimeStats.longestKm != null ? 'single activity' : 'no activities yet'}
-            />
-            <StatCard
-              label="BEST PACE"
-              value={fmtPace(allTimeStats.bestPaceSecPerKm)}
-              sub={allTimeStats.bestPaceSecPerKm != null ? 'min / km' : 'no activities yet'}
-            />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
+            <StatCard styles={styles} label="TOTAL ACTIVITIES" value={String(allTimeStats.count)} sub="all time" />
+            <StatCard styles={styles} label="TOTAL DISTANCE"   value={allTimeStats.totalDistanceKm > 0 ? String(allTimeStats.totalDistanceKm) : '0'} sub="km all time" />
+            <StatCard styles={styles} label="LONGEST"          value={allTimeStats.longestKm != null ? `${allTimeStats.longestKm} km` : '—'} sub={allTimeStats.longestKm != null ? 'single activity' : 'no activities yet'} />
+            <StatCard styles={styles} label="BEST PACE"        value={fmtPace(allTimeStats.bestPaceSecPerKm)} sub={allTimeStats.bestPaceSecPerKm != null ? 'min / km' : 'no activities yet'} />
           </ScrollView>
 
-          {/* Distance chart */}
           <View style={styles.chartCard}>
             <View style={styles.chartHeader}>
               <Text style={styles.sectionTitle}>DISTANCE BY WEEK</Text>
@@ -212,28 +174,19 @@ export default function ActivitiesScreen({ navigation }) {
                     onPress={() => setActivePeriod(p)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.periodPillText, activePeriod === p && styles.periodPillTextActive]}>
-                      {p}
-                    </Text>
+                    <Text style={[styles.periodPillText, activePeriod === p && styles.periodPillTextActive]}>{p}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-            <DistanceChart data={chartData} loading={chartLoading} />
-            {chartData.some(b => b.km > 0) && (
-              <Text style={styles.chartUnit}>km per week</Text>
-            )}
+            <DistanceChart data={chartData} loading={chartLoading} styles={styles} c={c} />
+            {chartData.some(b => b.km > 0) && <Text style={styles.chartUnit}>km per week</Text>}
           </View>
 
-          {/* Sport filter + activity list */}
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitle}>ALL ACTIVITIES</Text>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
             {FILTERS.map(f => (
               <TouchableOpacity
                 key={f}
@@ -241,20 +194,15 @@ export default function ActivitiesScreen({ navigation }) {
                 onPress={() => setActiveFilter(f)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>
-                  {f}
-                </Text>
+                <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>{f}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
 
           {activities.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>🏅</Text>
               <Text style={styles.emptyTitle}>No activities logged yet</Text>
-              <Text style={styles.emptyBody}>
-                Tap "+ Log" to record your first run, ride, climb, or any sport.
-              </Text>
+              <Text style={styles.emptyBody}>Tap "+ Log" to record your first run, ride, climb, or any sport.</Text>
               <TouchableOpacity style={styles.emptyBtn} activeOpacity={0.85}>
                 <Text style={styles.emptyBtnText}>+ Log your first activity</Text>
               </TouchableOpacity>
@@ -265,6 +213,8 @@ export default function ActivitiesScreen({ navigation }) {
                 <ActivityCard
                   key={item.id}
                   item={item}
+                  styles={styles}
+                  c={c}
                   onPress={() => navigation.navigate('ActivityDetail', { id: item.id, title: item.title })}
                 />
               ))}
@@ -277,76 +227,73 @@ export default function ActivitiesScreen({ navigation }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles factory ───────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  root:        { flex: 1, backgroundColor: BG },
-  scroll:      { paddingBottom: 32 },
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+function makeStyles(c) {
+  return StyleSheet.create({
+    root:        { flex: 1, backgroundColor: c.BG },
+    scroll:      { paddingBottom: 32 },
+    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: DARK, letterSpacing: 1 },
-  logBtn:      { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-  logBtnText:  { color: '#fff', fontWeight: '700', fontSize: 13 },
+    header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 },
+    headerTitle: { fontSize: 20, fontWeight: '900', color: c.TEXT, letterSpacing: 1 },
+    logBtn:      { backgroundColor: c.ORANGE, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+    logBtnText:  { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  statsScroll:    { paddingHorizontal: 16, gap: 10, marginBottom: 16 },
-  statCard:       { width: 150, backgroundColor: CARD_BG, borderRadius: 14, padding: 14 },
-  statLabel:      { fontSize: 10, fontWeight: '700', color: '#888', letterSpacing: 0.8, marginBottom: 4 },
-  statValue:      { fontSize: 28, fontWeight: '900', color: DARK, lineHeight: 32 },
-  statValueEmpty: { color: '#CCC' },
-  statSub:        { fontSize: 12, color: '#AAA', marginTop: 2 },
+    statsScroll:    { paddingHorizontal: 16, gap: 10, marginBottom: 16 },
+    statCard:       { width: 150, backgroundColor: c.CARD_BG, borderRadius: 14, padding: 14 },
+    statLabel:      { fontSize: 10, fontWeight: '700', color: c.DARK_ORANGE, letterSpacing: 0.8, marginBottom: 4 },
+    statValue:      { fontSize: 28, fontWeight: '900', color: c.TEXT, lineHeight: 32 },
+    statValueEmpty: { color: c.TEXT_FAINT },
+    statSub:        { fontSize: 12, color: c.TEXT_MUTED, marginTop: 2 },
 
-  chartCard:   { backgroundColor: CARD_BG, borderRadius: 14, marginHorizontal: 16, padding: 16, marginBottom: 20 },
-  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  periodPills:          { flexDirection: 'row', gap: 6 },
-  periodPill:           { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: '#D9D0C7' },
-  periodPillActive:     { backgroundColor: DARK },
-  periodPillText:       { fontSize: 11, fontWeight: '600', color: '#666' },
-  periodPillTextActive: { color: '#fff' },
-  chartScroll:  { paddingVertical: 8, gap: 6, alignItems: 'flex-end' },
-  barCol:       { alignItems: 'center', width: 36 },
-  barKm:        { fontSize: 9, color: '#999', marginBottom: 4 },
-  barTrack:     { height: BAR_MAX_H, justifyContent: 'flex-end' },
-  bar:          { width: 24, borderRadius: 6 },
-  barActive:    { backgroundColor: ORANGE },
-  barDefault:   { backgroundColor: '#C8BFAF' },
-  barLabel:     { fontSize: 10, color: '#888', marginTop: 6 },
-  chartUnit:    { fontSize: 10, color: '#AAA', marginTop: 6, textAlign: 'right' },
-  chartEmpty:   { alignItems: 'center', paddingVertical: 28 },
-  chartEmptyIcon: { fontSize: 28, marginBottom: 10, opacity: 0.35 },
-  chartEmptyText: { fontSize: 12, color: '#AAA', textAlign: 'center', lineHeight: 18 },
+    chartCard:   { backgroundColor: c.CARD_BG, borderRadius: 14, marginHorizontal: 16, padding: 16, marginBottom: 20 },
+    chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    periodPills:          { flexDirection: 'row', gap: 6 },
+    periodPill:           { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, backgroundColor: c.DIVIDER },
+    periodPillActive:     { backgroundColor: c.TEXT },
+    periodPillText:       { fontSize: 11, fontWeight: '600', color: c.TEXT_SUB },
+    periodPillTextActive: { color: c.BG },
+    chartScroll:  { paddingVertical: 8, gap: 6, alignItems: 'flex-end' },
+    barCol:       { alignItems: 'center', width: 36 },
+    barKm:        { fontSize: 9, color: c.TEXT_MUTED, marginBottom: 4 },
+    barTrack:     { height: BAR_MAX_H, justifyContent: 'flex-end' },
+    bar:          { width: 24, borderRadius: 6 },
+    barLabel:     { fontSize: 10, color: c.TEXT_MUTED, marginTop: 6 },
+    chartUnit:    { fontSize: 10, color: c.TEXT_MUTED, marginTop: 6, textAlign: 'right' },
+    chartEmpty:   { alignItems: 'center', paddingVertical: 28 },
+    chartEmptyIcon: { fontSize: 28, marginBottom: 10, opacity: 0.35 },
+    chartEmptyText: { fontSize: 12, color: c.TEXT_MUTED, textAlign: 'center', lineHeight: 18 },
 
-  sectionTitle: { fontSize: 13, fontWeight: '900', color: DARK, letterSpacing: 1 },
-  listHeader:   { paddingHorizontal: 16, marginBottom: 10 },
-  filterScroll: { paddingHorizontal: 16, gap: 8, marginBottom: 12 },
-  filterChip:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: CARD_BG, borderWidth: 1.5, borderColor: 'transparent' },
-  filterChipActive:   { backgroundColor: DARK, borderColor: DARK },
-  filterChipText:     { fontSize: 13, fontWeight: '600', color: '#555' },
-  filterChipTextActive:{ color: '#fff' },
+    sectionTitle: { fontSize: 13, fontWeight: '900', color: c.DARK_ORANGE, letterSpacing: 1 },
+    listHeader:   { paddingHorizontal: 16, marginBottom: 10 },
+    filterScroll: { paddingHorizontal: 16, gap: 8, marginBottom: 12 },
+    filterChip:         { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: c.CARD_BG, borderWidth: 1.5, borderColor: 'transparent' },
+    filterChipActive:   { backgroundColor: c.TEXT, borderColor: c.TEXT },
+    filterChipText:     { fontSize: 13, fontWeight: '600', color: c.TEXT_SUB },
+    filterChipTextActive:{ color: c.BG },
 
-  actList: { paddingHorizontal: 16, gap: 10 },
-  actCard: { backgroundColor: CARD_BG, borderRadius: 16, padding: 14 },
-  actTop:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  actIconWrap: { width: 44, height: 44, backgroundColor: '#fff', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  actIcon:    { fontSize: 22 },
-  actInfo:    { flex: 1 },
-  actTitle:   { fontSize: 14, fontWeight: '700', color: DARK },
-  actDate:    { fontSize: 11, color: ORANGE, fontWeight: '600', marginTop: 2 },
-  actMeta:    { fontSize: 11, color: '#888', marginTop: 1 },
-  actChevron: { fontSize: 22, color: '#BBB' },
-  actDivider: { height: 1, backgroundColor: '#D9D0C7', marginVertical: 12 },
-  actStats:   { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
-  actStat:    {},
-  actStatVal: { fontSize: 15, fontWeight: '800', color: DARK },
-  actStatLbl: { fontSize: 10, color: '#999', fontWeight: '600', letterSpacing: 0.4, marginTop: 1 },
+    actList: { paddingHorizontal: 16, gap: 10 },
+    actCard: { backgroundColor: c.CARD_BG, borderRadius: 16, padding: 14 },
+    actTop:  { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    actIconWrap: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    actIcon:    { fontSize: 22 },
+    actInfo:    { flex: 1 },
+    actTitle:   { fontSize: 14, fontWeight: '700', color: c.TEXT },
+    actDate:    { fontSize: 11, color: c.ORANGE, fontWeight: '600', marginTop: 2 },
+    actMeta:    { fontSize: 11, color: c.TEXT_MUTED, marginTop: 1 },
+    actChevron: { fontSize: 22, color: c.TEXT_FAINT },
+    actDivider: { height: 1, backgroundColor: c.DIVIDER, marginVertical: 12 },
+    actStats:   { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
+    actStat:    {},
+    actStatVal: { fontSize: 15, fontWeight: '800', color: c.TEXT },
+    actStatLbl: { fontSize: 10, color: c.TEXT_MUTED, fontWeight: '600', letterSpacing: 0.4, marginTop: 1 },
 
-  emptyCard:  { backgroundColor: CARD_BG, borderRadius: 16, marginHorizontal: 16, padding: 32, alignItems: 'center' },
-  emptyIcon:  { fontSize: 36, marginBottom: 12, opacity: 0.4 },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: DARK, marginBottom: 6 },
-  emptyBody:  { fontSize: 13, color: '#888', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  emptyBtn:   { backgroundColor: ORANGE, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
-  emptyBtnText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
-});
+    emptyCard:  { backgroundColor: c.CARD_BG, borderRadius: 16, marginHorizontal: 16, padding: 32, alignItems: 'center' },
+    emptyIcon:  { fontSize: 36, marginBottom: 12, opacity: 0.4 },
+    emptyTitle: { fontSize: 16, fontWeight: '700', color: c.TEXT, marginBottom: 6 },
+    emptyBody:  { fontSize: 13, color: c.TEXT_MUTED, textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+    emptyBtn:   { backgroundColor: c.ORANGE, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 10 },
+    emptyBtnText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
+  });
+}

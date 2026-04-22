@@ -3,11 +3,11 @@ import { useAuth } from './useAuth';
 import { getAllTimeStats, getDistanceChartData, getActivitiesList } from '../lib/activities';
 
 const SPORT_MAP = {
-  'All':      null,
-  '🏃 Run':  'running',
-  '🚴 Ride': 'cycling',
-  '🧗 Climb':'climbing',
-  '🏊 Swim': 'swimming',
+  'All':     null,
+  'Run':     'running',
+  'Ride':    'cycling',
+  'Climb':   'climbing',
+  'Swim':    'swimming',
 };
 
 const EMPTY_STATS = { count: 0, totalDistanceKm: 0, longestKm: null, bestPaceSecPerKm: null };

@@ -15,7 +15,11 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "ai.lauver.app"
+      "bundleIdentifier": "ai.lauver.app",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Lauver reads your workouts to track your training and find matching athletes.",
+        "NSHealthUpdateUsageDescription": "Lauver saves workouts to Apple Health."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +35,18 @@
     "plugins": [
       "expo-web-browser",
       "@react-native-community/datetimepicker",
-      "expo-secure-store"
-    ]
+      "expo-secure-store",
+      [
+        "react-native-health",
+        {
+          "isClinicalDataEnabled": false
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5b026c8a-9bd3-4dd3-b42d-b6c5ad85b472"
+      }
+    }
   }
 }

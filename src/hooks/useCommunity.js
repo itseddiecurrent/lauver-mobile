@@ -4,6 +4,7 @@ import {
   getFeed, createPost, toggleReaction,
   getSuggestedGroups, joinGroup,
   getUpcomingEvents, toggleRsvp,
+  createCommunity,
 } from '../lib/community';
 
 export function useCommunity() {
@@ -73,9 +74,14 @@ export function useCommunity() {
     setPosts(fresh);
   }, [user]);
 
+  const handleCreateCommunity = async (fields) => {
+    if (!user) return;
+    await createCommunity({ ...fields, creator_id: user.id });
+  };
+
   return {
     posts, groups, events, loading,
     refresh: load,
-    handleReaction, handleJoinGroup, handleRsvp, handlePost,
+    handleReaction, handleJoinGroup, handleRsvp, handlePost, handleCreateCommunity,
   };
 }
