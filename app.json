@@ -18,7 +18,8 @@
       "bundleIdentifier": "ai.lauver.app",
       "infoPlist": {
         "NSHealthShareUsageDescription": "Lauver reads your workouts to track your training and find matching athletes.",
-        "NSHealthUpdateUsageDescription": "Lauver saves workouts to Apple Health."
+        "NSHealthUpdateUsageDescription": "Lauver saves workouts to Apple Health.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

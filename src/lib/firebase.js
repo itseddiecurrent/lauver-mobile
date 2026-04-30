@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -11,12 +11,20 @@ const firebaseConfig = {
   appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Prevent duplicate app initialization on hot reload
+// Prevent duplicate initialization on hot reload
 const app = getApps().length === 0
   ? initializeApp(firebaseConfig)
   : getApps()[0];
 
-// Use AsyncStorage so Firebase session survives app restarts
-export const firebaseAuth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+// initializeAuth throws if called twice; getAuth returns existing instance
+export const firebaseAuth = getApps().length > 1
+  ? getAuth(app)
+  : (() => {
+      try {
+        return initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+      } catch {
+        return getAuth(app);
+      }
+    })();

@@ -747,15 +747,23 @@ export default function ProfileScreen() {
                   )}
                 </View>
                 <TouchableOpacity
-                  style={[styles.connectBtn, app.connected && !app.reauth && styles.connectBtnActive]}
+                  style={[
+                    styles.connectBtn,
+                    app.connected && !app.reauth ? styles.connectBtnConnected : null,
+                    app.reauth ? styles.connectBtnReauth : null,
+                  ]}
                   onPress={app.connected && !app.reauth ? app.onDisconnect : app.onConnect}
                   disabled={app.loading}
                   activeOpacity={0.8}
                 >
                   {app.loading
-                    ? <ActivityIndicator size="small" color={c.TEXT} />
-                    : <Text style={[styles.connectBtnText, app.connected && !app.reauth && styles.connectBtnTextActive]}>
-                        {app.connected && !app.reauth ? 'Disconnect' : app.reauth ? 'Reconnect' : 'Connect'}
+                    ? <ActivityIndicator size="small" color={app.connected && !app.reauth ? '#2E9E5B' : c.TEXT} />
+                    : <Text style={[
+                        styles.connectBtnText,
+                        app.connected && !app.reauth ? styles.connectBtnTextConnected : null,
+                        app.reauth ? styles.connectBtnTextReauth : null,
+                      ]}>
+                        {app.connected && !app.reauth ? 'Connected' : app.reauth ? 'Reconnect' : 'Connect'}
                       </Text>
                   }
                 </TouchableOpacity>
@@ -952,10 +960,12 @@ function makeStyles(c) {
     statusDot:         { width: 7, height: 7, borderRadius: 4, backgroundColor: '#3A7D44' },
     statusText:        { fontSize: 11, color: '#3A7D44', fontWeight: '600' },
 
-    connectBtn:           { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: c.TEXT, flexShrink: 0 },
-    connectBtnActive:     { backgroundColor: c.TEXT, borderColor: c.TEXT },
-    connectBtnText:       { fontSize: 12, fontWeight: '700', color: c.TEXT },
-    connectBtnTextActive: { color: c.BG },
+    connectBtn:              { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: c.TEXT, flexShrink: 0 },
+    connectBtnConnected:     { borderColor: '#2E9E5B', backgroundColor: 'transparent' },
+    connectBtnReauth:        { borderColor: '#E8602C', backgroundColor: 'transparent' },
+    connectBtnText:          { fontSize: 12, fontWeight: '700', color: c.TEXT },
+    connectBtnTextConnected: { color: '#2E9E5B' },
+    connectBtnTextReauth:    { color: '#E8602C' },
 
     unitRow:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
     unitLabel:            { fontSize: 14, fontWeight: '600', color: c.TEXT },

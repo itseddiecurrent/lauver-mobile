@@ -37,7 +37,11 @@ export function useStravaConnect() {
   // Redirect URI — must match what's registered at strava.com/settings/api
   // During development this resolves to:
   //   https://auth.expo.io/@your-username/lauver-mobile-app
-  const redirectUri = makeRedirectUri({ scheme: 'lauver' });
+  // In Expo Go, makeRedirectUri returns exp:// which Strava rejects.
+  // Use the auth.expo.io proxy URL directly instead.
+  // Replace YOUR_EXPO_USERNAME with the output of: npx expo whoami
+  const redirectUri = makeRedirectUri({ scheme: 'lauver', path: 'oauthredirect' });
+  console.log('Strava redirectUri:', redirectUri);
 
   const [request, response, promptAsync] = useAuthRequest(
     {
