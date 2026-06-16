@@ -28,8 +28,8 @@ export function useActivities() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     const [stats, list] = await Promise.all([
-      getAllTimeStats(user.id).catch(() => EMPTY_STATS),
-      getActivitiesList(user.id, null).catch(() => []),
+      getAllTimeStats(user.uid).catch(() => EMPTY_STATS),
+      getActivitiesList(user.uid, null).catch(() => []),
     ]);
     setAllTimeStats(stats);
     setActivities(list);
@@ -40,7 +40,7 @@ export function useActivities() {
   const loadChart = useCallback(async () => {
     if (!user) return;
     setChartLoading(true);
-    const data = await getDistanceChartData(user.id, activePeriod).catch(() => []);
+    const data = await getDistanceChartData(user.uid, activePeriod).catch(() => []);
     setChartData(data);
     setChartLoading(false);
   }, [user, activePeriod]);
@@ -49,7 +49,7 @@ export function useActivities() {
   const loadFiltered = useCallback(async () => {
     if (!user) return;
     const sport = SPORT_MAP[activeFilter];
-    const list  = await getActivitiesList(user.id, sport).catch(() => []);
+    const list  = await getActivitiesList(user.uid, sport).catch(() => []);
     setActivities(list);
   }, [user, activeFilter]);
 

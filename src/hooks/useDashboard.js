@@ -6,12 +6,16 @@ import {
   getRecentActivities,
   getMonthStats,
 } from '../lib/activities';
+import { getMutualMatches } from '../lib/match';
+import { getFeed }          from '../lib/community';
 
 const DEFAULT = {
-  weekStats:          { count: 0, totalDistanceKm: 0, totalDurationSeconds: 0 },
-  weeklyChart:        [],
-  recentActivities:   [],
-  monthStats:         { count: 0, totalDistanceKm: 0 },
+  weekStats:        { count: 0, totalDistanceKm: 0, totalDurationSeconds: 0 },
+  weeklyChart:      [],
+  recentActivities: [],
+  monthStats:       { count: 0, totalDistanceKm: 0 },
+  matchCount:       null,   // null = not yet loaded
+  latestPost:       null,   // null = no posts or not yet loaded
 };
 
 export function useDashboard() {
@@ -25,13 +29,24 @@ export function useDashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [weekStats, weeklyChart, recentActivities, monthStats] = await Promise.all([
-        getWeekStats(user.id).catch(() => DEFAULT.weekStats),
-        getWeeklyChart(user.id).catch(() => DEFAULT.weeklyChart),
-        getRecentActivities(user.id, 3).catch(() => DEFAULT.recentActivities),
-        getMonthStats(user.id).catch(() => DEFAULT.monthStats),
-      ]);
-      setData({ weekStats, weeklyChart, recentActivities, monthStats });
+      const [weekStats, weeklyChart, recentActivities, monthStats, mutualMatches, feed] =
+        await Promise.all([
+          getWeekStats(user.uid).catch(() => DEFAULT.weekStats),
+          getWeeklyChart(user.uid).catch(() => DEFAULT.weeklyChart),
+          getRecentActivities(user.uid, 3).catch(() => DEFAULT.recentActivities),
+          getMonthStats(user.uid).catch(() => DEFAULT.monthStats),
+          getMutualMatches(user.uid).catch(() => []),
+          getFeed(user.uid, 1).catch(() => []),
+        ]);
+
+      setData({
+        weekStats,
+        weeklyChart,
+        recentActivities,
+        monthStats,
+        matchCount: mutualMatches.length,
+        latestPost: feed[0] ?? null,
+      });
     } catch (err) {
       setError(err.message);
     } finally {

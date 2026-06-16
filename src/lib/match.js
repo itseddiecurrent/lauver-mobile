@@ -1,27 +1,17 @@
 /**
  * Supabase query functions for the Match feature.
  *
- * Additional columns needed on the profiles table:
+ * Profiles columns used (all exist in DB):
+ *   skill        text    -- 'Beginner' | 'Intermediate' | 'Advanced'
+ *   availability text[]  -- ['Weekends', 'Mornings', ...]
+ *   city         text    -- location display name
+ *   photos       text[]  -- uploaded photo URLs
+ *   sports       text[]
+ *   avatar_url   text
  *
- *   alter table profiles add column if not exists skill_level   text;          -- 'Beginner' | 'Intermediate' | 'Advanced'
- *   alter table profiles add column if not exists availability  text[];        -- ['Weekends', 'Mornings', ...]
- *   alter table profiles add column if not exists location_name text;
- *
- * Required swipes table:
- *
- *   create table swipes (
- *     id         uuid primary key default gen_random_uuid(),
- *     user_id    uuid references profiles(id) on delete cascade not null,
- *     target_id  uuid references profiles(id) on delete cascade not null,
- *     action     text not null,   -- 'pass' | 'like' | 'star'
- *     created_at timestamptz default now(),
- *     unique (user_id, target_id)
- *   );
- *   alter table swipes enable row level security;
- *   create policy "users manage own swipes" on swipes for all using (auth.uid() = user_id);
- *   create policy "swipes readable for matches" on swipes for select using (
- *     auth.uid() = user_id or auth.uid() = target_id
- *   );
+ * Required swipes table (created via migration 20260616_initial_schema.sql):
+ *   user_id/target_id are TEXT to match profiles.id (Firebase UID)
+ *   RLS: (auth.uid())::text = user_id
  */
 
 import { supabase } from './supabase';
@@ -39,25 +29,25 @@ export async function getMatchReadiness(user) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('avatar_url, sports, skill_level, location_name, availability')
-    .eq('id', user.id)
+    .select('photos, avatar_url, sports, skill, city, availability')
+    .eq('id', user.uid)
     .maybeSingle();
 
   checks.push(
     {
       key:   'photo',
       label: 'Profile photo uploaded',
-      done:  !!profile?.avatar_url,
+      done:  (Array.isArray(profile?.photos) && profile.photos.length > 0) || !!profile?.avatar_url,
     },
     {
       key:   'sports',
       label: 'Sports & skill level set',
-      done:  Array.isArray(profile?.sports) && profile.sports.length > 0 && !!profile?.skill_level,
+      done:  Array.isArray(profile?.sports) && profile.sports.length > 0 && !!profile?.skill,
     },
     {
       key:   'location',
       label: 'Location & availability set',
-      done:  !!profile?.location_name && Array.isArray(profile?.availability) && profile.availability.length > 0,
+      done:  !!profile?.city && Array.isArray(profile?.availability) && profile.availability.length > 0,
     },
   );
 
@@ -82,12 +72,12 @@ export async function getMatchCandidates(userId, { sports = [], skills = [] } = 
 
   let query = supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, sports, skill_level, availability, location_name')
+    .select('id, display_name, avatar_url, photos, sports, skill, availability, city')
     .not('id', 'in', `(${excludeIds.join(',')})`)
     .limit(20);
 
   if (sports.length > 0) query = query.overlaps('sports', sports);
-  if (skills.length > 0) query = query.in('skill_level', skills);
+  if (skills.length > 0) query = query.in('skill', skills);
 
   const { data, error } = await query;
   if (error) throw error;

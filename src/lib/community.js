@@ -164,12 +164,17 @@ export async function getFeed(userId, limit = 20) {
 }
 
 /**
- * Create a new post, optionally attached to an activity.
+ * Create a new post, optionally attached to an activity or photo.
+ *
+ * photo_url requires adding the column first:
+ *   alter table posts add column if not exists photo_url text;
  */
-export async function createPost(userId, body, activityId = null) {
+export async function createPost(userId, body, activityId = null, photoUrl = null) {
+  const payload = { user_id: userId, body, activity_id: activityId || undefined };
+  if (photoUrl) payload.photo_url = photoUrl;
   const { data, error } = await supabase
     .from('posts')
-    .insert({ user_id: userId, body, activity_id: activityId || undefined })
+    .insert(payload)
     .select()
     .single();
   if (error) throw error;
@@ -271,6 +276,50 @@ export async function createCommunity(fields) {
   if (error) throw error;
   return data;
 }
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+
+/**
+ * Fetch comments for a post, oldest first.
+ * Each comment includes author display_name.
+ */
+export async function getComments(postId, limit = 100) {
+  const { data, error } = await supabase
+    .from('post_comments')
+    .select('id, body, created_at, author:profiles!user_id ( id, display_name )')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Add a comment to a post. Returns the new comment row with author info.
+ */
+export async function createComment(userId, postId, body) {
+  const { data, error } = await supabase
+    .from('post_comments')
+    .insert({ user_id: userId, post_id: postId, body: body.trim() })
+    .select('id, body, created_at, author:profiles!user_id ( id, display_name )')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Delete a comment (RLS ensures only the owner can delete).
+ */
+export async function deleteComment(userId, commentId) {
+  const { error } = await supabase
+    .from('post_comments')
+    .delete()
+    .eq('id', commentId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
+// ─── RSVP ─────────────────────────────────────────────────────────────────────
 
 /**
  * Toggle RSVP for an event. Returns true if added, false if removed.

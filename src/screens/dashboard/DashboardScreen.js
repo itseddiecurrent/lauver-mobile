@@ -3,7 +3,10 @@ import {
   TouchableOpacity, SafeAreaView, Dimensions, Image,
 } from 'react-native';
 import { useMemo } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useProfile }   from '../../hooks/useProfile';
+import { useUnits }     from '../../hooks/useUnits';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
@@ -91,8 +94,8 @@ function ActivityRow({ activity, styles, c }) {
       <View style={styles.activityStats}>
         {activity.distance_km != null && (
           <View style={styles.activityStat}>
-            <Text style={styles.activityStatVal}>{activity.distance_km}</Text>
-            <Text style={styles.activityStatLabel}>KM</Text>
+            <Text style={styles.activityStatVal}>{fmtDistance(activity.distance_km)}</Text>
+            <Text style={styles.activityStatLabel}>DIST</Text>
           </View>
         )}
         {activity.routes_count != null && (
@@ -115,7 +118,10 @@ function ActivityRow({ activity, styles, c }) {
 export default function DashboardScreen() {
   const { colors: c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { weekStats, weeklyChart, recentActivities, monthStats, loading, error, refresh } = useDashboard();
+  const navigation = useNavigation();
+  const { weekStats, weeklyChart, recentActivities, monthStats, matchCount, latestPost, loading, error, refresh } = useDashboard();
+  const { progress } = useProfile();
+  const { distUnit, fmtDistance } = useUnits();
 
   const chartBars = weeklyChart.length > 0
     ? weeklyChart
@@ -134,7 +140,7 @@ export default function DashboardScreen() {
             resizeMode="contain"
           />
         </View>
-        <TouchableOpacity style={styles.logBtn} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.logBtn} activeOpacity={0.85} onPress={() => navigation.navigate('LogActivity')}>
           <Text style={styles.logBtnText}>+ Log Activity</Text>
         </TouchableOpacity>
       </View>
@@ -155,9 +161,15 @@ export default function DashboardScreen() {
 
           <View style={styles.statsGrid}>
             <StatCard styles={styles} label="THIS WEEK"   value={String(weekStats.count)} sub="activities" />
-            <StatCard styles={styles} label="DISTANCE"    value={weekStats.totalDistanceKm > 0 ? String(weekStats.totalDistanceKm) : '0'} sub="km this week" />
+            <StatCard styles={styles} label="DISTANCE"    value={fmtDistance(weekStats.totalDistanceKm)} sub="this week" />
             <StatCard styles={styles} label="ACTIVE TIME" value={fmtWeekDuration(weekStats.totalDurationSeconds)} sub="this week" />
-            <StatCard styles={styles} label="MATCHES"     value="—" sub="complete profile to unlock" note="profile incomplete" />
+            <StatCard
+              styles={styles}
+              label="MATCHES"
+              value={matchCount > 0 ? String(matchCount) : '—'}
+              sub={matchCount > 0 ? 'mutual matches' : 'complete profile to unlock'}
+              note={matchCount === 0 && progress < 100 ? 'profile incomplete' : null}
+            />
           </View>
 
           <WeeklyChart bars={chartBars} styles={styles} c={c} />
@@ -186,24 +198,27 @@ export default function DashboardScreen() {
               <View style={styles.quickDivider} />
               <View>
                 <Text style={[styles.quickBig, monthStats.totalDistanceKm > 0 && styles.quickBigActive]}>{monthStats.totalDistanceKm}</Text>
-                <Text style={styles.quickSub}>km</Text>
+                <Text style={styles.quickSub}>{distUnit}</Text>
               </View>
             </View>
           </View>
 
           <View style={styles.quickCard}>
             <Text style={styles.quickCardTitle}>Community</Text>
-            <Text style={styles.quickBody}>No posts yet. Join the community and share your first activity.</Text>
+            {latestPost
+              ? <Text style={styles.quickBody} numberOfLines={2}>{latestPost.body}</Text>
+              : <Text style={styles.quickBody}>No posts yet. Join the community and share your first activity.</Text>
+            }
           </View>
 
           <View style={[styles.quickCard, { marginBottom: 32 }]}>
             <Text style={styles.quickCardTitle}>Profile</Text>
-            <Text style={styles.quickBody}>0% complete — finish your profile to unlock athlete matching.</Text>
+            <Text style={styles.quickBody}>{progress}% complete — {progress < 100 ? 'finish your profile to unlock athlete matching.' : 'profile complete!'}</Text>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: '0%' }]} />
+              <View style={[styles.progressFill, { width: `${progress}%` }]} />
             </View>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.quickLink}>Complete profile →</Text>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Profile')}>
+              <Text style={styles.quickLink}>{progress < 100 ? 'Complete profile →' : 'View profile →'}</Text>
             </TouchableOpacity>
           </View>
 

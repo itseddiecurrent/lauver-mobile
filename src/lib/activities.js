@@ -197,6 +197,48 @@ export async function getDistanceChartData(userId, period) {
 }
 
 /**
+ * Fetch a single activity by its UUID.
+ * Returns the full row or throws on error / not found.
+ */
+export async function getActivityById(activityId) {
+  const { data, error } = await supabase
+    .from('activities')
+    .select('*')
+    .eq('id', activityId)
+    .single();
+  if (error) throw new Error(error.message || 'Activity not found');
+  return data;
+}
+
+/**
+ * Insert a new manually-logged activity.
+ * fields: { title, sport, startedAt (Date), durationSeconds, distanceKm?, routesCount?, calories?, notes? }
+ * Returns the new row's id.
+ */
+export async function insertActivity(userId, fields) {
+  const { data, error } = await supabase
+    .from('activities')
+    .insert({
+      user_id:          userId,
+      title:            fields.title,
+      sport:            fields.sport,
+      started_at:       fields.startedAt instanceof Date
+                          ? fields.startedAt.toISOString()
+                          : fields.startedAt,
+      duration_seconds: fields.durationSeconds,
+      distance_km:      fields.distanceKm   ?? null,
+      routes_count:     fields.routesCount  ?? null,
+      calories:         fields.calories     ?? null,
+      notes:            fields.notes        ?? null,
+      canonical_source: 'manual',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message || 'Failed to insert activity');
+  return data;
+}
+
+/**
  * All activities for a user, optionally filtered by sport.
  */
 export async function getActivitiesList(userId, sport = null) {

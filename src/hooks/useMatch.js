@@ -25,7 +25,7 @@ export function useMatch() {
 
     const [readinessData, matchesData] = await Promise.all([
       getMatchReadiness(user).catch(() => []),
-      getMutualMatches(user.id).catch(() => []),
+      getMutualMatches(user.uid).catch(() => []),
     ]);
 
     setReadiness(readinessData);
@@ -38,7 +38,7 @@ export function useMatch() {
   // Fetch candidates whenever filters change and matching is unlocked
   const loadCandidates = useCallback(async (sports = [], skills = []) => {
     if (!user) return;
-    const data = await getMatchCandidates(user.id, { sports, skills }).catch(() => []);
+    const data = await getMatchCandidates(user.uid, { sports, skills }).catch(() => []);
     setCandidates(data);
   }, [user]);
 
@@ -53,10 +53,10 @@ export function useMatch() {
     if (!user) return;
     // Remove from local list immediately
     setCandidates(prev => prev.filter(c => c.id !== targetId));
-    await recordSwipe(user.id, targetId, action).catch(() => {});
+    await recordSwipe(user.uid, targetId, action).catch(() => {});
     // If liked/starred, refresh mutual matches in case it's mutual
     if (action !== 'pass') {
-      getMutualMatches(user.id).then(setMatches).catch(() => {});
+      getMutualMatches(user.uid).then(setMatches).catch(() => {});
     }
   }, [user]);
 

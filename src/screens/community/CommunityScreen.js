@@ -1,12 +1,18 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, ActivityIndicator, TextInput,
-  Modal, Alert, KeyboardAvoidingView, Platform,
+  Modal, Alert, KeyboardAvoidingView, Platform, FlatList,
 } from 'react-native';
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { useCommunity } from '../../hooks/useCommunity';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../context/ThemeContext';
+import { getComments, createComment, deleteComment } from '../../lib/community';
+import { getActivitiesList } from '../../lib/activities';
+import { supabase } from '../../lib/supabase';
+import { firebaseAuth } from '../../lib/firebase';
 
 const PRESET_TAGS = ['Hiking', 'Cycling', 'Running', 'Swimming', 'Climbing', 'Skiing', 'Gym', 'Yoga', 'Outdoors', 'Team Sports'];
 
@@ -68,7 +74,7 @@ function ChipGroup({ options, selected, onToggle, single = false, c }) {
   );
 }
 
-function PostCard({ post, onReact, styles, c }) {
+function PostCard({ post, onReact, onComments, styles, c }) {
   const authorName = post.author?.display_name ?? 'Unknown';
   const sport      = post.activity?.sport;
   const sportLabel = sport ? ` · ${sport.charAt(0).toUpperCase() + sport.slice(1)}` : '';
@@ -110,8 +116,10 @@ function PostCard({ post, onReact, styles, c }) {
         <TouchableOpacity style={styles.actionBtn} onPress={() => onReact(post.id, 'react')} activeOpacity={0.7}>
           <Text style={[styles.actionText, post.userReactions.includes('react') && styles.actionTextActive]}>React</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-          <Text style={styles.actionText}>{post.commentCount} comments</Text>
+        <TouchableOpacity style={styles.actionBtn} onPress={onComments} activeOpacity={0.7}>
+          <Text style={styles.actionText}>
+            {post.commentCount} {post.commentCount === 1 ? 'comment' : 'comments'}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
           <Text style={styles.actionText}>↗ Share</Text>
@@ -157,6 +165,221 @@ function EventRow({ event, onRsvp, isLast, styles }) {
       </TouchableOpacity>
     </View>
   );
+}
+
+// ─── Comments Modal ───────────────────────────────────────────────────────────
+
+function CommentsModal({ post, visible, onClose, currentUserId, c }) {
+  const ms = useMemo(() => makeCommentStyles(c), [c]);
+  const [comments,  setComments]  = useState([]);
+  const [text,      setText]      = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [posting,   setPosting]   = useState(false);
+
+  useEffect(() => {
+    if (!visible || !post) { setComments([]); return; }
+    setLoading(true);
+    getComments(post.id)
+      .then(setComments)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [visible, post?.id]);
+
+  const submit = async () => {
+    if (!text.trim() || posting) return;
+    setPosting(true);
+    try {
+      const comment = await createComment(currentUserId, post.id, text.trim());
+      setComments(prev => [...prev, comment]);
+      setText('');
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const remove = async (commentId) => {
+    await deleteComment(currentUserId, commentId).catch(() => {});
+    setComments(prev => prev.filter(c => c.id !== commentId));
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={ms.root}>
+        <View style={ms.header}>
+          <Text style={ms.title}>
+            {post ? `${post.commentCount} ${post.commentCount === 1 ? 'Comment' : 'Comments'}` : 'Comments'}
+          </Text>
+          <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+            <Text style={ms.close}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {loading ? (
+          <View style={ms.loadingWrap}><ActivityIndicator color={c.ORANGE} /></View>
+        ) : (
+          <FlatList
+            data={comments}
+            keyExtractor={item => item.id}
+            contentContainerStyle={ms.list}
+            ListEmptyComponent={<Text style={ms.empty}>No comments yet. Be the first!</Text>}
+            renderItem={({ item }) => {
+              const name  = item.author?.display_name ?? 'Unknown';
+              const isOwn = item.author?.id === currentUserId;
+              return (
+                <View style={ms.commentRow}>
+                  <Avatar name={name} size={34} />
+                  <View style={ms.bubble}>
+                    <View style={ms.bubbleHeader}>
+                      <Text style={ms.commentName}>{name}</Text>
+                      <Text style={ms.commentTime}>{timeAgo(item.created_at)}</Text>
+                    </View>
+                    <Text style={ms.commentBody}>{item.body}</Text>
+                  </View>
+                  {isOwn && (
+                    <TouchableOpacity
+                      onPress={() => remove(item.id)}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    >
+                      <Text style={ms.deleteBtn}>✕</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            }}
+          />
+        )}
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={ms.inputRow}>
+            <TextInput
+              style={ms.input}
+              placeholder="Add a comment…"
+              placeholderTextColor={c.TEXT_MUTED}
+              value={text}
+              onChangeText={setText}
+              multiline
+            />
+            <TouchableOpacity
+              style={[ms.sendBtn, (!text.trim() || posting) && ms.sendBtnDisabled]}
+              onPress={submit}
+              disabled={!text.trim() || posting}
+              activeOpacity={0.8}
+            >
+              {posting
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={ms.sendBtnText}>↑</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+function makeCommentStyles(c) {
+  return StyleSheet.create({
+    root:         { flex: 1, backgroundColor: c.BG },
+    header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.DIVIDER },
+    title:        { fontSize: 16, fontWeight: '800', color: c.TEXT },
+    close:        { fontSize: 18, color: c.TEXT_MUTED, padding: 4 },
+    loadingWrap:  { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    list:         { padding: 16, gap: 12, paddingBottom: 16 },
+    empty:        { textAlign: 'center', color: c.TEXT_MUTED, fontSize: 13, marginTop: 40 },
+    commentRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+    bubble:       { flex: 1, backgroundColor: c.CARD_BG, borderRadius: 14, padding: 10 },
+    bubbleHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+    commentName:  { fontSize: 13, fontWeight: '700', color: c.TEXT },
+    commentTime:  { fontSize: 11, color: c.TEXT_MUTED },
+    commentBody:  { fontSize: 13, color: c.TEXT_SUB, lineHeight: 18 },
+    deleteBtn:    { fontSize: 13, color: c.TEXT_MUTED, paddingTop: 10 },
+    inputRow:     { flexDirection: 'row', alignItems: 'flex-end', padding: 12, borderTopWidth: 1, borderTopColor: c.DIVIDER, gap: 10 },
+    input:        { flex: 1, backgroundColor: c.CARD_BG, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: c.TEXT, maxHeight: 100 },
+    sendBtn:      { width: 40, height: 40, borderRadius: 20, backgroundColor: c.ORANGE, justifyContent: 'center', alignItems: 'center' },
+    sendBtnDisabled: { opacity: 0.4 },
+    sendBtnText:  { color: '#fff', fontSize: 20, fontWeight: '800' },
+  });
+}
+
+// ─── Activity Picker Modal ────────────────────────────────────────────────────
+
+const SPORT_ICONS = { running: '🏃', cycling: '🚴', swimming: '🏊', climbing: '🧗', hiking: '🥾', skiing: '⛷️', gym: '🏋️', yoga: '🧘' };
+
+function ActivityPickerModal({ visible, userId, onSelect, onClose, c }) {
+  const ms = useMemo(() => makeActivityPickerStyles(c), [c]);
+  const [activities, setActivities] = useState([]);
+  const [loading,    setLoading]    = useState(false);
+
+  useEffect(() => {
+    if (!visible || !userId) return;
+    setLoading(true);
+    getActivitiesList(userId, null)
+      .then(data => setActivities(data.slice(0, 30)))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [visible, userId]);
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={ms.root}>
+        <View style={ms.header}>
+          <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
+            <Text style={ms.cancel}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={ms.title}>Attach Activity</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        {loading ? (
+          <View style={ms.loadingWrap}><ActivityIndicator color={c.ORANGE} /></View>
+        ) : activities.length === 0 ? (
+          <View style={ms.loadingWrap}><Text style={ms.empty}>No activities yet.</Text></View>
+        ) : (
+          <FlatList
+            data={activities}
+            keyExtractor={item => item.id}
+            contentContainerStyle={ms.list}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={ms.row}
+                onPress={() => { onSelect(item); onClose(); }}
+                activeOpacity={0.7}
+              >
+                <Text style={ms.icon}>{SPORT_ICONS[item.sport] ?? '⚡'}</Text>
+                <View style={ms.info}>
+                  <Text style={ms.actTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={ms.actMeta}>
+                    {item.sport.charAt(0).toUpperCase() + item.sport.slice(1)}
+                    {item.distance_km ? `  ·  ${item.distance_km} km` : ''}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+function makeActivityPickerStyles(c) {
+  return StyleSheet.create({
+    root:        { flex: 1, backgroundColor: c.BG },
+    header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.DIVIDER },
+    title:       { fontSize: 16, fontWeight: '800', color: c.TEXT },
+    cancel:      { fontSize: 15, color: c.TEXT_MUTED, fontWeight: '600', width: 60 },
+    loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    empty:       { fontSize: 13, color: c.TEXT_MUTED },
+    list:        { padding: 12 },
+    row:         { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, backgroundColor: c.CARD_BG, borderRadius: 14, marginBottom: 8 },
+    icon:        { fontSize: 24 },
+    info:        { flex: 1 },
+    actTitle:    { fontSize: 14, fontWeight: '700', color: c.TEXT },
+    actMeta:     { fontSize: 12, color: c.TEXT_MUTED, marginTop: 2 },
+  });
 }
 
 // ─── Create Community Modal ───────────────────────────────────────────────────
@@ -270,17 +493,69 @@ export default function CommunityScreen() {
   const { user } = useAuth();
   const { colors: c } = useTheme();
   const styles = useMemo(() => makeStyles(c), [c]);
-  const { posts, groups, events, loading, handleReaction, handleJoinGroup, handleRsvp, handlePost, handleCreateCommunity } = useCommunity();
-  const [composeText,    setComposeText]    = useState('');
-  const [posting,        setPosting]        = useState(false);
-  const [showCreateComm, setShowCreateComm] = useState(false);
+  const {
+    posts, groups, events, loading,
+    handleReaction, handleJoinGroup, handleRsvp,
+    handlePost, handleCreateCommunity,
+  } = useCommunity();
+
+  const [composeText,       setComposeText]       = useState('');
+  const [posting,           setPosting]           = useState(false);
+  const [showCreateComm,    setShowCreateComm]     = useState(false);
+
+  // Comments
+  const [activeCommentPost, setActiveCommentPost] = useState(null);
+
+  // Activity attachment
+  const [attachedActivity,  setAttachedActivity]  = useState(null);
+  const [showActivityPicker,setShowActivityPicker] = useState(false);
+
+  // Photo attachment
+  const [attachedPhotoUrl,  setAttachedPhotoUrl]  = useState(null);
+  const [uploadingPhoto,    setUploadingPhoto]     = useState(false);
 
   const submitPost = async () => {
     if (!composeText.trim()) return;
     setPosting(true);
-    await handlePost(composeText);
+    await handlePost(composeText, attachedActivity?.id ?? null, attachedPhotoUrl);
     setComposeText('');
+    setAttachedActivity(null);
+    setAttachedPhotoUrl(null);
     setPosting(false);
+  };
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+      base64: true,
+    });
+    if (result.canceled) return;
+
+    setUploadingPhoto(true);
+    try {
+      const asset = result.assets[0];
+      const ext   = asset.uri.split('.').pop().toLowerCase().replace('jpeg', 'jpg');
+      const uid   = firebaseAuth.currentUser?.uid;
+      const path  = `posts/${uid}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from('post-media')
+        .upload(path, decode(asset.base64), { contentType: `image/${ext}`, upsert: false });
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage.from('post-media').getPublicUrl(path);
+      setAttachedPhotoUrl(publicUrl);
+    } catch (e) {
+      Alert.alert('Photo upload failed', e.message + '\n\nMake sure the "post-media" Storage bucket exists in Supabase.');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   return (
@@ -312,17 +587,52 @@ export default function CommunityScreen() {
               />
             </View>
             <View style={styles.composeFooter}>
-              {['Photo', 'Route', 'Activity', 'Goal'].map(a => (
-                <TouchableOpacity key={a} style={[styles.composeBtn, { backgroundColor: c.ELEVATED }]} activeOpacity={0.7}>
-                  <Text style={styles.composeBtnText}>{a}</Text>
-                </TouchableOpacity>
-              ))}
+              <TouchableOpacity
+                style={[styles.composeBtn, { backgroundColor: attachedPhotoUrl ? c.ORANGE + '25' : c.ELEVATED }]}
+                onPress={pickPhoto}
+                disabled={uploadingPhoto}
+                activeOpacity={0.7}
+              >
+                {uploadingPhoto
+                  ? <ActivityIndicator size="small" color={c.ORANGE} />
+                  : <Text style={[styles.composeBtnText, attachedPhotoUrl && { color: c.ORANGE }]}>Photo</Text>
+                }
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.composeBtn, { backgroundColor: attachedActivity ? c.ORANGE + '25' : c.ELEVATED }]}
+                onPress={() => setShowActivityPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.composeBtnText, attachedActivity && { color: c.ORANGE }]}>Activity</Text>
+              </TouchableOpacity>
               {composeText.trim().length > 0 && (
                 <TouchableOpacity style={styles.postBtn} onPress={submitPost} disabled={posting} activeOpacity={0.85}>
                   <Text style={styles.postBtnText}>{posting ? '…' : 'Post'}</Text>
                 </TouchableOpacity>
               )}
             </View>
+            {(attachedActivity || attachedPhotoUrl) && (
+              <View style={styles.attachmentsRow}>
+                {attachedActivity && (
+                  <View style={styles.attachChip}>
+                    <Text style={styles.attachChipText} numberOfLines={1}>
+                      {SPORT_ICONS[attachedActivity.sport] ?? '⚡'} {attachedActivity.title}
+                    </Text>
+                    <TouchableOpacity onPress={() => setAttachedActivity(null)} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+                      <Text style={styles.attachChipRemove}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {attachedPhotoUrl && (
+                  <View style={styles.attachChip}>
+                    <Text style={styles.attachChipText}>Photo attached</Text>
+                    <TouchableOpacity onPress={() => setAttachedPhotoUrl(null)} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
+                      <Text style={styles.attachChipRemove}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
 
           {posts.length === 0 ? (
@@ -332,7 +642,16 @@ export default function CommunityScreen() {
               <Text style={styles.emptyBody}>Log an activity or join a group to see posts from athletes near you.</Text>
             </View>
           ) : (
-            posts.map(p => <PostCard key={p.id} post={p} onReact={handleReaction} styles={styles} c={c} />)
+            posts.map(p => (
+              <PostCard
+                key={p.id}
+                post={p}
+                onReact={handleReaction}
+                onComments={() => setActiveCommentPost(p)}
+                styles={styles}
+                c={c}
+              />
+            ))
           )}
 
           <Text style={styles.sectionTitle}>SUGGESTED GROUPS</Text>
@@ -373,6 +692,22 @@ export default function CommunityScreen() {
         onClose={() => setShowCreateComm(false)}
         onSubmit={handleCreateCommunity}
         defaultContact={user?.email ?? ''}
+      />
+
+      <CommentsModal
+        post={activeCommentPost}
+        visible={activeCommentPost !== null}
+        onClose={() => setActiveCommentPost(null)}
+        currentUserId={user?.uid}
+        c={c}
+      />
+
+      <ActivityPickerModal
+        visible={showActivityPicker}
+        userId={user?.uid}
+        onSelect={setAttachedActivity}
+        onClose={() => setShowActivityPicker(false)}
+        c={c}
       />
     </SafeAreaView>
   );
@@ -453,6 +788,11 @@ function makeStyles(c) {
 
     enableBtn:     { backgroundColor: c.TEXT, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 8 },
     enableBtnText: { color: c.BG, fontWeight: '700', fontSize: 13 },
+
+    attachmentsRow:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+    attachChip:       { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.ORANGE + '20', borderWidth: 1, borderColor: c.ORANGE, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+    attachChipText:   { fontSize: 12, fontWeight: '600', color: c.ORANGE, maxWidth: 160 },
+    attachChipRemove: { fontSize: 11, color: c.ORANGE, fontWeight: '800' },
   });
 }
 

@@ -10,6 +10,7 @@ import LoginScreen          from '../screens/auth/LoginScreen';
 import DashboardScreen      from '../screens/dashboard/DashboardScreen';
 import ActivitiesScreen     from '../screens/activities/ActivitiesScreen';
 import ActivityDetailScreen from '../screens/activities/ActivityDetailScreen';
+import LogActivityScreen    from '../screens/activities/LogActivityScreen';
 import CommunityScreen      from '../screens/community/CommunityScreen';
 import MatchScreen          from '../screens/match/MatchScreen';
 import ProfileScreen        from '../screens/profile/ProfileScreen';
@@ -31,12 +32,12 @@ function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarStyle:            { backgroundColor: c.BG, borderTopColor: c.DIVIDER },
-        tabBarActiveTintColor:  c.ORANGE,
-        tabBarInactiveTintColor:c.TEXT_MUTED,
-        headerStyle:            { backgroundColor: c.BG },
-        headerTintColor:        c.TEXT,
-        headerShadowVisible:    false,
+        tabBarStyle:             { backgroundColor: c.BG, borderTopColor: c.DIVIDER },
+        tabBarActiveTintColor:   c.ORANGE,
+        tabBarInactiveTintColor: c.TEXT_MUTED,
+        headerStyle:             { backgroundColor: c.BG },
+        headerTintColor:         c.TEXT,
+        headerShadowVisible:     false,
       }}
     >
       <Tab.Screen name="Dashboard"  component={DashboardScreen} options={{ headerShown: false }} />
@@ -45,6 +46,25 @@ function MainTabs() {
       <Tab.Screen name="Match"      component={MatchScreen}     />
       <Tab.Screen name="Profile"    component={ProfileScreen}   />
     </Tab.Navigator>
+  );
+}
+
+// LogActivity is a modal at the MainApp level so both Dashboard and Activities can reach it.
+function MainApp() {
+  const { colors: c } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={MainTabs} />
+      <Stack.Screen
+        name="LogActivity"
+        component={LogActivityScreen}
+        options={{
+          headerShown:  false,
+          presentation: 'modal',
+          animation:    'slide_from_bottom',
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 
@@ -68,7 +88,7 @@ export default function RootNavigator() {
     <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
         {user
-          ? <Stack.Screen name="Main"  component={MainTabs}   />
+          ? <Stack.Screen name="Main"  component={MainApp}    />
           : <Stack.Screen name="Login" component={LoginScreen} />
         }
       </Stack.Navigator>

@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, ActivityIndicator,
+  SafeAreaView, ActivityIndicator, Image,
 } from 'react-native';
 import { useState, useMemo } from 'react';
 import { useMatch } from '../../hooks/useMatch';
@@ -45,13 +45,16 @@ function AthleteCard({ athlete, onPass, onLike, onStar, styles, c }) {
   return (
     <View style={styles.athleteCard}>
       <View style={[styles.cardHero, { backgroundColor: color + '22' }]}>
-        <View style={[styles.cardAvatar, { backgroundColor: color }]}>
-          <Text style={styles.cardAvatarText}>{initial}</Text>
-        </View>
+        {athlete.avatar_url
+          ? <Image source={{ uri: athlete.avatar_url }} style={styles.cardAvatarImg} />
+          : <View style={[styles.cardAvatar, { backgroundColor: color }]}>
+              <Text style={styles.cardAvatarText}>{initial}</Text>
+            </View>
+        }
       </View>
       <View style={styles.cardBody}>
         <Text style={styles.cardName}>{name}</Text>
-        {athlete.location_name ? <Text style={styles.cardLocation}>{athlete.location_name}</Text> : null}
+        {athlete.city ? <Text style={styles.cardLocation}>{athlete.city}</Text> : null}
         {sports.length > 0 && (
           <View style={styles.sportTags}>
             {sports.map(s => (
@@ -64,7 +67,7 @@ function AthleteCard({ athlete, onPass, onLike, onStar, styles, c }) {
         <View style={styles.cardDetails}>
           <View style={styles.cardDetail}>
             <Text style={styles.cardDetailLabel}>SKILL</Text>
-            <Text style={styles.cardDetailVal}>{athlete.skill_level || '—'}</Text>
+            <Text style={styles.cardDetailVal}>{athlete.skill || '—'}</Text>
           </View>
           <View style={styles.cardDetailDivider} />
           <View style={styles.cardDetail}>
@@ -243,6 +246,7 @@ function makeStyles(c) {
     athleteCard: { backgroundColor: c.CARD_BG, borderRadius: 20, marginHorizontal: 16, marginBottom: 12, overflow: 'hidden' },
     cardHero:       { height: 160, justifyContent: 'center', alignItems: 'center' },
     cardAvatar:     { width: 72, height: 72, borderRadius: 36, justifyContent: 'center', alignItems: 'center' },
+    cardAvatarImg:  { width: 72, height: 72, borderRadius: 36 },
     cardAvatarText: { color: '#fff', fontSize: 28, fontWeight: '900' },
     cardBody:       { padding: 16 },
     cardName:       { fontSize: 20, fontWeight: '900', color: c.TEXT },

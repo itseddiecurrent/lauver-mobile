@@ -1,250 +1,227 @@
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, SafeAreaView, Dimensions,
+  TouchableOpacity, SafeAreaView, Dimensions, ActivityIndicator,
 } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import { useUnits } from '../../hooks/useUnits';
+import { getActivityById } from '../../lib/activities';
 
 const { width } = Dimensions.get('window');
 
-const ORANGE  = '#E8602C';
-const DARK    = '#1C1A18';
-const BG      = '#F0EDE8';
-const CARD_BG = '#EAE6DF';
+// ─── Formatters ───────────────────────────────────────────────────────────────
 
-// Mock detail data keyed by id
-const DETAIL = {
-  '1': {
-    sport: 'Running', title: 'Morning Run — Riverside Trail',
-    date: 'Today, Apr 14 · 6:42 am', source: 'Garmin Forerunner 265',
-    stats: [
-      { val: '8.3',   lbl: 'DISTANCE (KM)' },
-      { val: '42:17', lbl: 'TIME' },
-      { val: '5:05',  lbl: 'AVG PACE (MIN/KM)' },
-      { val: '148',   lbl: 'AVG BPM' },
-      { val: '174',   lbl: 'MAX BPM' },
-      { val: '312',   lbl: 'CALORIES (KCAL)' },
-    ],
-    splits: [
-      { km: 1, pace: '5:12' }, { km: 2, pace: '5:08' }, { km: 3, pace: '5:01' },
-      { km: 4, pace: '4:58' }, { km: 5, pace: '5:03' }, { km: 6, pace: '4:55' },
-      { km: 7, pace: '5:09' }, { km: 8, pace: '5:00' },
-    ],
-  },
-  '2': {
-    sport: 'Cycling', title: 'Evening Ride — City Loop',
-    date: 'Yesterday · 5:30 pm', source: 'Garmin Edge 540',
-    stats: [
-      { val: '24.6',    lbl: 'DISTANCE (KM)' },
-      { val: '1:02:44', lbl: 'TIME' },
-      { val: '23.7',    lbl: 'AVG SPEED (KM/H)' },
-      { val: '139',     lbl: 'AVG BPM' },
-      { val: '168',     lbl: 'MAX BPM' },
-      { val: '480',     lbl: 'CALORIES (KCAL)' },
-    ],
-    splits: [],
-  },
-  '3': {
-    sport: 'Climbing', title: 'Bouldering Session — The Cave',
-    date: '2 days ago · 7:00 pm', source: 'Manual entry',
-    stats: [
-      { val: '14',     lbl: 'ROUTES COMPLETED' },
-      { val: '1:20:00',lbl: 'TIME' },
-      { val: 'V3–V5',  lbl: 'GRADE RANGE' },
-    ],
-    splits: [],
-  },
-  '4': {
-    sport: 'Swimming', title: 'Lap Swim — Municipal Pool',
-    date: '3 days ago · 7:15 am', source: 'Apple Health',
-    stats: [
-      { val: '2.4',    lbl: 'DISTANCE (KM)' },
-      { val: '48:22',  lbl: 'TIME' },
-      { val: '50m',    lbl: 'POOL LENGTH' },
-    ],
-    splits: [],
-  },
-  '5': {
-    sport: 'Hiking', title: 'Trail Hike — North Ridge',
-    date: '5 days ago · 8:00 am', source: 'Garmin Forerunner 265',
-    stats: [
-      { val: '12.1',   lbl: 'DISTANCE (KM)' },
-      { val: '3:15:00',lbl: 'TIME' },
-      { val: '640m',   lbl: 'ELEVATION GAIN' },
-    ],
-    splits: [],
-  },
-};
+function fmtDuration(seconds) {
+  if (!seconds) return '—';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function fmtPace(seconds, km) {
+  if (!seconds || !km || km === 0) return '—';
+  const secPerKm = seconds / km;
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function fmtSpeed(seconds, km) {
+  if (!seconds || !km || km === 0) return '—';
+  return (km / (seconds / 3600)).toFixed(1);
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const diffDay = Math.floor((Date.now() - d) / 86400000);
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  if (diffDay === 0) return `Today, ${dateStr} · ${time}`;
+  if (diffDay === 1) return `Yesterday, ${dateStr} · ${time}`;
+  return `${dateStr} · ${time}`;
+}
+
+function sourceLabel(canonical_source) {
+  const MAP = {
+    garmin: 'Garmin',
+    apple:  'Apple Health',
+    strava: 'Strava',
+    manual: 'Manual entry',
+  };
+  return MAP[canonical_source] ?? 'Manual entry';
+}
+
+function capitalise(str) {
+  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+}
+
+// ─── Build stats array from a DB activity row ─────────────────────────────────
+
+function buildStats(activity, fmtDist = v => `${v} km`, fmtElev = v => `${v} m`) {
+  const { sport, distance_km, duration_seconds, avg_heart_rate, calories, routes_count, elevation_gain_m } = activity;
+  const stats = [];
+
+  if (distance_km != null) {
+    stats.push({ val: fmtDist(distance_km), lbl: 'DISTANCE' });
+  }
+  if (routes_count != null) {
+    stats.push({ val: String(routes_count), lbl: 'ROUTES' });
+  }
+
+  stats.push({ val: fmtDuration(duration_seconds), lbl: 'TIME' });
+
+  if (sport === 'running' && distance_km > 0) {
+    stats.push({ val: fmtPace(duration_seconds, distance_km), lbl: 'AVG PACE (MIN/KM)' });
+  }
+  if ((sport === 'cycling' || sport === 'swimming') && distance_km > 0) {
+    stats.push({ val: fmtSpeed(duration_seconds, distance_km), lbl: 'AVG SPEED (KM/H)' });
+  }
+  if (avg_heart_rate != null) {
+    stats.push({ val: String(avg_heart_rate), lbl: 'AVG BPM' });
+  }
+  if (calories != null) {
+    stats.push({ val: String(calories), lbl: 'CALORIES (KCAL)' });
+  }
+  if (elevation_gain_m != null) {
+    stats.push({ val: fmtElev(elevation_gain_m), lbl: 'ELEVATION GAIN' });
+  }
+
+  return stats;
+}
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function ActivityDetailScreen({ route, navigation }) {
-  const { id, title } = route.params;
-  const d = DETAIL[id] ?? {
-    sport: 'Activity', title: title ?? 'Activity',
-    date: '', source: '', stats: [], splits: [],
-  };
+  const { id } = route.params;
+  const { colors: c } = useTheme();
+  const s = useMemo(() => makeStyles(c), [c]);
+  const { fmtDistance, fmtElevation } = useUnits();
+
+  const [activity, setActivity] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    getActivityById(id)
+      .then(data => { if (!cancelled) { setActivity(data); setLoading(false); } })
+      .catch(e   => { if (!cancelled) { setError(e.message); setLoading(false); } });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const stats = activity ? buildStats(activity, fmtDistance, fmtElevation) : [];
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={s.root}>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹ Back</Text>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <Text style={s.backText}>‹ Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerSport}>{d.sport.toUpperCase()}</Text>
+        <Text style={s.headerSport}>
+          {activity ? capitalise(activity.sport).toUpperCase() : ''}
+        </Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      {loading ? (
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={c.ORANGE} />
+        </View>
+      ) : error ? (
+        <View style={s.center}>
+          <Text style={s.errorText}>{error}</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.retryBtn}>
+            <Text style={s.retryText}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-        {/* Title card */}
-        <View style={styles.titleCard}>
-          <View style={styles.titleRow}>
-            <View style={styles.titleInfo}>
-              <Text style={styles.title}>{d.title}</Text>
-              <Text style={styles.date}>{d.date}</Text>
-              <View style={styles.sourceBadge}>
-                <Text style={styles.sourceText}>{d.source}</Text>
-              </View>
+          {/* Title card */}
+          <View style={s.titleCard}>
+            <Text style={s.title}>{activity.title}</Text>
+            <Text style={s.date}>{fmtDate(activity.started_at)}</Text>
+            <View style={s.sourceBadge}>
+              <Text style={s.sourceText}>{sourceLabel(activity.canonical_source)}</Text>
             </View>
+            {activity.notes ? (
+              <Text style={s.notes}>{activity.notes}</Text>
+            ) : null}
           </View>
-        </View>
 
-        {/* Map placeholder */}
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapLabel}>Route map</Text>
-          <Text style={styles.mapSub}>OpenStreetMap / Mapbox coming soon</Text>
-        </View>
+          {/* Map placeholder — GPS tracks not yet supported */}
+          <View style={s.mapPlaceholder}>
+            <Text style={s.mapLabel}>Route map</Text>
+            <Text style={s.mapSub}>GPS tracks not yet supported</Text>
+          </View>
 
-        {/* Stats grid */}
-        <Text style={styles.sectionTitle}>STATS</Text>
-        <View style={styles.statsGrid}>
-          {d.stats.map(s => (
-            <View key={s.lbl} style={styles.statCard}>
-              <Text style={styles.statVal}>{s.val}</Text>
-              <Text style={styles.statLbl}>{s.lbl}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Splits (running only) */}
-        {d.splits.length > 0 && (
-          <>
-            <Text style={styles.sectionTitle}>KM SPLITS</Text>
-            <View style={styles.splitsCard}>
-              {d.splits.map((s, i) => (
-                <View key={s.km} style={[styles.splitRow, i < d.splits.length - 1 && styles.splitBorder]}>
-                  <Text style={styles.splitKm}>KM {s.km}</Text>
-                  <View style={styles.splitBarWrap}>
-                    <View style={[styles.splitBar, { width: `${Math.min(100, (330 / parseInt(s.pace)) * 80)}%` }]} />
+          {/* Stats grid */}
+          {stats.length > 0 && (
+            <>
+              <Text style={s.sectionTitle}>STATS</Text>
+              <View style={s.statsGrid}>
+                {stats.map(st => (
+                  <View key={st.lbl} style={s.statCard}>
+                    <Text style={s.statVal}>{st.val}</Text>
+                    <Text style={s.statLbl}>{st.lbl}</Text>
                   </View>
-                  <Text style={styles.splitPace}>{s.pace}</Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
+                ))}
+              </View>
+            </>
+          )}
 
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  root:   { flex: 1, backgroundColor: BG },
-  scroll: { padding: 16, paddingBottom: 40 },
+// ─── Styles factory ───────────────────────────────────────────────────────────
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-  },
-  backBtn:     { width: 60 },
-  backText:    { fontSize: 16, color: ORANGE, fontWeight: '600' },
-  headerSport: { fontSize: 14, fontWeight: '900', color: DARK, letterSpacing: 1 },
+function makeStyles(c) {
+  return StyleSheet.create({
+    root:   { flex: 1, backgroundColor: c.BG },
+    scroll: { padding: 16, paddingBottom: 40 },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
 
-  // Title card
-  titleCard: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-  },
-  titleRow:  { flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
-  iconWrap:  {
-    width: 52, height: 52, backgroundColor: '#fff',
-    borderRadius: 14, justifyContent: 'center', alignItems: 'center',
-  },
-  icon:      { fontSize: 26 },
-  titleInfo: { flex: 1 },
-  title:     { fontSize: 15, fontWeight: '800', color: DARK, lineHeight: 20 },
-  date:      { fontSize: 12, color: '#888', marginTop: 4 },
-  sourceBadge: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: '#D9D0C7',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  sourceText: { fontSize: 11, color: '#555', fontWeight: '600' },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
+    },
+    backBtn:     { width: 60 },
+    backText:    { fontSize: 16, color: c.ORANGE, fontWeight: '600' },
+    headerSport: { fontSize: 14, fontWeight: '900', color: c.TEXT, letterSpacing: 1 },
 
-  // Map placeholder
-  mapPlaceholder: {
-    backgroundColor: '#E0D8CF',
-    borderRadius: 16,
-    height: 180,
-    marginBottom: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#CCC5BB',
-    borderStyle: 'dashed',
-  },
-  mapIcon:  { fontSize: 32, marginBottom: 8 },
-  mapLabel: { fontSize: 14, fontWeight: '700', color: DARK },
-  mapSub:   { fontSize: 12, color: '#888', marginTop: 4 },
+    errorText: { fontSize: 14, color: c.TEXT_MUTED, textAlign: 'center' },
+    retryBtn:  { backgroundColor: c.ORANGE, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 8 },
+    retryText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  // Section title
-  sectionTitle: {
-    fontSize: 13, fontWeight: '900', color: DARK,
-    letterSpacing: 1, marginBottom: 10,
-  },
+    titleCard:   { backgroundColor: c.CARD_BG, borderRadius: 16, padding: 16, marginBottom: 12 },
+    title:       { fontSize: 16, fontWeight: '800', color: c.TEXT, lineHeight: 22 },
+    date:        { fontSize: 12, color: c.TEXT_MUTED, marginTop: 4 },
+    sourceBadge: { marginTop: 8, alignSelf: 'flex-start', backgroundColor: c.ELEVATED, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+    sourceText:  { fontSize: 11, color: c.TEXT_SUB, fontWeight: '600' },
+    notes:       { fontSize: 13, color: c.TEXT_SUB, marginTop: 12, lineHeight: 18 },
 
-  // Stats grid (3-column)
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 24,
-  },
-  statCard: {
-    width: (width - 52) / 3,
-    backgroundColor: CARD_BG,
-    borderRadius: 14,
-    padding: 12,
-  },
-  statVal: { fontSize: 20, fontWeight: '900', color: DARK },
-  statLbl: { fontSize: 9,  fontWeight: '700', color: '#888', letterSpacing: 0.6, marginTop: 4 },
+    mapPlaceholder: {
+      backgroundColor: c.CARD_BG, borderRadius: 16, height: 160, marginBottom: 20,
+      justifyContent: 'center', alignItems: 'center',
+      borderWidth: 1.5, borderColor: c.DIVIDER, borderStyle: 'dashed',
+    },
+    mapLabel: { fontSize: 14, fontWeight: '700', color: c.TEXT },
+    mapSub:   { fontSize: 12, color: c.TEXT_MUTED, marginTop: 4 },
 
-  // Splits
-  splitsCard: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  splitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    gap: 10,
-  },
-  splitBorder: { borderBottomWidth: 1, borderBottomColor: '#D9D0C7' },
-  splitKm:     { width: 36, fontSize: 12, fontWeight: '700', color: '#888' },
-  splitBarWrap:{ flex: 1, height: 6, backgroundColor: '#D9D0C7', borderRadius: 3 },
-  splitBar:    { height: 6, backgroundColor: ORANGE, borderRadius: 3 },
-  splitPace:   { width: 42, fontSize: 13, fontWeight: '800', color: DARK, textAlign: 'right' },
-});
+    sectionTitle: { fontSize: 13, fontWeight: '900', color: c.DARK_ORANGE, letterSpacing: 1, marginBottom: 10 },
+
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+    statCard:  { width: (width - 52) / 3, backgroundColor: c.CARD_BG, borderRadius: 14, padding: 12 },
+    statVal:   { fontSize: 20, fontWeight: '900', color: c.TEXT },
+    statLbl:   { fontSize: 9, fontWeight: '700', color: c.TEXT_MUTED, letterSpacing: 0.6, marginTop: 4 },
+  });
+}

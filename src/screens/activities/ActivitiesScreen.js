@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useMemo } from 'react';
 import { useActivities } from '../../hooks/useActivities';
+import { useUnits }      from '../../hooks/useUnits';
 import { useTheme } from '../../context/ThemeContext';
 
 const FILTERS = ['All', 'Run', 'Ride', 'Climb', 'Swim'];
@@ -47,7 +48,7 @@ function StatCard({ label, value, sub, styles }) {
   );
 }
 
-function DistanceChart({ data, loading, styles, c }) {
+function DistanceChart({ data, loading, distUnit, styles, c }) {
   if (loading) {
     return (
       <View style={styles.chartEmpty}>
@@ -85,7 +86,7 @@ function DistanceChart({ data, loading, styles, c }) {
   );
 }
 
-function ActivityCard({ item, onPress, styles, c }) {
+function ActivityCard({ item, onPress, fmtDistance, styles, c }) {
   const sport = item.sport.charAt(0).toUpperCase() + item.sport.slice(1);
   const time  = new Date(item.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -103,7 +104,7 @@ function ActivityCard({ item, onPress, styles, c }) {
       <View style={styles.actStats}>
         {item.distance_km != null && (
           <View style={styles.actStat}>
-            <Text style={styles.actStatVal}>{item.distance_km} km</Text>
+            <Text style={styles.actStatVal}>{fmtDistance(item.distance_km)}</Text>
             <Text style={styles.actStatLbl}>distance</Text>
           </View>
         )}
@@ -139,12 +140,13 @@ export default function ActivitiesScreen({ navigation }) {
     activePeriod, setActivePeriod,
     activeFilter, setActiveFilter,
   } = useActivities();
+  const { distUnit, fmtDistance } = useUnits();
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ACTIVITIES</Text>
-        <TouchableOpacity style={styles.logBtn} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.logBtn} activeOpacity={0.85} onPress={() => navigation.navigate('LogActivity')}>
           <Text style={styles.logBtnText}>+ Log</Text>
         </TouchableOpacity>
       </View>
@@ -158,8 +160,8 @@ export default function ActivitiesScreen({ navigation }) {
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
             <StatCard styles={styles} label="TOTAL ACTIVITIES" value={String(allTimeStats.count)} sub="all time" />
-            <StatCard styles={styles} label="TOTAL DISTANCE"   value={allTimeStats.totalDistanceKm > 0 ? String(allTimeStats.totalDistanceKm) : '0'} sub="km all time" />
-            <StatCard styles={styles} label="LONGEST"          value={allTimeStats.longestKm != null ? `${allTimeStats.longestKm} km` : '—'} sub={allTimeStats.longestKm != null ? 'single activity' : 'no activities yet'} />
+            <StatCard styles={styles} label="TOTAL DISTANCE"   value={fmtDistance(allTimeStats.totalDistanceKm)} sub="all time" />
+            <StatCard styles={styles} label="LONGEST"          value={allTimeStats.longestKm != null ? fmtDistance(allTimeStats.longestKm) : '—'} sub={allTimeStats.longestKm != null ? 'single activity' : 'no activities yet'} />
             <StatCard styles={styles} label="BEST PACE"        value={fmtPace(allTimeStats.bestPaceSecPerKm)} sub={allTimeStats.bestPaceSecPerKm != null ? 'min / km' : 'no activities yet'} />
           </ScrollView>
 
@@ -179,8 +181,8 @@ export default function ActivitiesScreen({ navigation }) {
                 ))}
               </View>
             </View>
-            <DistanceChart data={chartData} loading={chartLoading} styles={styles} c={c} />
-            {chartData.some(b => b.km > 0) && <Text style={styles.chartUnit}>km per week</Text>}
+            <DistanceChart data={chartData} loading={chartLoading} distUnit={distUnit} styles={styles} c={c} />
+            {chartData.some(b => b.km > 0) && <Text style={styles.chartUnit}>{distUnit} per week</Text>}
           </View>
 
           <View style={styles.listHeader}>
@@ -203,7 +205,7 @@ export default function ActivitiesScreen({ navigation }) {
             <View style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No activities logged yet</Text>
               <Text style={styles.emptyBody}>Tap "+ Log" to record your first run, ride, climb, or any sport.</Text>
-              <TouchableOpacity style={styles.emptyBtn} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.emptyBtn} activeOpacity={0.85} onPress={() => navigation.navigate('LogActivity')}>
                 <Text style={styles.emptyBtnText}>+ Log your first activity</Text>
               </TouchableOpacity>
             </View>
@@ -215,6 +217,7 @@ export default function ActivitiesScreen({ navigation }) {
                   item={item}
                   styles={styles}
                   c={c}
+                  fmtDistance={fmtDistance}
                   onPress={() => navigation.navigate('ActivityDetail', { id: item.id, title: item.title })}
                 />
               ))}

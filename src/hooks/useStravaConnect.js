@@ -19,7 +19,7 @@ const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID;
 
 // Strava OAuth discovery (manual — Strava doesn't publish a discovery doc)
 const discovery = {
-  authorizationEndpoint: 'https://www.strava.com/oauth/mobile/authorize',
+  authorizationEndpoint: 'https://www.strava.com/oauth/authorize',
   tokenEndpoint:         'https://www.strava.com/oauth/token',
   revocationEndpoint:    'https://www.strava.com/oauth/deauthorize',
 };
@@ -50,8 +50,7 @@ export function useStravaConnect() {
       redirectUri,
       // Strava requires response_type=code (default) and these extras:
       extraParams: {
-        approval_prompt: 'auto',   // 'auto' skips re-approval if already authorized
-                                   // use 'force' to always show the approval screen
+        approval_prompt: 'force',
       },
     },
     discovery,
@@ -81,16 +80,17 @@ export function useStravaConnect() {
   // ── Handle redirect response from browser ─────────────────────────────────
 
   useEffect(() => {
+    console.log('Strava OAuth response:', JSON.stringify(response));
     if (!response || response.type !== 'success') return;
 
     const { code } = response.params;
-    if (!code || !userId) return;
+    console.log('Strava code:', code, 'userId:', userId);
+    if (!code || !userId) { console.warn('Missing code or userId, aborting'); return; }
 
     (async () => {
       setConnecting(true);
       setError(null);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
 
         // Call our edge function to exchange code for tokens
         const res = await fetch(
@@ -99,19 +99,21 @@ export function useStravaConnect() {
             method:  'POST',
             headers: {
               'Content-Type':  'application/json',
-              'Authorization': `Bearer ${session?.access_token ?? ''}`,
+              'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
             },
             body: JSON.stringify({ code, userId }),
           },
         );
 
         const result = await res.json();
+        console.log('Edge function response:', res.status, JSON.stringify(result));
         if (!res.ok) throw new Error(result.error ?? 'Connection failed');
 
         setConnected(true);
         setAthleteName(result.athlete?.name ?? null);
         setRequiresReauth(false);
       } catch (e) {
+        console.error('Strava connect error:', e.message);
         setError(e.message);
       } finally {
         setConnecting(false);

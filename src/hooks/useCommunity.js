@@ -5,7 +5,9 @@ import {
   getSuggestedGroups, joinGroup,
   getUpcomingEvents, toggleRsvp,
   createCommunity,
+  createComment, deleteComment,
 } from '../lib/community';
+import { supabase } from '../lib/supabase';
 
 export function useCommunity() {
   const { user } = useAuth();
@@ -19,9 +21,9 @@ export function useCommunity() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     const [postsData, groupsData, eventsData] = await Promise.all([
-      getFeed(user.id).catch(() => []),
-      getSuggestedGroups(user.id).catch(() => []),
-      getUpcomingEvents(user.id).catch(() => []),
+      getFeed(user.uid).catch(() => []),
+      getSuggestedGroups(user.uid).catch(() => []),
+      getUpcomingEvents(user.uid).catch(() => []),
     ]);
     setPosts(postsData);
     setGroups(groupsData);
@@ -31,7 +33,19 @@ export function useCommunity() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Optimistic reaction toggle
+  // ── Realtime: reload feed when any new post is inserted ──────────────────────
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('community-posts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, () => {
+        getFeed(user.uid).then(setPosts).catch(() => {});
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  // ── Reactions (optimistic) ────────────────────────────────────────────────────
   const handleReaction = useCallback(async (postId, emoji) => {
     if (!user) return;
     setPosts(prev => prev.map(p => {
@@ -43,17 +57,17 @@ export function useCommunity() {
         reactionCounts: { ...p.reactionCounts, [emoji]: Math.max(0, (p.reactionCounts[emoji] || 0) + (had ? -1 : 1)) },
       };
     }));
-    await toggleReaction(user.id, postId, emoji).catch(() => {});
+    await toggleReaction(user.uid, postId, emoji).catch(() => {});
   }, [user]);
 
-  // Optimistic group join (remove from suggestions immediately)
+  // ── Groups ────────────────────────────────────────────────────────────────────
   const handleJoinGroup = useCallback(async (groupId) => {
     if (!user) return;
     setGroups(prev => prev.filter(g => g.id !== groupId));
-    await joinGroup(user.id, groupId).catch(() => {});
+    await joinGroup(user.uid, groupId).catch(() => {});
   }, [user]);
 
-  // Optimistic RSVP toggle
+  // ── Events ────────────────────────────────────────────────────────────────────
   const handleRsvp = useCallback(async (eventId) => {
     if (!user) return;
     setEvents(prev => prev.map(e =>
@@ -63,25 +77,46 @@ export function useCommunity() {
         attendee_count: e.attendee_count + (e.hasRsvp ? -1 : 1),
       }
     ));
-    await toggleRsvp(user.id, eventId).catch(() => {});
+    await toggleRsvp(user.uid, eventId).catch(() => {});
   }, [user]);
 
-  // Submit a new post then reload feed
-  const handlePost = useCallback(async (body) => {
+  // ── Posts ─────────────────────────────────────────────────────────────────────
+  const handlePost = useCallback(async (body, activityId = null, photoUrl = null) => {
     if (!user || !body.trim()) return;
-    await createPost(user.id, body).catch(() => {});
-    const fresh = await getFeed(user.id).catch(() => []);
+    await createPost(user.uid, body, activityId, photoUrl).catch(() => {});
+    const fresh = await getFeed(user.uid).catch(() => []);
     setPosts(fresh);
   }, [user]);
 
+  // ── Comments (optimistic count update in posts list) ─────────────────────────
+  const handleAddComment = useCallback(async (postId, body) => {
+    if (!user || !body.trim()) return null;
+    const comment = await createComment(user.uid, postId, body);
+    setPosts(prev => prev.map(p =>
+      p.id !== postId ? p : { ...p, commentCount: p.commentCount + 1 }
+    ));
+    return comment;
+  }, [user]);
+
+  const handleDeleteComment = useCallback(async (postId, commentId) => {
+    if (!user) return;
+    await deleteComment(user.uid, commentId).catch(() => {});
+    setPosts(prev => prev.map(p =>
+      p.id !== postId ? p : { ...p, commentCount: Math.max(0, p.commentCount - 1) }
+    ));
+  }, [user]);
+
+  // ── Communities ───────────────────────────────────────────────────────────────
   const handleCreateCommunity = async (fields) => {
     if (!user) return;
-    await createCommunity({ ...fields, creator_id: user.id });
+    await createCommunity({ ...fields, creator_id: user.uid });
   };
 
   return {
     posts, groups, events, loading,
     refresh: load,
-    handleReaction, handleJoinGroup, handleRsvp, handlePost, handleCreateCommunity,
+    handleReaction, handleJoinGroup, handleRsvp,
+    handlePost, handleAddComment, handleDeleteComment,
+    handleCreateCommunity,
   };
 }
