@@ -5,12 +5,15 @@
 //   2. Receive redirect with ?code=
 //   3. POST code + userId to our edge function
 //   4. Edge function exchanges code for tokens and saves to DB
+//
+// Also exposes syncNow() to trigger a manual activity sync.
 
 import { useState, useEffect } from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
 import { supabase } from '../lib/supabase';
 import { firebaseAuth } from '../lib/firebase';
+import { syncEvents } from '../lib/syncEvents';
 
 // Required so Expo can close the browser after redirect on iOS
 WebBrowser.maybeCompleteAuthSession();
@@ -31,6 +34,9 @@ export function useStravaConnect() {
   const [connecting,     setConnecting]     = useState(false);
   const [requiresReauth, setRequiresReauth] = useState(false);
   const [error,          setError]          = useState(null);
+  const [isSyncing,      setIsSyncing]      = useState(false);
+  const [lastSyncAt,     setLastSyncAt]     = useState(null);
+  const [lastImported,   setLastImported]   = useState(null);
 
   const userId = firebaseAuth.currentUser?.uid;
 
@@ -63,7 +69,7 @@ export function useStravaConnect() {
     (async () => {
       const { data } = await supabase
         .from('platform_connections')
-        .select('meta, requires_reauth')
+        .select('meta, requires_reauth, last_sync_at')
         .eq('user_id', userId)
         .eq('platform', 'strava')
         .maybeSingle();
@@ -72,6 +78,7 @@ export function useStravaConnect() {
         setConnected(true);
         setAthleteName(data.meta?.athlete_name ?? null);
         setRequiresReauth(data.requires_reauth ?? false);
+        setLastSyncAt(data.last_sync_at ?? null);
       }
       setLoading(false);
     })();
@@ -91,7 +98,6 @@ export function useStravaConnect() {
       setConnecting(true);
       setError(null);
       try {
-
         // Call our edge function to exchange code for tokens
         const res = await fetch(
           `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/strava-auth`,
@@ -112,6 +118,8 @@ export function useStravaConnect() {
         setConnected(true);
         setAthleteName(result.athlete?.name ?? null);
         setRequiresReauth(false);
+        // Background sync was triggered by strava-auth; poll for last_sync_at after a delay
+        setTimeout(() => refreshSyncStatus(), 10000);
       } catch (e) {
         console.error('Strava connect error:', e.message);
         setError(e.message);
@@ -120,6 +128,50 @@ export function useStravaConnect() {
       }
     })();
   }, [response]);
+
+  // ── Refresh sync status from DB ───────────────────────────────────────────
+
+  async function refreshSyncStatus() {
+    if (!userId) return;
+    const { data } = await supabase
+      .from('platform_connections')
+      .select('last_sync_at')
+      .eq('user_id', userId)
+      .eq('platform', 'strava')
+      .maybeSingle();
+    if (data?.last_sync_at) setLastSyncAt(data.last_sync_at);
+  }
+
+  // ── Manual sync ───────────────────────────────────────────────────────────
+
+  async function syncNow() {
+    if (!userId || isSyncing) return;
+    setIsSyncing(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/strava-sync`,
+        {
+          method:  'POST',
+          headers: {
+            'Content-Type':  'application/json',
+            'Authorization': `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ userId }),
+        },
+      );
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error ?? 'Sync failed');
+      setLastImported(result.imported ?? 0);
+      setLastSyncAt(new Date().toISOString());
+      syncEvents.emit('activitiesChanged', { platform: 'strava', imported: result.imported ?? 0 });
+    } catch (e) {
+      console.error('Strava sync error:', e.message);
+      setError(e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   // ── Disconnect ─────────────────────────────────────────────────────────────
 
@@ -133,6 +185,8 @@ export function useStravaConnect() {
     setConnected(false);
     setAthleteName(null);
     setRequiresReauth(false);
+    setLastSyncAt(null);
+    setLastImported(null);
   }
 
   // ── Connect (opens browser) ────────────────────────────────────────────────
@@ -149,8 +203,12 @@ export function useStravaConnect() {
     loading,
     connecting,
     error,
+    isSyncing,
+    lastSyncAt,
+    lastImported,
     connect,
     disconnect,
+    syncNow,
     redirectUri,   // expose so you can show it in Settings for debugging
   };
 }

@@ -54,20 +54,16 @@ function getMonthBounds() {
  * Returns { count, totalDistanceKm, totalDurationSeconds }
  */
 export async function getWeekStats(userId) {
-  const { monday, sunday } = getWeekBounds();
   const { data, error } = await supabase
-    .from('activities')
-    .select('distance_km, duration_seconds')
-    .eq('user_id', userId)
-    .gte('started_at', monday.toISOString())
-    .lte('started_at', sunday.toISOString());
+    .rpc('get_week_stats_for_user', { uid: userId });
 
   if (error) throw error;
 
+  const row = data ?? {};
   return {
-    count: data.length,
-    totalDistanceKm:      parseFloat(data.reduce((s, a) => s + (a.distance_km      ?? 0), 0).toFixed(1)),
-    totalDurationSeconds: data.reduce((s, a) => s + (a.duration_seconds ?? 0), 0),
+    count:                row.count ?? 0,
+    totalDistanceKm:      parseFloat((row.totalDistanceKm ?? row.totaldistancekm ?? 0).toFixed(1)),
+    totalDurationSeconds: row.totalDurationSeconds ?? row.totaldurationseconds ?? 0,
   };
 }
 
@@ -76,27 +72,15 @@ export async function getWeekStats(userId) {
  * Each bucket: { day, mins, today }
  */
 export async function getWeeklyChart(userId) {
-  const { monday, sunday } = getWeekBounds();
   const { data, error } = await supabase
-    .from('activities')
-    .select('started_at, duration_seconds')
-    .eq('user_id', userId)
-    .gte('started_at', monday.toISOString())
-    .lte('started_at', sunday.toISOString());
+    .rpc('get_weekly_chart_for_user', { uid: userId });
 
   if (error) throw error;
-
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const todayIdx = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
-  const buckets  = days.map((day, i) => ({ day, mins: 0, today: i === todayIdx }));
-
-  for (const activity of data) {
-    const d   = new Date(activity.started_at).getDay();
-    const idx = d === 0 ? 6 : d - 1;
-    buckets[idx].mins += Math.round((activity.duration_seconds ?? 0) / 60);
-  }
-
-  return buckets;
+  return (data ?? []).map(b => ({
+    day:   b.day,
+    mins:  Math.round(b.mins ?? 0),
+    today: b.today ?? false,
+  }));
 }
 
 /**
@@ -104,14 +88,10 @@ export async function getWeeklyChart(userId) {
  */
 export async function getRecentActivities(userId, limit = 3) {
   const { data, error } = await supabase
-    .from('activities')
-    .select('id, title, sport, started_at, duration_seconds, distance_km, routes_count')
-    .eq('user_id', userId)
-    .order('started_at', { ascending: false })
-    .limit(limit);
+    .rpc('get_recent_activities_for_user', { uid: userId, lim: limit });
 
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
 /**
@@ -120,23 +100,17 @@ export async function getRecentActivities(userId, limit = 3) {
  */
 export async function getAllTimeStats(userId) {
   const { data, error } = await supabase
-    .from('activities')
-    .select('distance_km, duration_seconds, sport')
-    .eq('user_id', userId);
+    .rpc('get_all_time_stats_for_user', { uid: userId });
 
   if (error) throw error;
-  if (data.length === 0) return { count: 0, totalDistanceKm: 0, longestKm: null, bestPaceSecPerKm: null };
 
-  const count            = data.length;
-  const totalDistanceKm  = parseFloat(data.reduce((s, a) => s + (a.distance_km ?? 0), 0).toFixed(1));
-  const withDist         = data.filter(a => a.distance_km > 0);
-  const longestKm        = withDist.length > 0 ? Math.max(...withDist.map(a => a.distance_km)) : null;
-  const runPace          = data.filter(a => a.sport === 'running' && a.distance_km > 0 && a.duration_seconds > 0);
-  const bestPaceSecPerKm = runPace.length > 0
-    ? Math.min(...runPace.map(a => a.duration_seconds / a.distance_km))
-    : null;
-
-  return { count, totalDistanceKm, longestKm, bestPaceSecPerKm };
+  const row = data ?? {};
+  return {
+    count:             row.count ?? 0,
+    totalDistanceKm:   parseFloat((row.totalDistanceKm ?? row.totaldistancekm ?? 0).toFixed(1)),
+    longestKm:         row.longestKm ?? row.longestkm ?? null,
+    bestPaceSecPerKm:  row.bestPaceSecPerKm ?? row.bestpacesecperkm ?? null,
+  };
 }
 
 /**
@@ -154,11 +128,7 @@ export async function getDistanceChartData(userId, period) {
   else         startDate.setDate(now.getDate() - weeks * 7);
 
   const { data, error } = await supabase
-    .from('activities')
-    .select('started_at, distance_km')
-    .eq('user_id', userId)
-    .gte('started_at', startDate.toISOString())
-    .order('started_at');
+    .rpc('get_activities_for_chart', { uid: userId, start_date: startDate.toISOString() });
 
   if (error) throw error;
 
@@ -242,17 +212,11 @@ export async function insertActivity(userId, fields) {
  * All activities for a user, optionally filtered by sport.
  */
 export async function getActivitiesList(userId, sport = null) {
-  let query = supabase
-    .from('activities')
-    .select('id, title, sport, started_at, duration_seconds, distance_km, routes_count, calories, avg_heart_rate')
-    .eq('user_id', userId)
-    .order('started_at', { ascending: false });
+  const { data, error } = await supabase
+    .rpc('get_activities_list_for_user', { uid: userId, sport_filter: sport ?? null });
 
-  if (sport) query = query.eq('sport', sport);
-
-  const { data, error } = await query;
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
 /**
@@ -260,18 +224,14 @@ export async function getActivitiesList(userId, sport = null) {
  * Returns { count, totalDistanceKm }
  */
 export async function getMonthStats(userId) {
-  const { start, end } = getMonthBounds();
   const { data, error } = await supabase
-    .from('activities')
-    .select('distance_km')
-    .eq('user_id', userId)
-    .gte('started_at', start.toISOString())
-    .lte('started_at', end.toISOString());
+    .rpc('get_month_stats_for_user', { uid: userId });
 
   if (error) throw error;
 
+  const row = data ?? {};
   return {
-    count:           data.length,
-    totalDistanceKm: Math.round(data.reduce((s, a) => s + (a.distance_km ?? 0), 0)),
+    count:           row.count ?? 0,
+    totalDistanceKm: Math.round(row.totalDistanceKm ?? row.totaldistancekm ?? 0),
   };
 }

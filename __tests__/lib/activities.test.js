@@ -8,7 +8,7 @@ import {
   getMonthStats,
   insertActivity,
 } from '../../src/lib/activities';
-import { __setTableData, __resetAll, supabase } from '../../src/lib/supabase';
+import { __setTableData, __setRpcData, __resetAll, supabase } from '../../src/lib/supabase';
 
 jest.mock('../../src/lib/supabase');
 
@@ -19,35 +19,28 @@ beforeEach(() => __resetAll());
 // ─── getWeekStats ─────────────────────────────────────────────────────────────
 
 describe('getWeekStats', () => {
-  test('returns zero stats for empty dataset', async () => {
-    __setTableData('activities', []);
+  test('returns zero stats when RPC returns nulls', async () => {
+    __setRpcData('get_week_stats_for_user', { count: 0, totalDistanceKm: 0, totalDurationSeconds: 0 });
     const stats = await getWeekStats(UID);
     expect(stats).toEqual({ count: 0, totalDistanceKm: 0, totalDurationSeconds: 0 });
   });
 
-  test('sums distance and duration correctly', async () => {
-    __setTableData('activities', [
-      { distance_km: 5.0, duration_seconds: 1800 },
-      { distance_km: 3.5, duration_seconds: 1200 },
-    ]);
+  test('sums distance and duration from RPC response', async () => {
+    __setRpcData('get_week_stats_for_user', { count: 2, totalDistanceKm: 8.5, totalDurationSeconds: 3000 });
     const stats = await getWeekStats(UID);
     expect(stats.count).toBe(2);
     expect(stats.totalDistanceKm).toBe(8.5);
     expect(stats.totalDurationSeconds).toBe(3000);
   });
 
-  test('handles null distance_km gracefully', async () => {
-    __setTableData('activities', [
-      { distance_km: null, duration_seconds: 900 },
-      { distance_km: 2.0,  duration_seconds: 600 },
-    ]);
+  test('handles null distance gracefully (defaults to 0)', async () => {
+    __setRpcData('get_week_stats_for_user', { count: 1, totalDistanceKm: null, totalDurationSeconds: 900 });
     const stats = await getWeekStats(UID);
-    expect(stats.totalDistanceKm).toBe(2.0);
-    expect(stats.totalDurationSeconds).toBe(1500);
+    expect(stats.totalDistanceKm).toBe(0);
   });
 
   test('throws on supabase error', async () => {
-    __setTableData('activities', () => ({ data: null, error: { message: 'DB error' } }));
+    __setRpcData('get_week_stats_for_user', () => ({ data: null, error: { message: 'DB error' } }));
     await expect(getWeekStats(UID)).rejects.toMatchObject({ message: 'DB error' });
   });
 });
@@ -55,98 +48,91 @@ describe('getWeekStats', () => {
 // ─── getWeeklyChart ───────────────────────────────────────────────────────────
 
 describe('getWeeklyChart', () => {
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  function makeBuckets(overrides = {}) {
+    return DAYS.map((day, i) => ({ day, mins: overrides[day] ?? 0, today: i === 2 }));
+  }
+
   test('returns exactly 7 buckets', async () => {
-    __setTableData('activities', []);
+    __setRpcData('get_weekly_chart_for_user', makeBuckets());
     const chart = await getWeeklyChart(UID);
     expect(chart).toHaveLength(7);
   });
 
   test('bucket days are Mon–Sun', async () => {
-    __setTableData('activities', []);
+    __setRpcData('get_weekly_chart_for_user', makeBuckets());
     const days = (await getWeeklyChart(UID)).map(b => b.day);
-    expect(days).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+    expect(days).toEqual(DAYS);
   });
 
-  test('exactly one bucket is marked today', async () => {
-    __setTableData('activities', []);
+  test('passes through today flag from RPC', async () => {
+    __setRpcData('get_weekly_chart_for_user', makeBuckets());
     const todayCount = (await getWeeklyChart(UID)).filter(b => b.today).length;
     expect(todayCount).toBe(1);
   });
 
-  test('aggregates duration into correct day bucket', async () => {
-    const now = new Date();
-    const diffToMonday = now.getDay() === 0 ? -6 : 1 - now.getDay();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday);
-    monday.setHours(10, 0, 0, 0);
-
-    __setTableData('activities', [{ started_at: monday.toISOString(), duration_seconds: 3600 }]);
+  test('rounds fractional mins to integer', async () => {
+    __setRpcData('get_weekly_chart_for_user', [{ day: 'Mon', mins: 12.6, today: false }]);
     const chart = await getWeeklyChart(UID);
-    expect(chart[0].mins).toBe(60);
+    expect(chart[0].mins).toBe(13);
   });
 });
 
 // ─── getRecentActivities ──────────────────────────────────────────────────────
 
 describe('getRecentActivities', () => {
-  test('returns the data array from supabase', async () => {
+  test('returns the data array from RPC', async () => {
     const activities = [
-      { id: '1', title: 'Morning Run', sport: 'running', started_at: new Date().toISOString(), duration_seconds: 1800, distance_km: 5, routes_count: null },
+      { id: '1', title: 'Morning Run', sport: 'running', started_at: new Date().toISOString(), duration_seconds: 1800, distance_km: 5 },
     ];
-    __setTableData('activities', activities);
+    __setRpcData('get_recent_activities_for_user', activities);
     const result = await getRecentActivities(UID, 3);
     expect(result).toEqual(activities);
   });
 
-  test('calls limit with the provided value', async () => {
-    __setTableData('activities', []);
-    await getRecentActivities(UID, 7);
-    // The supabase.from mock returns a builder; verify from was called with 'activities'
-    expect(supabase.from).toHaveBeenCalledWith('activities');
+  test('calls rpc with correct function name', async () => {
+    __setRpcData('get_recent_activities_for_user', []);
+    await getRecentActivities(UID, 5);
+    expect(supabase.rpc).toHaveBeenCalledWith('get_recent_activities_for_user', { uid: UID, lim: 5 });
+  });
+
+  test('returns empty array when RPC returns null', async () => {
+    __setRpcData('get_recent_activities_for_user', null);
+    const result = await getRecentActivities(UID, 3);
+    expect(result).toEqual([]);
   });
 });
 
 // ─── getAllTimeStats ──────────────────────────────────────────────────────────
 
 describe('getAllTimeStats', () => {
-  test('returns zero stats for empty dataset', async () => {
-    __setTableData('activities', []);
+  test('returns zero stats when RPC returns empty', async () => {
+    __setRpcData('get_all_time_stats_for_user', { count: 0, totalDistanceKm: 0, longestKm: null, bestPaceSecPerKm: null });
     const stats = await getAllTimeStats(UID);
     expect(stats).toEqual({ count: 0, totalDistanceKm: 0, longestKm: null, bestPaceSecPerKm: null });
   });
 
-  test('calculates longestKm correctly', async () => {
-    __setTableData('activities', [
-      { distance_km: 10, duration_seconds: 3600, sport: 'running' },
-      { distance_km: 5,  duration_seconds: 1800, sport: 'running' },
-    ]);
+  test('passes through longestKm from RPC', async () => {
+    __setRpcData('get_all_time_stats_for_user', { count: 2, totalDistanceKm: 15, longestKm: 10, bestPaceSecPerKm: 360 });
     const stats = await getAllTimeStats(UID);
     expect(stats.longestKm).toBe(10);
   });
 
-  test('bestPaceSecPerKm is from running only', async () => {
-    __setTableData('activities', [
-      { distance_km: 10, duration_seconds: 3600, sport: 'running' },  // 360 s/km
-      { distance_km: 5,  duration_seconds: 1500, sport: 'running' },  // 300 s/km ← best
-      { distance_km: 20, duration_seconds: 3600, sport: 'cycling' },  // excluded
-    ]);
+  test('passes through bestPaceSecPerKm from RPC', async () => {
+    __setRpcData('get_all_time_stats_for_user', { count: 3, totalDistanceKm: 25, longestKm: 20, bestPaceSecPerKm: 300 });
     const stats = await getAllTimeStats(UID);
     expect(stats.bestPaceSecPerKm).toBeCloseTo(300, 0);
   });
 
-  test('totalDistanceKm includes all sports', async () => {
-    __setTableData('activities', [
-      { distance_km: 5,  duration_seconds: 1800, sport: 'running' },
-      { distance_km: 20, duration_seconds: 3600, sport: 'cycling' },
-    ]);
+  test('totalDistanceKm is rounded to 1 decimal', async () => {
+    __setRpcData('get_all_time_stats_for_user', { count: 2, totalDistanceKm: 25.123, longestKm: null, bestPaceSecPerKm: null });
     const stats = await getAllTimeStats(UID);
-    expect(stats.totalDistanceKm).toBe(25);
+    expect(stats.totalDistanceKm).toBe(25.1);
   });
 
-  test('bestPaceSecPerKm is null when no running data', async () => {
-    __setTableData('activities', [
-      { distance_km: 20, duration_seconds: 3600, sport: 'cycling' },
-    ]);
+  test('bestPaceSecPerKm is null when RPC returns null', async () => {
+    __setRpcData('get_all_time_stats_for_user', { count: 1, totalDistanceKm: 20, longestKm: 20, bestPaceSecPerKm: null });
     const stats = await getAllTimeStats(UID);
     expect(stats.bestPaceSecPerKm).toBeNull();
   });
@@ -156,29 +142,29 @@ describe('getAllTimeStats', () => {
 
 describe('getDistanceChartData', () => {
   test('Month period returns 4 weekly buckets', async () => {
-    __setTableData('activities', []);
+    __setRpcData('get_activities_for_chart', []);
     const chart = await getDistanceChartData(UID, 'Month');
     expect(chart).toHaveLength(4);
     chart.forEach(b => { expect(b).toHaveProperty('label'); expect(b).toHaveProperty('km'); });
   });
 
   test('3 Months period returns 12 weekly buckets', async () => {
-    __setTableData('activities', []);
+    __setRpcData('get_activities_for_chart', []);
     const chart = await getDistanceChartData(UID, '3 Months');
     expect(chart).toHaveLength(12);
   });
 
   test('Year period returns 12 monthly buckets', async () => {
-    __setTableData('activities', []);
+    __setRpcData('get_activities_for_chart', []);
     const chart = await getDistanceChartData(UID, 'Year');
     expect(chart).toHaveLength(12);
     const validMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     chart.forEach(b => expect(validMonths).toContain(b.label));
   });
 
-  test('aggregates distance into correct bucket', async () => {
+  test('aggregates distance from raw rows into current-week bucket', async () => {
     const now = new Date();
-    __setTableData('activities', [{ started_at: now.toISOString(), distance_km: 7.5 }]);
+    __setRpcData('get_activities_for_chart', [{ started_at: now.toISOString(), distance_km: 7.5 }]);
     const chart = await getDistanceChartData(UID, 'Month');
     const total = chart.reduce((s, b) => s + b.km, 0);
     expect(total).toBeCloseTo(7.5, 1);
@@ -188,36 +174,38 @@ describe('getDistanceChartData', () => {
 // ─── getActivitiesList ────────────────────────────────────────────────────────
 
 describe('getActivitiesList', () => {
-  test('returns full list when sport is null', async () => {
+  test('returns full list from RPC', async () => {
     const data = [{ id: '1', sport: 'running' }, { id: '2', sport: 'cycling' }];
-    __setTableData('activities', data);
+    __setRpcData('get_activities_list_for_user', data);
     const result = await getActivitiesList(UID, null);
     expect(result).toEqual(data);
   });
 
-  test('queries activities table', async () => {
-    __setTableData('activities', []);
+  test('calls rpc with sport_filter=null when sport is null', async () => {
+    __setRpcData('get_activities_list_for_user', []);
+    await getActivitiesList(UID, null);
+    expect(supabase.rpc).toHaveBeenCalledWith('get_activities_list_for_user', { uid: UID, sport_filter: null });
+  });
+
+  test('calls rpc with sport_filter when sport is provided', async () => {
+    __setRpcData('get_activities_list_for_user', []);
     await getActivitiesList(UID, 'running');
-    expect(supabase.from).toHaveBeenCalledWith('activities');
+    expect(supabase.rpc).toHaveBeenCalledWith('get_activities_list_for_user', { uid: UID, sport_filter: 'running' });
   });
 });
 
 // ─── getMonthStats ────────────────────────────────────────────────────────────
 
 describe('getMonthStats', () => {
-  test('returns count and totalDistanceKm', async () => {
-    __setTableData('activities', [
-      { distance_km: 5 },
-      { distance_km: 10 },
-      { distance_km: null },
-    ]);
+  test('returns count and totalDistanceKm from RPC', async () => {
+    __setRpcData('get_month_stats_for_user', { count: 3, totalDistanceKm: 15 });
     const stats = await getMonthStats(UID);
     expect(stats.count).toBe(3);
     expect(stats.totalDistanceKm).toBe(15);
   });
 
-  test('returns zeros for empty month', async () => {
-    __setTableData('activities', []);
+  test('returns zeros when RPC returns empty', async () => {
+    __setRpcData('get_month_stats_for_user', { count: 0, totalDistanceKm: 0 });
     const stats = await getMonthStats(UID);
     expect(stats).toEqual({ count: 0, totalDistanceKm: 0 });
   });

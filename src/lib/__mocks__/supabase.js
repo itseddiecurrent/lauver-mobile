@@ -38,9 +38,16 @@ function _makeBuilder(table) {
   return b;
 }
 
+const _rpcData = {};
+
 const supabase = {
   from:          jest.fn((table) => _makeBuilder(table)),
-  rpc:           jest.fn().mockResolvedValue({ data: null, error: null }),
+  rpc:           jest.fn((fn) => {
+    const entry = _rpcData[fn];
+    if (entry === undefined) return Promise.resolve({ data: null, error: null });
+    if (typeof entry === 'function') return Promise.resolve(entry());
+    return Promise.resolve({ data: entry, error: null });
+  }),
   removeChannel: jest.fn(),
   channel:       jest.fn().mockReturnValue({
     on:        jest.fn().mockReturnThis(),
@@ -64,8 +71,13 @@ function __setTableData(table, dataOrFn) {
   _tableData[table] = dataOrFn;
 }
 
+function __setRpcData(fnName, dataOrFn) {
+  _rpcData[fnName] = dataOrFn;
+}
+
 function __resetAll() {
   Object.keys(_tableData).forEach(k => delete _tableData[k]);
+  Object.keys(_rpcData).forEach(k => delete _rpcData[k]);
   supabase.from.mockClear();
   supabase.rpc.mockClear();
 }
@@ -74,4 +86,4 @@ function syncFirebaseToSupabase() {
   return Promise.resolve({ session: {} });
 }
 
-module.exports = { supabase, syncFirebaseToSupabase, __setTableData, __resetAll };
+module.exports = { supabase, syncFirebaseToSupabase, __setTableData, __setRpcData, __resetAll };

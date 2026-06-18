@@ -8,6 +8,7 @@ import {
 } from '../lib/activities';
 import { getMutualMatches } from '../lib/match';
 import { getFeed }          from '../lib/community';
+import { syncEvents }       from '../lib/syncEvents';
 
 const DEFAULT = {
   weekStats:        { count: 0, totalDistanceKm: 0, totalDurationSeconds: 0 },
@@ -55,6 +56,12 @@ export function useDashboard() {
   }, [user]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Re-fetch whenever any platform finishes syncing activities
+  useEffect(() => {
+    syncEvents.on('activitiesChanged', load);
+    return () => syncEvents.off('activitiesChanged', load);
+  }, [load]);
 
   return { ...data, loading, error, refresh: load };
 }

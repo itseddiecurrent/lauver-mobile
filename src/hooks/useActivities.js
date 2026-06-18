@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { getAllTimeStats, getDistanceChartData, getActivitiesList } from '../lib/activities';
+import { syncEvents } from '../lib/syncEvents';
 
 const SPORT_MAP = {
   'All':     null,
@@ -56,6 +57,11 @@ export function useActivities() {
   useEffect(() => { loadInitial(); }, [loadInitial]);
   useEffect(() => { loadChart();   }, [loadChart]);
   useEffect(() => { loadFiltered();}, [loadFiltered]);
+
+  useEffect(() => {
+    syncEvents.on('activitiesChanged', loadInitial);
+    return () => syncEvents.off('activitiesChanged', loadInitial);
+  }, [loadInitial]);
 
   return {
     allTimeStats, chartData, activities,

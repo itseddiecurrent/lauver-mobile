@@ -2,7 +2,8 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   SafeAreaView, ActivityIndicator,
 } from 'react-native';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useActivities } from '../../hooks/useActivities';
 import { useUnits }      from '../../hooks/useUnits';
 import { useTheme } from '../../context/ThemeContext';
@@ -139,8 +140,11 @@ export default function ActivitiesScreen({ navigation }) {
     loading, chartLoading,
     activePeriod, setActivePeriod,
     activeFilter, setActiveFilter,
+    refresh,
   } = useActivities();
   const { distUnit, fmtDistance } = useUnits();
+
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   return (
     <SafeAreaView style={styles.root}>

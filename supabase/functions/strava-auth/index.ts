@@ -90,6 +90,18 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Failed to save connection', detail: upsertError.message }, 500);
   }
 
+  // Trigger first activity sync in the background (don't block auth response)
+  EdgeRuntime.waitUntil(
+    fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/strava-sync`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+      },
+      body: JSON.stringify({ userId }),
+    }).catch(e => console.error('Initial sync error:', e)),
+  );
+
   return json({
     ok: true,
     athlete: {

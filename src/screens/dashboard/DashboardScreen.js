@@ -2,8 +2,8 @@ import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
   TouchableOpacity, SafeAreaView, Dimensions, Image,
 } from 'react-native';
-import { useMemo } from 'react';
-import { useNavigation } from '@react-navigation/native';
+import { useMemo, useCallback } from 'react';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useProfile }   from '../../hooks/useProfile';
 import { useUnits }     from '../../hooks/useUnits';
@@ -81,7 +81,7 @@ function WeeklyChart({ bars, styles, c }) {
   );
 }
 
-function ActivityRow({ activity, styles, c }) {
+function ActivityRow({ activity, styles, c, fmtDistance }) {
   const sport = activity.sport.charAt(0).toUpperCase() + activity.sport.slice(1);
   const when  = `${relativeDate(activity.started_at)} · ${sport}`;
 
@@ -122,6 +122,9 @@ export default function DashboardScreen() {
   const { weekStats, weeklyChart, recentActivities, monthStats, matchCount, latestPost, loading, error, refresh } = useDashboard();
   const { progress } = useProfile();
   const { distUnit, fmtDistance } = useUnits();
+
+  // Refresh data whenever this tab comes into focus (e.g. after Strava sync)
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   const chartBars = weeklyChart.length > 0
     ? weeklyChart
@@ -182,7 +185,7 @@ export default function DashboardScreen() {
             </View>
           ) : (
             <View style={styles.activitiesList}>
-              {recentActivities.map(a => <ActivityRow key={a.id} activity={a} styles={styles} c={c} />)}
+              {recentActivities.map(a => <ActivityRow key={a.id} activity={a} styles={styles} c={c} fmtDistance={fmtDistance} />)}
             </View>
           )}
 
