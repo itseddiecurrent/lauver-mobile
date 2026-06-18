@@ -12,6 +12,7 @@ import { signOut } from 'firebase/auth';
 import { firebaseAuth } from '../../lib/firebase';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../context/ThemeContext';
+import { useUnitsContext } from '../../context/UnitsContext';
 import { useStravaConnect } from '../../hooks/useStravaConnect';
 import { useAppleHealthConnect } from '../../hooks/useAppleHealthConnect';
 
@@ -208,9 +209,11 @@ export default function ProfileScreen() {
   const [garminConnected, setGarminConnected] = useState(false);
   const strava = useStravaConnect();
 
-  const [unitDistance,  setUnitDistance]  = useState('km');
-  const [unitElevation, setUnitElevation] = useState('m');
-  const [unitWeight,    setUnitWeight]    = useState('kg');
+  const {
+    distUnit:   unitDistance,  setDistUnit:   setUnitDistance,
+    elevUnit:   unitElevation, setElevUnit:   setUnitElevation,
+    weightUnit: unitWeight,    setWeightUnit: setUnitWeight,
+  } = useUnitsContext();
 
   const uid = firebaseAuth.currentUser?.uid;
 
@@ -335,6 +338,17 @@ export default function ProfileScreen() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveUnits() {
+    if (!uid) return;
+    await supabase.from('profiles').upsert({
+      id: uid,
+      unit_distance:  unitDistance,
+      unit_elevation: unitElevation,
+      unit_weight:    unitWeight,
+    });
+    Alert.alert('Saved', 'Unit preferences updated.');
   }
 
   const toggleItem = (list, setList, item) =>
@@ -707,7 +721,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity
               style={styles.unitSaveBtn}
-              onPress={handleSave}
+              onPress={saveUnits}
               activeOpacity={0.85}
             >
               <Text style={styles.unitSaveBtnText}>Save Units</Text>

@@ -7,7 +7,7 @@ jest.mock('../../src/lib/firebase', () => ({ firebaseAuth: {} }));
 jest.mock('../../src/hooks/useAuth', () => ({ useAuth: () => ({ user: null, loading: false }) }));
 jest.mock('../../src/lib/supabase');
 
-import { makeDistFmt, makeElevFmt } from '../../src/hooks/useUnits';
+import { makeDistFmt, makeElevFmt, makeWeightFmt } from '../../src/hooks/useUnits';
 
 // ─── makeDistFmt ──────────────────────────────────────────────────────────────
 
@@ -104,17 +104,61 @@ describe('makeElevFmt("ft")', () => {
   });
 });
 
-// ─── Default formatter fallback (used in buildStats with no useUnits) ─────────
+// ─── makeWeightFmt ────────────────────────────────────────────────────────────
 
-describe('default km formatter matches makeDistFmt("km")', () => {
-  const kmFmt  = makeDistFmt('km');
-  const mFmt   = makeElevFmt('m');
+describe('makeWeightFmt("kg")', () => {
+  const fmt = makeWeightFmt('kg');
 
-  test('km default produces same output as makeDistFmt km', () => {
-    expect(kmFmt(5.5)).toBe('5.5 km');
+  test('formats kg', () => {
+    expect(fmt(70)).toBe('70 kg');
   });
 
-  test('m default produces same output as makeElevFmt m', () => {
-    expect(mFmt(250)).toBe('250 m');
+  test('formats decimal kg', () => {
+    expect(fmt(70.5)).toBe('70.5 kg');
+  });
+
+  test('returns — for null', () => {
+    expect(fmt(null)).toBe('—');
+  });
+
+  test('returns — for undefined', () => {
+    expect(fmt(undefined)).toBe('—');
+  });
+});
+
+describe('makeWeightFmt("lb")', () => {
+  const fmt = makeWeightFmt('lb');
+
+  test('converts 70 kg ≈ 154.3 lb', () => {
+    expect(fmt(70)).toBe('154.3 lb');
+  });
+
+  test('converts 100 kg ≈ 220.5 lb', () => {
+    expect(fmt(100)).toBe('220.5 lb');
+  });
+
+  test('returns — for null', () => {
+    expect(fmt(null)).toBe('—');
+  });
+
+  test('lb value is always toFixed(1)', () => {
+    const result = fmt(80);
+    expect(result).toMatch(/^\d+\.\d lb$/);
+  });
+});
+
+// ─── Default formatter fallback ───────────────────────────────────────────────
+
+describe('default formatters', () => {
+  test('makeDistFmt km produces correct output', () => {
+    expect(makeDistFmt('km')(5.5)).toBe('5.5 km');
+  });
+
+  test('makeElevFmt m produces correct output', () => {
+    expect(makeElevFmt('m')(250)).toBe('250 m');
+  });
+
+  test('makeWeightFmt kg produces correct output', () => {
+    expect(makeWeightFmt('kg')(65)).toBe('65 kg');
   });
 });

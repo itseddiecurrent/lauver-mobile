@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { UnitsProvider } from './src/context/UnitsContext';
 import RootNavigator from './src/navigation';
 
 function AppContent() {
@@ -15,7 +16,9 @@ function AppContent() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <UnitsProvider>
+        <AppContent />
+      </UnitsProvider>
     </ThemeProvider>
   );
 }
