@@ -35,6 +35,7 @@ describe('Required tables exist', () => {
     'activities', 'activity_sources', 'communities',
     'event_rsvps', 'events',
     'group_members', 'groups',
+    'matches', 'messages',
     'platform_connections',
     'post_comments', 'post_reactions', 'posts',
     'profiles', 'swipes',
@@ -61,6 +62,7 @@ describe('RLS enabled on tables with user data', () => {
   const RLS_TABLES = [
     'activities', 'activity_sources', 'communities',
     'event_rsvps', 'group_members',
+    'matches', 'messages',
     'post_comments', 'post_reactions', 'posts',
     'profiles', 'swipes',
   ];
@@ -90,7 +92,7 @@ describe('Critical column spot-checks', () => {
     // activities
     ['activities', 'canonical_source'],
     ['activities', 'elevation_gain_m'],
-    // profiles — real column names (not skill_level / location_name)
+    // profiles — base columns
     ['profiles', 'skill'],
     ['profiles', 'city'],
     ['profiles', 'availability'],
@@ -99,12 +101,34 @@ describe('Critical column spot-checks', () => {
     ['profiles', 'unit_distance'],
     ['profiles', 'unit_elevation'],
     ['profiles', 'unit_weight'],
+    // profiles — match columns (Step 1)
+    ['profiles', 'visible_in_match'],
+    ['profiles', 'gender'],
+    ['profiles', 'pref_gender'],
+    ['profiles', 'pref_distance_km'],
+    ['profiles', 'pref_sports'],
+    ['profiles', 'latitude'],
+    ['profiles', 'longitude'],
+    ['profiles', 'location_updated_at'],
     // posts
     ['posts', 'photo_url'],
     ['posts', 'activity_id'],
-    // swipes
-    ['swipes', 'action'],
-    ['swipes', 'target_id'],
+    // swipes — renamed columns (Step 1)
+    ['swipes', 'swiper_id'],
+    ['swipes', 'swiped_id'],
+    ['swipes', 'direction'],
+    // matches (Step 1)
+    ['matches', 'user1_id'],
+    ['matches', 'user2_id'],
+    ['matches', 'matched_at'],
+    ['matches', 'unmatched_by'],
+    ['matches', 'unmatched_at'],
+    // messages (Step 1)
+    ['messages', 'match_id'],
+    ['messages', 'sender_id'],
+    ['messages', 'body'],
+    ['messages', 'sent_at'],
+    ['messages', 'read_at'],
     // activity_sources
     ['activity_sources', 'platform'],
     ['activity_sources', 'external_id'],
