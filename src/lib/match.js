@@ -1,125 +1,139 @@
 /**
  * Supabase query functions for the Match feature.
+ * All read queries go through SECURITY DEFINER RPC functions (Firebase OIDC bypass).
+ * Write operations (updateMatchPrefs, updateLocation) upsert directly — safe since
+ * they only touch the caller's own row and don't depend on auth.uid().
  *
- * Profiles columns used (all exist in DB):
- *   skill        text    -- 'Beginner' | 'Intermediate' | 'Advanced'
- *   availability text[]  -- ['Weekends', 'Mornings', ...]
- *   city         text    -- location display name
- *   photos       text[]  -- uploaded photo URLs
- *   sports       text[]
- *   avatar_url   text
- *
- * Required swipes table (created via migration 20260616_initial_schema.sql):
- *   user_id/target_id are TEXT to match profiles.id (Firebase UID)
- *   RLS: (auth.uid())::text = user_id
+ * DB schema: see supabase/migrations/20260619_match_schema.sql
+ * RPC funcs:  see supabase/migrations/20260619_match_rpc.sql
  */
 
 import { supabase } from './supabase';
 
-// ─── Readiness check ──────────────────────────────────────────────────────────
+// ─── Candidates ───────────────────────────────────────────────────────────────
 
 /**
- * Returns an array of { key, label, done } requirement objects.
- * All must be done=true before matching is unlocked.
+ * Returns up to 50 visible profiles matching the given filters, sorted by
+ * distance then sports overlap. Excludes anyone already swiped.
+ *
+ * @param {string} userId - Firebase UID
+ * @param {{ gender?: string, maxKm?: number, sports?: string[] }} filters
+ *   gender  — 'male' | 'female' | 'other' | 'all'  (default 'all')
+ *   maxKm   — max distance in km; 0 = no limit      (default 0)
+ *   sports  — array of sport strings; [] = no filter (default [])
  */
-export async function getMatchReadiness(user) {
-  const checks = [
-    { key: 'account', label: 'Account created', done: true },
-  ];
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('photos, avatar_url, sports, skill, city, availability')
-    .eq('id', user.uid)
-    .maybeSingle();
-
-  checks.push(
-    {
-      key:   'photo',
-      label: 'Profile photo uploaded',
-      done:  (Array.isArray(profile?.photos) && profile.photos.length > 0) || !!profile?.avatar_url,
-    },
-    {
-      key:   'sports',
-      label: 'Sports & skill level set',
-      done:  Array.isArray(profile?.sports) && profile.sports.length > 0 && !!profile?.skill,
-    },
-    {
-      key:   'location',
-      label: 'Location & availability set',
-      done:  !!profile?.city && Array.isArray(profile?.availability) && profile.availability.length > 0,
-    },
-  );
-
-  return checks;
-}
-
-// ─── Match candidates ─────────────────────────────────────────────────────────
-
-/**
- * Fetch candidate profiles for the current user.
- * Excludes the user themselves and anyone already swiped.
- * Optionally filters by sports array overlap and skill_level.
- */
-export async function getMatchCandidates(userId, { sports = [], skills = [] } = {}) {
-  // IDs to exclude (self + already swiped)
-  const { data: swiped } = await supabase
-    .from('swipes')
-    .select('target_id')
-    .eq('user_id', userId);
-
-  const excludeIds = [userId, ...(swiped || []).map(s => s.target_id)];
-
-  let query = supabase
-    .from('profiles')
-    .select('id, display_name, avatar_url, photos, sports, skill, availability, city')
-    .not('id', 'in', `(${excludeIds.join(',')})`)
-    .limit(20);
-
-  if (sports.length > 0) query = query.overlaps('sports', sports);
-  if (skills.length > 0) query = query.in('skill', skills);
-
-  const { data, error } = await query;
+export async function getMatchCandidates(userId, { gender = 'all', maxKm = 0, sports = [] } = {}) {
+  const { data, error } = await supabase.rpc('get_match_candidates', {
+    uid:      userId,
+    p_gender: gender,
+    p_max_km: maxKm,
+    p_sports: sports.length > 0 ? sports : [],
+  });
   if (error) throw error;
-  return data || [];
+  return data ?? [];
 }
 
 // ─── Swipe ────────────────────────────────────────────────────────────────────
 
 /**
- * Record a swipe action. action: 'pass' | 'like' | 'star'
+ * Records a swipe and checks for a mutual match.
+ * Enforces 15 right-swipes per UTC day.
+ *
+ * @param {string} userId
+ * @param {string} targetId
+ * @param {'left'|'right'} direction
+ * @returns {{ matched: boolean, matchId: string|null, error: string|null }}
+ *   error = 'daily_limit' when the 15/day cap is hit
  */
-export async function recordSwipe(userId, targetId, action) {
-  const { error } = await supabase
-    .from('swipes')
-    .upsert({ user_id: userId, target_id: targetId, action }, { onConflict: 'user_id,target_id' });
+export async function recordSwipe(userId, targetId, direction) {
+  const { data, error } = await supabase.rpc('record_swipe', {
+    uid:       userId,
+    target_id: targetId,
+    dir:       direction,
+  });
+  if (error) throw error;
+  return {
+    matched: data?.matched ?? false,
+    matchId: data?.match_id ?? null,
+    error:   data?.error   ?? null,
+  };
+}
+
+// ─── Daily like count ─────────────────────────────────────────────────────────
+
+/**
+ * Returns how many right-swipes the user has made today (UTC).
+ * Used on hook mount to initialise likesRemaining.
+ */
+export async function getTodayLikesCount(userId) {
+  const { data, error } = await supabase.rpc('get_today_likes_count', { uid: userId });
+  if (error) throw error;
+  return data ?? 0;
+}
+
+// ─── Matches list ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns all active matches for the user, with the other person's info,
+ * last message preview, and unread count. Sorted by last message date.
+ */
+export async function getMyMatches(userId) {
+  const { data, error } = await supabase.rpc('get_my_matches', { uid: userId });
+  if (error) throw error;
+  return data ?? [];
+}
+
+// ─── Unmatch ──────────────────────────────────────────────────────────────────
+
+/**
+ * Soft-deletes the match. Both users lose access; messages remain in DB.
+ */
+export async function unmatch(userId, matchId) {
+  const { error } = await supabase.rpc('do_unmatch', {
+    uid:        userId,
+    p_match_id: matchId,
+  });
   if (error) throw error;
 }
 
-// ─── Mutual matches ───────────────────────────────────────────────────────────
+// ─── Match preferences ────────────────────────────────────────────────────────
 
 /**
- * Returns profiles that the user liked/starred AND who liked/starred back.
+ * Updates the user's match preferences and/or visibility.
+ * All fields are optional — only provided keys are written.
+ *
+ * @param {string} userId
+ * @param {{
+ *   visibleInMatch?: boolean,
+ *   gender?:         string,
+ *   prefGender?:     string,
+ *   prefDistanceKm?: number,
+ *   prefSports?:     string[],
+ * }} prefs
  */
-export async function getMutualMatches(userId) {
-  // Everyone the current user liked or starred
-  const { data: outgoing } = await supabase
-    .from('swipes')
-    .select('target_id')
-    .eq('user_id', userId)
-    .in('action', ['like', 'star']);
+export async function updateMatchPrefs(userId, prefs) {
+  const patch = { id: userId };
+  if (prefs.visibleInMatch !== undefined) patch.visible_in_match  = prefs.visibleInMatch;
+  if (prefs.gender         !== undefined) patch.gender            = prefs.gender;
+  if (prefs.prefGender     !== undefined) patch.pref_gender       = prefs.prefGender;
+  if (prefs.prefDistanceKm !== undefined) patch.pref_distance_km  = prefs.prefDistanceKm;
+  if (prefs.prefSports     !== undefined) patch.pref_sports       = prefs.prefSports;
 
-  const likedIds = (outgoing || []).map(s => s.target_id);
-  if (likedIds.length === 0) return [];
-
-  // Of those, who also liked/starred the current user back
-  const { data: mutual, error } = await supabase
-    .from('swipes')
-    .select('user_id, profiles!user_id ( id, display_name, avatar_url )')
-    .eq('target_id', userId)
-    .in('user_id', likedIds)
-    .in('action', ['like', 'star']);
-
+  const { error } = await supabase.from('profiles').upsert(patch);
   if (error) throw error;
-  return (mutual || []).map(m => m.profiles).filter(Boolean);
+}
+
+// ─── Location ─────────────────────────────────────────────────────────────────
+
+/**
+ * Writes the user's current lat/lng to their profile.
+ * Called after expo-location permission is granted.
+ */
+export async function updateLocation(userId, { latitude, longitude }) {
+  const { error } = await supabase.rpc('update_location', {
+    uid: userId,
+    lat: latitude,
+    lng: longitude,
+  });
+  if (error) throw error;
 }

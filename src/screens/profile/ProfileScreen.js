@@ -15,6 +15,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useUnitsContext } from '../../context/UnitsContext';
 import { useStravaConnect } from '../../hooks/useStravaConnect';
 import { useAppleHealthConnect } from '../../hooks/useAppleHealthConnect';
+import { updateMatchPrefs } from '../../lib/match';
 
 /*
   Supabase — add columns if not present:
@@ -209,6 +210,10 @@ export default function ProfileScreen() {
   const [garminConnected, setGarminConnected] = useState(false);
   const strava = useStravaConnect();
 
+  // ── Match preferences ──────────────────────────────────────────────────────
+  const [visibleInMatch, setVisibleInMatch] = useState(false);
+  const [myGender,       setMyGender]       = useState('');
+
   const {
     distUnit:   unitDistance,  setDistUnit:   setUnitDistance,
     elevUnit:   unitElevation, setElevUnit:   setUnitElevation,
@@ -238,6 +243,8 @@ export default function ProfileScreen() {
         setUnitDistance (data.unit_distance  ?? 'km');
         setUnitElevation(data.unit_elevation ?? 'm');
         setUnitWeight   (data.unit_weight    ?? 'kg');
+        setVisibleInMatch(data.visible_in_match ?? false);
+        setMyGender      (data.gender           ?? '');
         if (data.date_of_birth) {
           setDob(new Date(data.date_of_birth));
           setDobLocked(true);
@@ -349,6 +356,18 @@ export default function ProfileScreen() {
       unit_weight:    unitWeight,
     });
     Alert.alert('Saved', 'Unit preferences updated.');
+  }
+
+  async function setMatchPref(key, val) {
+    if (!uid) return;
+    if (key === 'visibleInMatch') setVisibleInMatch(val);
+    if (key === 'gender')         setMyGender(val);
+    try {
+      await updateMatchPrefs(uid, { [key]: val });
+    } catch {
+      // revert optimistic on error
+      if (key === 'visibleInMatch') setVisibleInMatch(v => !v);
+    }
   }
 
   const toggleItem = (list, setList, item) =>
@@ -726,6 +745,43 @@ export default function ProfileScreen() {
             >
               <Text style={styles.unitSaveBtnText}>Save Units</Text>
             </TouchableOpacity>
+
+            <View style={styles.settingsDivider} />
+
+            {/* ── Matching ── */}
+            <Text style={styles.settingsSection}>MATCHING</Text>
+            <Text style={styles.settingsSectionSub}>Control your visibility and who can discover you.</Text>
+
+            <View style={styles.appearanceRow}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.appearanceLabel}>Appear in Match</Text>
+                <Text style={styles.appearanceSub}>
+                  {visibleInMatch ? 'You are visible to other athletes' : 'You are hidden from matching'}
+                </Text>
+              </View>
+              <Switch
+                value={visibleInMatch}
+                onValueChange={val => setMatchPref('visibleInMatch', val)}
+                trackColor={{ false: '#D9D0C7', true: c.ORANGE }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            <Text style={[styles.fieldLabel, { marginTop: 16, marginBottom: 8 }]}>My Gender</Text>
+            <View style={styles.chipGroup}>
+              {['Male', 'Female', 'Other', 'Prefer not to say'].map(opt => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.chip, myGender === opt.toLowerCase() && styles.chipActive]}
+                  onPress={() => setMatchPref('gender', opt.toLowerCase())}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.chipText, myGender === opt.toLowerCase() && styles.chipTextActive]}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <View style={styles.settingsDivider} />
 

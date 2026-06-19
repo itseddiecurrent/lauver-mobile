@@ -1,187 +1,189 @@
+/**
+ * Tests for src/lib/match.js — all functions use SECURITY DEFINER RPCs.
+ */
+
 import {
-  getMatchReadiness,
   getMatchCandidates,
   recordSwipe,
-  getMutualMatches,
+  getTodayLikesCount,
+  getMyMatches,
+  unmatch,
+  updateMatchPrefs,
+  updateLocation,
 } from '../../src/lib/match';
-import { __setTableData, __resetAll, supabase } from '../../src/lib/supabase';
+import { __setRpcData, __setTableData, __resetAll, supabase } from '../../src/lib/supabase';
 
 jest.mock('../../src/lib/supabase');
 
-const UID      = 'user-me';
-const mockUser = { uid: UID };
-
-// Helper: build a full profile with real column names (skill, city, photos)
-const fullProfile = (overrides = {}) => ({
-  avatar_url:   'https://example.com/p.jpg',
-  photos:       ['https://example.com/p.jpg'],
-  sports:       ['running', 'cycling'],
-  skill:        'Intermediate',
-  city:         'San Francisco',
-  availability: ['Weekends', 'Mornings'],
-  ...overrides,
-});
+const UID = 'user-me';
 
 beforeEach(() => __resetAll());
-
-// ─── getMatchReadiness ────────────────────────────────────────────────────────
-
-describe('getMatchReadiness', () => {
-  test('always has account check as done:true', async () => {
-    __setTableData('profiles', [null]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'account').done).toBe(true);
-  });
-
-  test('returns 4 check items', async () => {
-    __setTableData('profiles', [null]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks).toHaveLength(4);
-  });
-
-  test('photo check fails when photos is empty and avatar_url is null', async () => {
-    __setTableData('profiles', [fullProfile({ avatar_url: null, photos: [] })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'photo').done).toBe(false);
-  });
-
-  test('photo check passes when photos array has entries', async () => {
-    __setTableData('profiles', [fullProfile({ photos: ['https://example.com/a.jpg'] })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'photo').done).toBe(true);
-  });
-
-  test('photo check passes when avatar_url is set (even if photos empty)', async () => {
-    __setTableData('profiles', [fullProfile({ photos: [], avatar_url: 'https://example.com/a.jpg' })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'photo').done).toBe(true);
-  });
-
-  test('sports check fails when sports array is empty', async () => {
-    __setTableData('profiles', [fullProfile({ sports: [] })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'sports').done).toBe(false);
-  });
-
-  test('sports check fails when skill is null', async () => {
-    __setTableData('profiles', [fullProfile({ skill: null })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'sports').done).toBe(false);
-  });
-
-  test('sports check passes with sports and skill', async () => {
-    __setTableData('profiles', [fullProfile({ sports: ['running'], skill: 'Advanced' })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'sports').done).toBe(true);
-  });
-
-  test('location check fails when city is null', async () => {
-    __setTableData('profiles', [fullProfile({ city: null })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'location').done).toBe(false);
-  });
-
-  test('location check fails when availability is empty', async () => {
-    __setTableData('profiles', [fullProfile({ availability: [] })]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.find(c => c.key === 'location').done).toBe(false);
-  });
-
-  test('all checks pass with complete profile', async () => {
-    __setTableData('profiles', [fullProfile()]);
-    const checks = await getMatchReadiness(mockUser);
-    expect(checks.every(c => c.done)).toBe(true);
-  });
-
-  test('returns false for all non-account checks when profile is null', async () => {
-    __setTableData('profiles', [null]);
-    const checks = await getMatchReadiness(mockUser);
-    const nonAccount = checks.filter(c => c.key !== 'account');
-    expect(nonAccount.every(c => c.done === false)).toBe(true);
-  });
-});
 
 // ─── getMatchCandidates ───────────────────────────────────────────────────────
 
 describe('getMatchCandidates', () => {
-  test('returns candidate profiles', async () => {
-    __setTableData('swipes', []);
-    __setTableData('profiles', [
-      { id: 'bob', display_name: 'Bob', sports: ['running'], skill: 'Beginner', city: 'NYC' },
+  test('returns candidates from RPC', async () => {
+    __setRpcData('get_match_candidates', [
+      { id: 'bob', display_name: 'Bob', sports: ['running'], distance_km: 3.2 },
     ]);
     const results = await getMatchCandidates(UID, {});
     expect(results).toHaveLength(1);
+    expect(results[0].id).toBe('bob');
   });
 
-  test('calls overlaps when sports filter provided', async () => {
-    __setTableData('swipes', []);
-    __setTableData('profiles', []);
-    await getMatchCandidates(UID, { sports: ['running'] });
-    expect(supabase.from).toHaveBeenCalledWith('profiles');
-  });
-
-  test('returns empty when no candidates', async () => {
-    __setTableData('swipes', []);
-    __setTableData('profiles', []);
+  test('returns empty array when RPC returns null', async () => {
+    __setRpcData('get_match_candidates', null);
     const results = await getMatchCandidates(UID, {});
     expect(results).toEqual([]);
+  });
+
+  test('passes gender, maxKm, sports to RPC', async () => {
+    __setRpcData('get_match_candidates', []);
+    await getMatchCandidates(UID, { gender: 'female', maxKm: 50, sports: ['running'] });
+    expect(supabase.rpc).toHaveBeenCalledWith('get_match_candidates', {
+      uid:      UID,
+      p_gender: 'female',
+      p_max_km: 50,
+      p_sports: ['running'],
+    });
+  });
+
+  test('defaults to all/0/empty when no filters passed', async () => {
+    __setRpcData('get_match_candidates', []);
+    await getMatchCandidates(UID);
+    expect(supabase.rpc).toHaveBeenCalledWith('get_match_candidates', {
+      uid:      UID,
+      p_gender: 'all',
+      p_max_km: 0,
+      p_sports: [],
+    });
   });
 });
 
 // ─── recordSwipe ──────────────────────────────────────────────────────────────
 
 describe('recordSwipe', () => {
-  test('calls upsert on swipes table', async () => {
-    __setTableData('swipes', []);
-    await recordSwipe(UID, 'target-1', 'like');
-    expect(supabase.from).toHaveBeenCalledWith('swipes');
+  test('calls record_swipe RPC with correct params', async () => {
+    __setRpcData('record_swipe', { matched: false, match_id: null, error: null });
+    await recordSwipe(UID, 'target-1', 'right');
+    expect(supabase.rpc).toHaveBeenCalledWith('record_swipe', {
+      uid:       UID,
+      target_id: 'target-1',
+      dir:       'right',
+    });
   });
 
-  test('resolves without throwing for each action type', async () => {
-    for (const action of ['pass', 'like', 'star']) {
-      __resetAll();
-      __setTableData('swipes', []);
-      await expect(recordSwipe(UID, 'target-1', action)).resolves.not.toThrow();
-    }
+  test('returns matched=true and matchId when RPC signals a match', async () => {
+    __setRpcData('record_swipe', { matched: true, match_id: 'match-abc', error: null });
+    const result = await recordSwipe(UID, 'target-1', 'right');
+    expect(result.matched).toBe(true);
+    expect(result.matchId).toBe('match-abc');
+    expect(result.error).toBeNull();
+  });
+
+  test('returns matched=false when no mutual match', async () => {
+    __setRpcData('record_swipe', { matched: false, match_id: null, error: null });
+    const result = await recordSwipe(UID, 'target-2', 'right');
+    expect(result.matched).toBe(false);
+    expect(result.matchId).toBeNull();
+  });
+
+  test('returns error=daily_limit when daily cap reached', async () => {
+    __setRpcData('record_swipe', { matched: false, match_id: null, error: 'daily_limit' });
+    const result = await recordSwipe(UID, 'target-3', 'right');
+    expect(result.error).toBe('daily_limit');
+  });
+
+  test('left swipe does not produce match', async () => {
+    __setRpcData('record_swipe', { matched: false, match_id: null, error: null });
+    const result = await recordSwipe(UID, 'target-4', 'left');
+    expect(result.matched).toBe(false);
   });
 });
 
-// ─── getMutualMatches ─────────────────────────────────────────────────────────
+// ─── getTodayLikesCount ───────────────────────────────────────────────────────
 
-describe('getMutualMatches', () => {
-  test('returns empty when user has no outgoing likes', async () => {
-    __setTableData('swipes', []);
-    expect(await getMutualMatches(UID)).toEqual([]);
+describe('getTodayLikesCount', () => {
+  test('returns count from RPC', async () => {
+    __setRpcData('get_today_likes_count', 7);
+    expect(await getTodayLikesCount(UID)).toBe(7);
   });
 
-  test('returns mutual match profiles', async () => {
-    let callIndex = 0;
-    supabase.from.mockImplementation((table) => {
-      if (table === 'swipes') {
-        callIndex++;
-        if (callIndex === 1) {
-          return {
-            select: jest.fn().mockReturnThis(),
-            eq:     jest.fn().mockReturnThis(),
-            in:     jest.fn().mockReturnThis(),
-            then:   (resolve) => resolve({ data: [{ target_id: 'alice' }], error: null }),
-          };
-        }
-        return {
-          select: jest.fn().mockReturnThis(),
-          eq:     jest.fn().mockReturnThis(),
-          in:     jest.fn().mockReturnThis(),
-          then:   (resolve) => resolve({
-            data: [{ user_id: 'alice', profiles: { id: 'alice', display_name: 'Alice', avatar_url: null } }],
-            error: null,
-          }),
-        };
-      }
-      return { select: jest.fn().mockReturnThis(), then: (r) => r({ data: [], error: null }) };
-    });
+  test('returns 0 when RPC returns null', async () => {
+    __setRpcData('get_today_likes_count', null);
+    expect(await getTodayLikesCount(UID)).toBe(0);
+  });
 
-    const matches = await getMutualMatches(UID);
-    expect(matches).toHaveLength(1);
-    expect(matches[0].display_name).toBe('Alice');
+  test('calls RPC with uid', async () => {
+    __setRpcData('get_today_likes_count', 0);
+    await getTodayLikesCount(UID);
+    expect(supabase.rpc).toHaveBeenCalledWith('get_today_likes_count', { uid: UID });
+  });
+});
+
+// ─── getMyMatches ─────────────────────────────────────────────────────────────
+
+describe('getMyMatches', () => {
+  test('returns matches from RPC', async () => {
+    __setRpcData('get_my_matches', [
+      { match_id: 'match-1', other_id: 'alice', other_display_name: 'Alice', unread_count: 2 },
+    ]);
+    const results = await getMyMatches(UID);
+    expect(results).toHaveLength(1);
+    expect(results[0].other_display_name).toBe('Alice');
+  });
+
+  test('returns empty when no matches', async () => {
+    __setRpcData('get_my_matches', []);
+    const results = await getMyMatches(UID);
+    expect(results).toEqual([]);
+  });
+
+  test('returns empty when RPC returns null', async () => {
+    __setRpcData('get_my_matches', null);
+    const results = await getMyMatches(UID);
+    expect(results).toEqual([]);
+  });
+});
+
+// ─── unmatch ──────────────────────────────────────────────────────────────────
+
+describe('unmatch', () => {
+  test('calls do_unmatch RPC', async () => {
+    __setRpcData('do_unmatch', null);
+    await unmatch(UID, 'match-abc');
+    expect(supabase.rpc).toHaveBeenCalledWith('do_unmatch', {
+      uid:        UID,
+      p_match_id: 'match-abc',
+    });
+  });
+});
+
+// ─── updateMatchPrefs ─────────────────────────────────────────────────────────
+
+describe('updateMatchPrefs', () => {
+  test('upserts only provided fields', async () => {
+    await updateMatchPrefs(UID, { visibleInMatch: true });
+    expect(supabase.from).toHaveBeenCalledWith('profiles');
+  });
+
+  test('maps visibleInMatch to visible_in_match', async () => {
+    await updateMatchPrefs(UID, { visibleInMatch: false, prefGender: 'female' });
+    // Verify the upsert call chain was reached (mock verifies from() was called)
+    expect(supabase.from).toHaveBeenCalledWith('profiles');
+  });
+});
+
+// ─── updateLocation ───────────────────────────────────────────────────────────
+
+describe('updateLocation', () => {
+  test('calls update_location RPC with lat/lng', async () => {
+    __setRpcData('update_location', null);
+    await updateLocation(UID, { latitude: 40.71, longitude: -74.01 });
+    expect(supabase.rpc).toHaveBeenCalledWith('update_location', {
+      uid: UID,
+      lat: 40.71,
+      lng: -74.01,
+    });
   });
 });

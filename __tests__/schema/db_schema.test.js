@@ -161,13 +161,118 @@ describe('Storage buckets', () => {
   });
 });
 
-// ─── RPC function ────────────────────────────────────────────────────────────
+// ─── RPC functions ───────────────────────────────────────────────────────────
 
 describe('RPC functions', () => {
-  test('increment_group_member_count function exists', () => {
+  let procs;
+  beforeAll(() => {
+    procs = dbQuery("SELECT proname FROM pg_proc ORDER BY proname;").map(r => r.proname);
+  });
+
+  const REQUIRED_RPCS = [
+    // pre-existing
+    'increment_group_member_count',
+    'get_week_stats_for_user',
+    'get_month_stats_for_user',
+    'get_all_time_stats_for_user',
+    'get_weekly_chart_for_user',
+    'get_recent_activities_for_user',
+    'get_activities_list_for_user',
+    'get_activities_for_chart',
+    // Step 2 — match
+    'haversine_km',
+    'get_match_candidates',
+    'record_swipe',
+    'get_today_likes_count',
+    'get_my_matches',
+    'get_messages',
+    'send_message',
+    'mark_messages_read',
+    'do_unmatch',
+    'update_location',
+  ];
+
+  REQUIRED_RPCS.forEach(fn => {
+    test(`function "${fn}" exists`, () => {
+      expect(procs).toContain(fn);
+    });
+  });
+});
+
+// ─── Step 2 RPC smoke tests ───────────────────────────────────────────────────
+
+describe('Step 2 RPC smoke tests', () => {
+  test('haversine_km: NYC to LA ≈ 3940 km', () => {
     const rows = dbQuery(
-      "SELECT proname FROM pg_proc WHERE proname = 'increment_group_member_count';"
+      "SELECT round(haversine_km(40.7128, -74.0060, 34.0522, -118.2437)::numeric, 0)::integer AS km;"
     );
-    expect(rows).toHaveLength(1);
+    const km = rows[0].km;
+    expect(km).toBeGreaterThan(3900);
+    expect(km).toBeLessThan(3980);
+  });
+
+  test('haversine_km: same point = 0 km', () => {
+    const rows = dbQuery(
+      "SELECT haversine_km(40.7128, -74.0060, 40.7128, -74.0060) AS km;"
+    );
+    expect(parseFloat(rows[0].km)).toBe(0);
+  });
+
+  test('get_match_candidates: returns empty array for unknown uid', () => {
+    const rows = dbQuery(
+      "SELECT * FROM get_match_candidates('no-such-user');"
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  test('get_today_likes_count: returns 0 for unknown uid', () => {
+    const rows = dbQuery(
+      "SELECT get_today_likes_count('no-such-user') AS n;"
+    );
+    expect(parseInt(rows[0].n)).toBe(0);
+  });
+
+  test('get_my_matches: returns empty array for unknown uid', () => {
+    const rows = dbQuery(
+      "SELECT * FROM get_my_matches('no-such-user');"
+    );
+    expect(rows).toHaveLength(0);
+  });
+
+  test('record_swipe: returns daily_limit error after 15 right-swipes', () => {
+    // Create temp profiles for the swiper and 16 targets
+    const swiper = 'tlc-swiper-001';
+    const targets = Array.from({ length: 16 }, (_, i) => `tlc-target-${String(i).padStart(3,'0')}`);
+
+    // Cleanup any leftovers from previous run
+    dbQuery(`DELETE FROM swipes WHERE swiper_id = '${swiper}';`);
+    dbQuery(`DELETE FROM profiles WHERE id like 'tlc-%';`);
+
+    // Insert temp profiles
+    const profileRows = [swiper, ...targets]
+      .map(id => `('${id}', 'Test')`)
+      .join(',');
+    dbQuery(`INSERT INTO profiles (id, first_name) VALUES ${profileRows} ON CONFLICT DO NOTHING;`);
+
+    // Insert exactly 15 right-swipes directly (bypass RPC to seed quickly)
+    const swipeRows = targets.slice(0, 15)
+      .map(t => `('${swiper}', '${t}', 'right')`)
+      .join(',');
+    dbQuery(`INSERT INTO swipes (swiper_id, swiped_id, direction) VALUES ${swipeRows} ON CONFLICT DO NOTHING;`);
+
+    // 16th like via RPC — should hit daily_limit
+    const rows = dbQuery(
+      `SELECT record_swipe('${swiper}', '${targets[15]}', 'right') AS result;`
+    );
+    // CLI already deserialises json columns into objects
+    const result = typeof rows[0].result === 'string'
+      ? JSON.parse(rows[0].result)
+      : rows[0].result;
+    expect(result.error).toBe('daily_limit');
+    expect(result.matched).toBe(false);
+
+    // Cleanup
+    dbQuery(`DELETE FROM swipes WHERE swiper_id = '${swiper}';`);
+    dbQuery(`DELETE FROM profiles WHERE id like 'tlc-%';`);
   });
 });

@@ -95,15 +95,15 @@ describe('progressFromProfile', () => {
 import { __setTableData, __resetAll } from '../../src/lib/supabase';
 jest.mock('../../src/lib/supabase');
 
-import { getMutualMatches } from '../../src/lib/match';
-import { getFeed }          from '../../src/lib/community';
+import { getMyMatches } from '../../src/lib/match';
+import { getFeed }      from '../../src/lib/community';
 
 beforeEach(() => __resetAll());
 
-describe('getMutualMatches returns count for matchCount', () => {
-  test('no swipes → empty array → matchCount 0', async () => {
-    __setTableData('swipes', []);
-    const matches = await getMutualMatches('user-x');
+describe('getMyMatches returns count for matchCount', () => {
+  test('no matches → empty array → matchCount 0', async () => {
+    // getMyMatches uses RPC — mock returns null/[] by default
+    const matches = await getMyMatches('user-x');
     expect(matches.length).toBe(0);
   });
 });

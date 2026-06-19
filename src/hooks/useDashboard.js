@@ -6,7 +6,7 @@ import {
   getRecentActivities,
   getMonthStats,
 } from '../lib/activities';
-import { getMutualMatches } from '../lib/match';
+import { getMyMatches } from '../lib/match';
 import { getFeed }          from '../lib/community';
 import { syncEvents }       from '../lib/syncEvents';
 
@@ -36,7 +36,7 @@ export function useDashboard() {
           getWeeklyChart(user.uid).catch(() => DEFAULT.weeklyChart),
           getRecentActivities(user.uid, 3).catch(() => DEFAULT.recentActivities),
           getMonthStats(user.uid).catch(() => DEFAULT.monthStats),
-          getMutualMatches(user.uid).catch(() => []),
+          getMyMatches(user.uid).catch(() => []),
           getFeed(user.uid, 1).catch(() => []),
         ]);
 

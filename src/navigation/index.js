@@ -13,6 +13,7 @@ import ActivityDetailScreen from '../screens/activities/ActivityDetailScreen';
 import LogActivityScreen    from '../screens/activities/LogActivityScreen';
 import CommunityScreen      from '../screens/community/CommunityScreen';
 import MatchScreen          from '../screens/match/MatchScreen';
+import ChatScreen           from '../screens/match/ChatScreen';
 import ProfileScreen        from '../screens/profile/ProfileScreen';
 
 const Stack = createNativeStackNavigator();
@@ -63,6 +64,11 @@ function MainApp() {
           presentation: 'modal',
           animation:    'slide_from_bottom',
         }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
