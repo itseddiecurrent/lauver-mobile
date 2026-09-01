@@ -48,7 +48,11 @@ async function main(): Promise<void> {
 
   await resetPublicSchema(databaseURL);
   runNodeModule('node_modules/prisma/build/index.js', ['migrate', 'deploy'], environment);
-  runNodeModule('node_modules/vitest/vitest.mjs', ['run', 'tests/integration'], environment);
+  runNodeModule(
+    'node_modules/vitest/vitest.mjs',
+    ['run', '--config', 'vitest.integration.config.ts'],
+    environment,
+  );
 }
 
 main().catch((error: unknown) => {

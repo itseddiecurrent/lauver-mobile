@@ -17,6 +17,7 @@ required_paths=(
   "$repo_root/backend/src/logger.ts"
   "$repo_root/backend/src/server-lifecycle.ts"
   "$repo_root/backend/tests/integration/postgres.integration.test.ts"
+  "$repo_root/backend/vitest.integration.config.ts"
   "$repo_root/render.yaml"
 )
 
