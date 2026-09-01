@@ -48,9 +48,11 @@ Guardrails and the complete native iOS regression suite also passed in the same 
 Pending creation of the Render Blueprint resources from `render.yaml`. Completion requires recording:
 
 - the Render staging API URL;
-- successful pre-deploy migration output;
+- successful startup migration output (`npm run db:migrate:deploy` runs before `npm start` on the free plan);
 - `GET /healthz` returning 200;
 - `GET /readyz` returning 200;
 - persistence after a Render restart or redeploy.
 
 The Step 01 implementation and automated verification are complete. The overall step remains pending only on the external Render staging acceptance above.
+
+The Blueprint is intentionally compatible with Render's free web-service plan: it does not use the paid `preDeployCommand` or `maxShutdownDelaySeconds` fields. Database migrations instead run idempotently at the beginning of every service start.

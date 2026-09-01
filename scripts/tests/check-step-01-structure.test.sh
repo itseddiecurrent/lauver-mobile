@@ -39,7 +39,11 @@ for executable_script in \
 done
 
 rg --quiet 'provider = "postgresql"' "$repo_root/backend/prisma/schema.prisma"
-rg --quiet 'preDeployCommand: npm run db:migrate:deploy' "$repo_root/render.yaml"
+rg --quiet 'startCommand: npm run db:migrate:deploy && npm start' "$repo_root/render.yaml"
+if rg --quiet 'preDeployCommand|maxShutdownDelaySeconds' "$repo_root/render.yaml"; then
+  echo "Step 01 structure check failed: render.yaml uses fields unsupported by free web services" >&2
+  exit 1
+fi
 rg --quiet 'autoDeployTrigger: checksPass' "$repo_root/render.yaml"
 rg --quiet 'healthCheckPath: /healthz' "$repo_root/render.yaml"
 rg --quiet 'USER node' "$repo_root/backend/Dockerfile"

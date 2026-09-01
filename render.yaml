@@ -7,10 +7,8 @@ services:
     plan: free
     autoDeployTrigger: checksPass
     buildCommand: ./scripts/build-deploy.sh
-    preDeployCommand: npm run db:migrate:deploy
-    startCommand: npm start
+    startCommand: npm run db:migrate:deploy && npm start
     healthCheckPath: /healthz
-    maxShutdownDelaySeconds: 30
     envVars:
       - key: NODE_ENV
         value: staging

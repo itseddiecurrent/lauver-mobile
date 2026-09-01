@@ -128,13 +128,13 @@ Build the production API image from the repository root:
 docker build --tag lauver-api:step-01 backend
 ```
 
-The image runs as the unprivileged `node` user and expects `DATABASE_URL`, `HOST`, `PORT`, and the optional settings documented in `backend/.env.example`. Apply migrations as a separate release action before starting a new application image.
+The image runs as the unprivileged `node` user and expects `DATABASE_URL`, `HOST`, `PORT`, and the optional settings documented in `backend/.env.example`. Apply migrations before starting a new application image.
 
 The root `render.yaml` defines a Singapore staging web service and PostgreSQL database. In Render:
 
 1. Create a Blueprint from this repository and review the selected service/database plans before applying it.
 2. Keep the generated `DATABASE_URL` binding; do not copy it into source control.
-3. Render runs `npm run db:migrate:deploy` as a pre-deploy command and deploys only after GitHub checks pass.
+3. On the free web-service plan, Render runs `npm run db:migrate:deploy && npm start` as the start command because pre-deploy commands are unavailable. Prisma safely skips migrations that are already applied; a migration failure prevents the API process from starting.
 4. After the first deploy, record the assigned `onrender.com` URL in `artifacts/acceptance/step-01.md` and verify both health endpoints.
 
 ## Current external setup still needed
