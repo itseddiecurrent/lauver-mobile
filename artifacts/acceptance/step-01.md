@@ -45,13 +45,17 @@ Guardrails and the complete native iOS regression suite also passed in the same 
 
 ## Render staging acceptance
 
-Pending creation of the Render Blueprint resources from `render.yaml`. Completion requires recording:
+Blueprint resources were created from `render.yaml` on 2026-09-01:
 
-- the Render staging API URL;
-- successful startup migration output (`npm run db:migrate:deploy` runs before `npm start` on the free plan);
-- `GET /healthz` returning 200;
-- `GET /readyz` returning 200;
-- persistence after a Render restart or redeploy.
+- Blueprint ID: `exs-dababkajobas73bseq6g`
+- Staging API: `https://lauver-api-staging.onrender.com`
+
+| Live check | Result | Response |
+|---|---|---|
+| `GET /healthz` | Pass — HTTP 200 at 2026-09-01 18:46 Asia/Shanghai | `{"status":"ok","service":"lauver-api"}` |
+| `GET /readyz` | Pass — HTTP 200 at 2026-09-01 18:46 Asia/Shanghai | `{"status":"ready","service":"lauver-api","database":"ok"}` |
+
+Completion still requires confirming successful startup migration output and database persistence after a Render restart or redeploy.
 
 The Step 01 implementation and automated verification are complete. The overall step remains pending only on the external Render staging acceptance above.
 
