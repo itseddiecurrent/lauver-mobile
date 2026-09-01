@@ -11,6 +11,9 @@ expo-env.d.ts
 
 # Native
 .kotlin/
+DerivedData/
+xcuserdata/
+*.xcuserstate
 *.orig.*
 *.jks
 *.p8
@@ -32,6 +35,9 @@ yarn-error.*
 
 # local env files
 .env
+.env.*
+!.env.example
+!**/.env.example
 .env*.local
 
 # typescript
@@ -40,3 +46,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Native iOS local configuration
+/LauverNative/Config/Local.xcconfig
+
+# Test output
+coverage/

@@ -1,0 +1,3 @@
+// Copy to Local.xcconfig for developer-specific, non-secret overrides.
+// Do not put OAuth secrets, private keys, or database credentials in Xcode config.
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID

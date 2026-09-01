@@ -1,0 +1,60 @@
+name: MVP CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Test MVP scope checker
+        run: ./scripts/tests/check-mvp-scope.test.sh
+      - name: Check MVP scope
+        run: ./scripts/check-mvp-scope.sh
+      - name: Test secret checker
+        run: ./scripts/tests/check-secrets.test.sh
+      - name: Test iOS Simulator selection
+        run: ./scripts/tests/select-ios-simulator.test.sh
+      - name: Check Step 00 repository structure
+        run: ./scripts/tests/check-step-00-structure.test.sh
+      - name: Check working tree for secrets
+        run: ./scripts/check-secrets.sh
+      - name: Scan Git history with Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:integration
+      - run: npm run build
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test native iOS app
+        run: ./scripts/test-ios.sh
+      - name: Verify built staging and production configuration
+        run: ./scripts/test-ios-config.sh

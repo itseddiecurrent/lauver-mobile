@@ -1,0 +1,251 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* LauverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* LauverApp.swift */; };
+		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ContentView.swift */; };
+		A10000000000000000000003 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AppConfiguration.swift */; };
+		A10000000000000000000004 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* Assets.xcassets */; };
+		A10000000000000000000005 /* AppConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* AppConfigurationTests.swift */; };
+		A10000000000000000000006 /* LauverUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000006 /* LauverUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A30000000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A40000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000000000000000000001;
+			remoteInfo = Lauver;
+		};
+		A30000000000000000000002 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A40000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000000000000000000001;
+			remoteInfo = Lauver;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* LauverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauverApp.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000005 /* AppConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfigurationTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* LauverUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauverUITests.swift; sourceTree = "<group>"; };
+		A20000000000000000000007 /* Lauver.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Lauver.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000008 /* LauverTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LauverTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000009 /* LauverUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LauverUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2000000000000000000000A /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000B /* Staging.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Staging.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000C /* Production.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Production.xcconfig; sourceTree = "<group>"; };
+		A2000000000000000000000D /* Local.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.xcconfig.example; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A60000000000000000000001 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A60000000000000000000002 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A60000000000000000000003 /* Frameworks */ = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A70000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A70000000000000000000002 /* Lauver */,
+				A70000000000000000000007 /* LauverTests */,
+				A70000000000000000000008 /* LauverUITests */,
+				A70000000000000000000009 /* Config */,
+				A7000000000000000000000A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A70000000000000000000002 /* Lauver */ = {
+			isa = PBXGroup;
+			children = (
+				A70000000000000000000003 /* App */,
+				A70000000000000000000004 /* Core */,
+				A70000000000000000000006 /* Resources */,
+			);
+			path = Lauver;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000001, A20000000000000000000002,);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000004 /* Core */ = {
+			isa = PBXGroup;
+			children = (A70000000000000000000005 /* Configuration */,);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000005 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000003,);
+			path = Configuration;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000006 /* Resources */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000004,);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000007 /* LauverTests */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000005,);
+			path = LauverTests;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000008 /* LauverUITests */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000006,);
+			path = LauverUITests;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000009 /* Config */ = {
+			isa = PBXGroup;
+			children = (A2000000000000000000000A, A2000000000000000000000B, A2000000000000000000000C, A2000000000000000000000D,);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		A7000000000000000000000A /* Products */ = {
+			isa = PBXGroup;
+			children = (A20000000000000000000007, A20000000000000000000008, A20000000000000000000009,);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A50000000000000000000001 /* Lauver */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000001;
+			buildPhases = (A90000000000000000000001, A60000000000000000000001, AB0000000000000000000001,);
+			buildRules = ();
+			dependencies = ();
+			name = Lauver;
+			productName = Lauver;
+			productReference = A20000000000000000000007;
+			productType = "com.apple.product-type.application";
+		};
+		A50000000000000000000002 /* LauverTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000002;
+			buildPhases = (A90000000000000000000002, A60000000000000000000002, AB0000000000000000000002,);
+			buildRules = ();
+			dependencies = (AC0000000000000000000001,);
+			name = LauverTests;
+			productName = LauverTests;
+			productReference = A20000000000000000000008;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A50000000000000000000003 /* LauverUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000003;
+			buildPhases = (A90000000000000000000003, A60000000000000000000003, AB0000000000000000000003,);
+			buildRules = ();
+			dependencies = (AC0000000000000000000002,);
+			name = LauverUITests;
+			productName = LauverUITests;
+			productReference = A20000000000000000000009;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A40000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A50000000000000000000001 = {CreatedOnToolsVersion = 16.0;};
+					A50000000000000000000002 = {CreatedOnToolsVersion = 16.0; TestTargetID = A50000000000000000000001;};
+					A50000000000000000000003 = {CreatedOnToolsVersion = 16.0; TestTargetID = A50000000000000000000001;};
+				};
+			};
+			buildConfigurationList = AA0000000000000000000004;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (en, Base,);
+			mainGroup = A70000000000000000000001;
+			productRefGroup = A7000000000000000000000A;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (A50000000000000000000001, A50000000000000000000002, A50000000000000000000003,);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AB0000000000000000000001 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000004,); runOnlyForDeploymentPostprocessing = 0; };
+		AB0000000000000000000002 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		AB0000000000000000000003 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A90000000000000000000001 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003,); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000002 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000005,); runOnlyForDeploymentPostprocessing = 0; };
+		A90000000000000000000003 /* Sources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000006,); runOnlyForDeploymentPostprocessing = 0; };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AC0000000000000000000001 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A50000000000000000000001; targetProxy = A30000000000000000000001; };
+		AC0000000000000000000002 /* PBXTargetDependency */ = {isa = PBXTargetDependency; target = A50000000000000000000001; targetProxy = A30000000000000000000002; };
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		AD0000000000000000000001 /* Staging */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; ENABLE_TESTABILITY = YES; ONLY_ACTIVE_ARCH = YES; SDKROOT = iphoneos; SWIFT_OPTIMIZATION_LEVEL = "-Onone";}; name = Staging;};
+		AD0000000000000000000002 /* Production */ = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SDKROOT = iphoneos; SWIFT_COMPILATION_MODE = wholemodule;}; name = Production;};
+		AD0000000000000000000003 /* Staging */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A2000000000000000000000B;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lauver/Resources/Info.plist;
+				PRODUCT_MODULE_NAME = Lauver;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Staging;
+		};
+		AD0000000000000000000004 /* Production */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A2000000000000000000000C;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Lauver/Resources/Info.plist;
+				PRODUCT_MODULE_NAME = Lauver;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Production;
+		};
+		AD0000000000000000000005 /* Staging */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000B; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lauver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lauver";}; name = Staging;};
+		AD0000000000000000000006 /* Production */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000C; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.tests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Lauver.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Lauver";}; name = Production;};
+		AD0000000000000000000007 /* Staging */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000B; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Lauver;}; name = Staging;};
+		AD0000000000000000000008 /* Production */ = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000C; buildSettings = {GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = 1; TEST_TARGET_NAME = Lauver;}; name = Production;};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA0000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000003, AD0000000000000000000004,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Staging;};
+		AA0000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000005, AD0000000000000000000006,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Staging;};
+		AA0000000000000000000003 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000007, AD0000000000000000000008,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Staging;};
+		AA0000000000000000000004 = {isa = XCConfigurationList; buildConfigurations = (AD0000000000000000000001, AD0000000000000000000002,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Staging;};
+/* End XCConfigurationList section */
+	};
+	rootObject = A40000000000000000000001 /* Project object */;
+}
