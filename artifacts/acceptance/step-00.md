@@ -1,6 +1,6 @@
 # Step 00 Acceptance Record
 
-> Status: local acceptance passed; GitHub Actions verification pending
+> Status: complete
 >
 > Last updated: 2026-09-01 (Asia/Shanghai)
 
@@ -40,7 +40,7 @@ Run from the repository root:
 | Backend production build | Pass | `npm run build` |
 | Native iOS XCTest/XCUITest | Pass | 7 XCTest and 1 XCUITest passed with `Lauver-Staging`; UI test launched the app and verified both labels |
 | Native iOS built configuration | Pass | Staging and production `.app` products contain the expected environment, HTTPS API URL, and bundle identifier |
-| GitHub Actions first run | Pending | Requires the Step 00 files to be pushed to the GitHub repository |
+| GitHub Actions | Pass | [`guardrails`, `backend`, and `ios` completed successfully](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33466934837) |
 
 ## Manual health check
 
@@ -72,10 +72,6 @@ IOS_TEST_TIMEOUT_SECONDS=600 \
 
 Result: `TEST SUCCEEDED`. The `Lauver-Staging` app launched in the Simulator and displayed `Lauver` and `Native iOS MVP`. Visual evidence: [step-00-simulator.png](step-00-simulator.png).
 
-## Remaining acceptance actions
+## Completion
 
-1. Commit and push the Step 00 files to the GitHub repository.
-2. Confirm all three GitHub Actions jobs (`guardrails`, `backend`, and `ios`) are green.
-3. Record the CI run link and final result in this file.
-
-The local implementation and acceptance checks are complete. Step 00 remains pending only until the first GitHub Actions run is green.
+Step 00 is complete. The native app shell, backend service, configuration boundaries, automated tests, scope and secret guardrails, OpenAPI contract, local acceptance, and the first full GitHub Actions run all passed.

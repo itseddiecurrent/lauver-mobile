@@ -682,6 +682,8 @@ xcodebuild test \
 
 ### Step 00：范围护栏与仓库骨架
 
+**状态：✅ 已完成（2026-09-01）。** 本地验收与 GitHub Actions 均已通过，证据见 `artifacts/acceptance/step-00.md`。
+
 **依赖：** 无。
 
 **实现任务：**
