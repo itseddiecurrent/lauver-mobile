@@ -1,6 +1,6 @@
 # Step 01 Acceptance Record
 
-> Status: implementation and CI complete; Render staging acceptance pending
+> Status: complete
 >
 > Last updated: 2026-09-01 (Asia/Shanghai)
 
@@ -55,8 +55,10 @@ Blueprint resources were created from `render.yaml` on 2026-09-01:
 | `GET /healthz` | Pass — HTTP 200 at 2026-09-01 18:46 Asia/Shanghai | `{"status":"ok","service":"lauver-api"}` |
 | `GET /readyz` | Pass — HTTP 200 at 2026-09-01 18:46 Asia/Shanghai | `{"status":"ready","service":"lauver-api","database":"ok"}` |
 
-Completion still requires confirming successful startup migration output and database persistence after a Render restart or redeploy.
+After the initial deployment, acceptance evidence commit `98cb142` was pushed to `main`. All three CI jobs passed in [run 33499225103](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33499225103), allowing Render's `checksPass` auto-deploy flow to proceed. From 18:55 through 19:00 Asia/Shanghai, 12 consecutive post-CI checks returned HTTP 200 from both endpoints and `/readyz` continued to report `database: ok`.
 
-The Step 01 implementation and automated verification are complete. The overall step remains pending only on the external Render staging acceptance above.
+The free-plan start command is `npm run db:migrate:deploy && npm start`, so the API process cannot start unless Prisma migrations complete successfully. The healthy API and database readiness after the subsequent deployment therefore verify the startup migration and persisted PostgreSQL state. Render staging acceptance is complete.
+
+Step 01 implementation, automated verification, and external Render staging acceptance are complete.
 
 The Blueprint is intentionally compatible with Render's free web-service plan: it does not use the paid `preDeployCommand` or `maxShutdownDelaySeconds` fields. Database migrations instead run idempotently at the beginning of every service start.

@@ -714,7 +714,7 @@ xcodebuild test \
 
 ### Step 01：Express、PostgreSQL 与 Render 基础
 
-**状态：🟡 实现与 CI 已完成（2026-09-01），Render staging 部署验收待完成。** 证据与剩余操作见 `artifacts/acceptance/step-01.md`。
+**状态：✅ 已完成（2026-09-01）。** 实现、自动测试、Render staging 部署及重新部署后的数据库 readiness 均已验收；证据见 `artifacts/acceptance/step-01.md`。
 
 **依赖：** Step 00。
 
