@@ -29,6 +29,8 @@ jobs:
         run: ./scripts/tests/select-ios-simulator.test.sh
       - name: Check Step 00 repository structure
         run: ./scripts/tests/check-step-00-structure.test.sh
+      - name: Check Step 01 repository structure
+        run: ./scripts/tests/check-step-01-structure.test.sh
       - name: Check working tree for secrets
         run: ./scripts/check-secrets.sh
       - name: Scan Git history with Gitleaks
@@ -36,6 +38,25 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://lauver:lauver_test@127.0.0.1:5432/lauver_test
+      TEST_DATABASE_URL: postgresql://lauver:lauver_test@127.0.0.1:5432/lauver_test
+      NODE_ENV: test
+      LOG_LEVEL: silent
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: lauver
+          POSTGRES_PASSWORD: lauver_test
+          POSTGRES_DB: lauver_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lauver -d lauver_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -47,11 +68,14 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - run: npm ci
+      - run: npm run db:generate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run test:integration
       - run: npm run build
+      - run: docker build --tag lauver-api-step-01 .
+      - run: npm audit --omit=dev
 
   ios:
     runs-on: macos-latest

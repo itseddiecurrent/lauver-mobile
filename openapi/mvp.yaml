@@ -17,11 +17,44 @@ paths:
       responses:
         '200':
           description: API process is running.
+          headers:
+            x-request-id:
+              $ref: '#/components/headers/RequestId'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthResponse'
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: API and PostgreSQL readiness check
+      security: []
+      responses:
+        '200':
+          description: API and PostgreSQL are ready to serve traffic.
+          headers:
+            x-request-id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+        '503':
+          description: PostgreSQL is unavailable.
+          headers:
+            x-request-id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
+  headers:
+    RequestId:
+      description: Server-generated request correlation identifier.
+      schema:
+        type: string
+        format: uuid
   schemas:
     HealthResponse:
       type: object
@@ -34,6 +67,20 @@ components:
         service:
           type: string
           const: lauver-api
+    ReadyResponse:
+      type: object
+      additionalProperties: false
+      required: [status, service, database]
+      properties:
+        status:
+          type: string
+          const: ready
+        service:
+          type: string
+          const: lauver-api
+        database:
+          type: string
+          const: ok
     ErrorResponse:
       type: object
       additionalProperties: false

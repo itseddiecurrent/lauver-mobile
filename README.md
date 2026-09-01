@@ -10,7 +10,7 @@ The authoritative MVP scope is in [`mvp.md`](mvp.md). The native implementation 
 LauverNative/          Native SwiftUI Xcode project
 backend/               TypeScript Express API
 openapi/mvp.yaml       REST contract
-scripts/               Scope, secret, iOS, and Step 00 test scripts
+scripts/               Scope, secret, iOS, and per-step test scripts
 artifacts/acceptance/  Per-step verification records
 src/                   Legacy React Native prototype; reference only
 ```
@@ -37,25 +37,39 @@ sudo xcodebuild -runFirstLaunch
 
 An Apple Developer Team ID is not needed for unsigned Simulator tests. Copy `LauverNative/Config/Local.xcconfig.example` to an ignored local config only when device signing is introduced.
 
-## Backend setup
+## Backend and PostgreSQL setup
+
+Step 01 uses PostgreSQL 17 and Prisma. The recommended local setup is Docker Desktop:
 
 ```bash
 cd backend
+docker compose up --detach postgres
 cp .env.example .env
 npm ci
+npm run db:generate
+npm run db:migrate:deploy
 npm run dev
 ```
 
-Verify the service:
+The Compose service creates persistent `lauver` and disposable `lauver_test` databases. If the volume existed before the test database initializer was added, create `lauver_test` manually or recreate only that development volume after confirming it contains no needed data.
+
+If you use an independently installed PostgreSQL server, create both databases and update the ignored `backend/.env` file with their connection strings.
+
+Verify liveness and database readiness separately:
 
 ```bash
 curl http://localhost:3000/healthz
+curl http://localhost:3000/readyz
 ```
 
-Expected response:
+Expected responses:
 
 ```json
 {"status":"ok","service":"lauver-api"}
+```
+
+```json
+{"status":"ready","service":"lauver-api","database":"ok"}
 ```
 
 ## Tests
@@ -65,6 +79,14 @@ Run all Step 00 checks:
 ```bash
 ./scripts/test-step-00.sh
 ```
+
+Run all Step 01 backend checks after PostgreSQL is healthy:
+
+```bash
+./scripts/test-step-01.sh
+```
+
+`npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
 
@@ -82,6 +104,7 @@ npm run typecheck
 npm test
 npm run test:integration
 npm run build
+npm audit --omit=dev
 
 cd ..
 ./scripts/test-ios.sh
@@ -97,13 +120,29 @@ The iOS script prefers an already booted iPhone Simulator, then falls back to th
 - Real `.env` files, private keys, OAuth secrets, tokens, and signing files must never be committed.
 - Staging and production use separate API base URLs and, in later steps, separate third-party applications.
 
+## Container and Render deployment
+
+Build the production API image from the repository root:
+
+```bash
+docker build --tag lauver-api:step-01 backend
+```
+
+The image runs as the unprivileged `node` user and expects `DATABASE_URL`, `HOST`, `PORT`, and the optional settings documented in `backend/.env.example`. Apply migrations as a separate release action before starting a new application image.
+
+The root `render.yaml` defines a Singapore staging web service and PostgreSQL database. In Render:
+
+1. Create a Blueprint from this repository and review the selected service/database plans before applying it.
+2. Keep the generated `DATABASE_URL` binding; do not copy it into source control.
+3. Render runs `npm run db:migrate:deploy` as a pre-deploy command and deploys only after GitHub checks pass.
+4. After the first deploy, record the assigned `onrender.com` URL in `artifacts/acceptance/step-01.md` and verify both health endpoints.
+
 ## Current external setup still needed
 
-Step 00 can be completed without third-party accounts. Before later steps, the project owner will need to provide or create:
+Step 01 needs a Render workspace connection to complete staging acceptance. Before later steps, the project owner will also need to provide or create:
 
 - Apple Developer Program access and the `ai.lauver.app` App ID;
-- Render staging and production projects;
-- PostgreSQL instances on Render;
+- a Render production project (staging is defined by `render.yaml`);
 - Strava staging/production applications;
 - Stream Chat staging/production applications;
 - an S3-compatible object-storage bucket;

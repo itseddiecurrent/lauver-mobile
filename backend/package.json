@@ -10,26 +10,40 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run tests/integration"
+    "test:step-00-integration": "vitest run tests/step-00",
+    "test:integration": "tsx scripts/test-integration.ts"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^6.12.0",
+    "@prisma/client": "^6.12.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
+    "helmet": "^8.3.0",
+    "pg": "^8.23.0",
+    "pino": "^10.3.1",
+    "pino-http": "^11.0.0",
     "zod": "^4.1.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.34.0",
+    "@eslint/js": "^10.0.1",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.3",
-    "eslint": "^9.34.0",
-    "globals": "^16.3.0",
+    "eslint": "^10.9.1",
+    "globals": "^17.11.0",
+    "prisma": "^6.12.0",
     "supertest": "^7.1.4",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.41.0",
-    "vitest": "^3.2.4"
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^3.2.7"
   }
 }

@@ -15,7 +15,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
   npm run lint
   npm run typecheck
   npm test
-  npm run test:integration
+  npm run test:step-00-integration
   npm run build
 )
 

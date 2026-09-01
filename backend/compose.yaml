@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: lauver
+      POSTGRES_PASSWORD: change-me
+      POSTGRES_DB: lauver
+    ports:
+      - "5432:5432"
+    volumes:
+      - lauver-postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lauver -d lauver"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  lauver-postgres-data:
