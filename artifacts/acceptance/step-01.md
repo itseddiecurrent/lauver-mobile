@@ -1,6 +1,6 @@
 # Step 01 Acceptance Record
 
-> Status: implementation verification in progress; Render staging acceptance pending
+> Status: implementation and CI complete; Render staging acceptance pending
 >
 > Last updated: 2026-09-01 (Asia/Shanghai)
 
@@ -33,13 +33,15 @@ Step 01 establishes the deployable Express/PostgreSQL foundation: validated conf
 
 ## CI verification
 
-Pending the first push containing Step 01. GitHub Actions is configured to:
+[`guardrails`, `backend`, and `ios` completed successfully](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33492402851). The Backend job:
 
-1. start PostgreSQL 17;
+1. started PostgreSQL 17;
 2. reset the isolated `lauver_test` schema;
-3. run `prisma migrate deploy` from an empty schema;
-4. verify the real Prisma/PostgreSQL `/readyz` path and migrated table;
-5. run lint, typecheck, 27 unit tests, integration tests, production build, Docker build, dependency audit, and repository guardrails.
+3. ran `prisma migrate deploy` from an empty schema;
+4. passed both real Prisma/PostgreSQL integration tests for `/readyz` and the migrated table;
+5. passed lint, typecheck, 27 unit tests, production build, Docker build, and dependency audit.
+
+Guardrails and the complete native iOS regression suite also passed in the same run.
 
 ## Render staging acceptance
 
@@ -51,4 +53,4 @@ Pending creation of the Render Blueprint resources from `render.yaml`. Completio
 - `GET /readyz` returning 200;
 - persistence after a Render restart or redeploy.
 
-Step 01 must not be marked complete until both CI and Render staging acceptance pass.
+The Step 01 implementation and automated verification are complete. The overall step remains pending only on the external Render staging acceptance above.
