@@ -1,6 +1,6 @@
 # Step 02 Acceptance Record
 
-> Status: local implementation and verification complete; commit and CI verification pending
+> Status: complete
 >
 > Last updated: 2026-09-02 (Asia/Shanghai)
 
@@ -11,7 +11,7 @@ Step 02 adds the native SwiftUI application shell and dependency container, stag
 ## Verification environment
 
 - Repository: `lauver-mobile`
-- Branch/base: uncommitted Step 02 changes on `main` at `a4cdeec`
+- Branch/implementation commit: `main` at `6b8be86`
 - macOS: `26.4.1` (`25E253`)
 - Xcode: `26.6` (`17F113`)
 - iOS Simulator: `iPhone 17 Pro - Lauver`, iOS `26.5`, UDID `C8000809-C352-4408-AC67-DCBAF53C415B`
@@ -44,10 +44,14 @@ The Step 02 working tree does not modify backend application, test, schema, lock
 | Backend unit and boundary tests | Pass | 27/27 tests passed across 6 files |
 | Backend production build | Pass | `npm run build` |
 | Production dependency audit | Pass | `npm audit --omit=dev` reported 0 vulnerabilities |
-| PostgreSQL migration/integration regression | Not rerun locally | The recovery environment has no Docker, PostgreSQL tools, `TEST_DATABASE_URL`, or backend env file; the unchanged backend passed its real PostgreSQL suite in Step 01 CI |
+| PostgreSQL migration/integration regression | Pass in CI | The GitHub Actions backend job reset the isolated PostgreSQL schema, deployed migrations, and passed the real database integration suite |
 
-## Remaining acceptance
+## CI verification
 
-1. Review and commit the Step 02 working tree.
-2. Push the commit and require the `guardrails`, `backend`, and `ios` GitHub Actions jobs to pass. The backend job supplies PostgreSQL and reruns migration/integration coverage that is unavailable locally.
-3. After CI is green, mark Step 02 complete in this record and `mvp.md`, and record the CI run link.
+Implementation commit `6b8be86` passed all three jobs in [MVP CI #8](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33577783480) on 2026-09-02:
+
+1. `guardrails` passed the scope-checker fixtures, scope guard, secret-checker fixtures, Simulator selector tests, Step 00/01/02 structure checks, working-tree secret scan, and Gitleaks history scan;
+2. `backend` passed Prisma generation, lint, typecheck, 27 unit/boundary tests, real PostgreSQL migration/integration tests, production build, Docker build, and dependency audit;
+3. `ios` passed the complete Simulator XCTest/XCUITest suite and both staging and production built-configuration checks.
+
+Step 02 implementation, local acceptance, live staging verification, and CI regression verification are complete.

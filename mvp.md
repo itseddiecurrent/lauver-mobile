@@ -746,6 +746,8 @@ xcodebuild test \
 
 ### Step 02：原生 iOS App Shell 与 API Client
 
+**状态：✅ 已完成（2026-09-02）。** 原生 App Shell、API Client、Keychain、非敏感 UI 状态存储、Design System、Render staging 在线状态及完整 CI 回归均已验收；证据见 `artifacts/acceptance/step-02.md`。
+
 **依赖：** Step 01。
 
 **实现任务：**
