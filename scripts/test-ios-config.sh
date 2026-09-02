@@ -46,7 +46,7 @@ assert_app_configuration() {
 }
 
 assert_app_configuration \
-  Lauver-Staging Staging staging https://api-staging.lauver.ai ai.lauver.app.staging
+  Lauver-Staging Staging staging https://lauver-api-staging.onrender.com ai.lauver.app.staging
 assert_app_configuration \
   Lauver-Production Production production https://api.lauver.ai ai.lauver.app
 

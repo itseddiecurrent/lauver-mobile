@@ -35,7 +35,7 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 sudo xcodebuild -runFirstLaunch
 ```
 
-An Apple Developer Team ID is not needed for unsigned Simulator tests. Copy `LauverNative/Config/Local.xcconfig.example` to an ignored local config only when device signing is introduced.
+An Apple Developer Team ID is not needed for Simulator tests. Xcode applies local ad-hoc Simulator signing so the Keychain integration test can exercise the real Security framework. Copy `LauverNative/Config/Local.xcconfig.example` to an ignored local config only when device signing is introduced.
 
 ## Backend and PostgreSQL setup
 
@@ -86,6 +86,12 @@ Run all Step 01 backend checks after PostgreSQL is healthy:
 ./scripts/test-step-01.sh
 ```
 
+Run the Step 02 native shell, API client, Keychain, state-component, and UI navigation checks:
+
+```bash
+./scripts/test-step-02.sh
+```
+
 `npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
@@ -95,6 +101,8 @@ Run checks separately:
 ./scripts/tests/check-secrets.test.sh
 ./scripts/tests/select-ios-simulator.test.sh
 ./scripts/tests/check-step-00-structure.test.sh
+./scripts/tests/check-step-01-structure.test.sh
+./scripts/tests/check-step-02-structure.test.sh
 ./scripts/check-mvp-scope.sh
 ./scripts/check-secrets.sh
 
@@ -111,7 +119,7 @@ cd ..
 ./scripts/test-ios-config.sh
 ```
 
-The iOS script prefers an already booted iPhone Simulator, then falls back to the first available iPhone. Set `SIMULATOR_UDID` to choose a specific device or `IOS_TEST_TIMEOUT_SECONDS` to override the 15-minute safety timeout.
+The iOS script prefers an already booted iPhone Simulator, then falls back to the first available iPhone. Set `SIMULATOR_UDID` to choose a specific device or `IOS_TEST_TIMEOUT_SECONDS` to override the 15-minute safety timeout. The staging scheme calls `https://lauver-api-staging.onrender.com/healthz`; production remains configured independently.
 
 ## Configuration boundaries
 
@@ -139,7 +147,7 @@ The root `render.yaml` defines a Singapore staging web service and PostgreSQL da
 
 ## Current external setup still needed
 
-Step 01 needs a Render workspace connection to complete staging acceptance. Before later steps, the project owner will also need to provide or create:
+Step 01 Render staging acceptance is complete. Before later steps, the project owner will still need to provide or create:
 
 - Apple Developer Program access and the `ai.lauver.app` App ID;
 - a Render production project (staging is defined by `render.yaml`);

@@ -14,16 +14,16 @@ final class AppConfigurationTests: XCTestCase {
     func testConfigurationLoadsStagingValues() throws {
         let configuration = try AppConfiguration.from(infoDictionary: [
             "APP_ENVIRONMENT": "staging",
-            "API_BASE_URL": "https://api-staging.lauver.ai"
+            "API_BASE_URL": "https://lauver-api-staging.onrender.com"
         ])
 
         XCTAssertEqual(configuration.environment, .staging)
-        XCTAssertEqual(configuration.apiBaseURL.absoluteString, "https://api-staging.lauver.ai")
+        XCTAssertEqual(configuration.apiBaseURL.absoluteString, "https://lauver-api-staging.onrender.com")
     }
 
     func testConfigurationRejectsMissingEnvironment() {
         XCTAssertThrowsError(try AppConfiguration.from(infoDictionary: [
-            "API_BASE_URL": "https://api-staging.lauver.ai"
+            "API_BASE_URL": "https://lauver-api-staging.onrender.com"
         ])) { error in
             XCTAssertEqual(error as? AppConfigurationError, .missingOrInvalidEnvironment)
         }
@@ -32,7 +32,7 @@ final class AppConfigurationTests: XCTestCase {
     func testConfigurationRejectsUnknownEnvironment() {
         XCTAssertThrowsError(try AppConfiguration.from(infoDictionary: [
             "APP_ENVIRONMENT": "preview",
-            "API_BASE_URL": "https://api-staging.lauver.ai"
+            "API_BASE_URL": "https://lauver-api-staging.onrender.com"
         ])) { error in
             XCTAssertEqual(error as? AppConfigurationError, .missingOrInvalidEnvironment)
         }

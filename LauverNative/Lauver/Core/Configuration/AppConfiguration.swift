@@ -13,6 +13,10 @@ struct AppConfiguration: Equatable {
     let environment: AppEnvironment
     let apiBaseURL: URL
 
+    func overridingAPIBaseURL(_ apiBaseURL: URL) -> AppConfiguration {
+        AppConfiguration(environment: environment, apiBaseURL: apiBaseURL)
+    }
+
     static func from(bundle: Bundle = .main) throws -> AppConfiguration {
         try from(infoDictionary: bundle.infoDictionary ?? [:])
     }

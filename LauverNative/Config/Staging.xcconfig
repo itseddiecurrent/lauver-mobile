@@ -2,5 +2,5 @@
 #include? "Local.xcconfig"
 
 APP_ENVIRONMENT = staging
-API_BASE_URL = https:/$()/api-staging.lauver.ai
+API_BASE_URL = https:/$()/lauver-api-staging.onrender.com
 PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.staging

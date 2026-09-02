@@ -30,8 +30,7 @@ xcodebuild test \
   -destination-timeout 60 \
   -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 180 \
-  -maximum-test-execution-time-allowance 300 \
-  CODE_SIGNING_ALLOWED=NO &
+  -maximum-test-execution-time-allowance 300 &
 test_pid=$!
 
 watchdog_pid=''
