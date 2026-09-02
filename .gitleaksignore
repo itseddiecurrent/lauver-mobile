@@ -1,0 +1,6 @@
+# Synthetic password fixtures in Step 03 tests; these are not credentials.
+f7d5b516b0e8de43adaf1bbda00a3c0de7c773c3:LauverNative/LauverTests/AuthServiceTests.swift:generic-api-key:71
+f7d5b516b0e8de43adaf1bbda00a3c0de7c773c3:LauverNative/LauverTests/AuthServiceTests.swift:generic-api-key:79
+f7d5b516b0e8de43adaf1bbda00a3c0de7c773c3:backend/tests/integration/postgres.integration.test.ts:generic-api-key:200
+f7d5b516b0e8de43adaf1bbda00a3c0de7c773c3:backend/tests/integration/postgres.integration.test.ts:generic-api-key:204
+f7d5b516b0e8de43adaf1bbda00a3c0de7c773c3:backend/tests/integration/postgres.integration.test.ts:generic-api-key:212
