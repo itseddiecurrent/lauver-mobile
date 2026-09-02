@@ -1,6 +1,6 @@
 # Step 03 Acceptance Record
 
-> Status: in progress — implementation and local non-database verification complete; external acceptance pending
+> Status: in progress — implementation, PostgreSQL/CI, and Render staging verification complete; real email delivery pending
 >
 > Last updated: 2026-09-02 (Asia/Shanghai)
 
@@ -12,7 +12,7 @@ Password-reset delivery is implemented through the server-side Resend API adapte
 
 ## Verification environment
 
-- Repository: `lauver-mobile`, uncommitted Step 03 working tree based on `main` at `bccca4f`
+- Repository: `lauver-mobile`, implementation commit `f7d5b51`, guardrail follow-up `a890360`
 - macOS/Xcode: same local workstation used for Step 02; Xcode 26.6 (`17F113`)
 - iOS Simulator: iOS 26.5, UDID `4423DF1C-0121-4788-8BEC-1D3CCF9C6BBC`
 - macOS: `26.4.1` (`25E253`)
@@ -39,12 +39,34 @@ Password-reset delivery is implemented through the server-side Resend API adapte
 
 The initial combined UI run exposed a Simulator-setting-dependent assertion that required the software keyboard accessibility node to exist after every secure-field focus. Product behavior was not failing. The assertion was relaxed, and only the three affected auth cases were rerun; all passed. The expensive unaffected cases were not rerun unnecessarily.
 
+## CI and PostgreSQL verification
+
+[MVP CI run 33586632539](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33586632539) passed all three jobs on 2026-09-02:
+
+1. `guardrails` passed the Step 00–03 structure checks, scope guard, working-tree secret scan, and Gitleaks history scan;
+2. `backend` reset a real PostgreSQL 17 test schema, deployed every migration from zero, passed the Step 03 database integration suite, built the production server and Docker image, and reported zero production dependency vulnerabilities;
+3. `ios` passed the complete XCTest/XCUITest suite and staging/production built-configuration checks.
+
+The first implementation run exposed five Gitleaks false positives for the exact synthetic password fixture `ReplacementHorse8`. `.gitleaksignore` now suppresses only those five commit/path/rule/line fingerprints; no detector or file is broadly excluded. The same Gitleaks 8.24.3 command passed locally before the follow-up was pushed.
+
+## Render staging verification
+
+Render deployed the Step 03 API and migration to `https://lauver-api-staging.onrender.com`. On 2026-09-02, `/healthz` and database-backed `/readyz` both returned HTTP 200. A generated non-production account then passed:
+
+- registration and duplicate-email rejection;
+- access-token session restore;
+- refresh-token rotation;
+- reused old-token rejection and revocation of the rotated token from the compromised session;
+- wrong-password rejection and correct-password login;
+- logout and immediate access-session invalidation;
+- identical forgot-password responses for existing and missing accounts;
+- invalid reset-token rejection.
+
+The test printed no password or session token. The generated account remains isolated staging test data because account deletion is intentionally deferred to Step 14.
+
 ## Acceptance still required
 
-- Run the Step 03 migration and auth integration suite against PostgreSQL from an empty schema.
-- Pass GitHub Actions guardrails/backend/iOS jobs for the Step 03 change.
-- Deploy the migration and API changes to Render staging, then verify register, logout, login, refresh rotation/reuse rejection, and session restore against the real staging database.
 - Configure `PASSWORD_RESET_DELIVERY=resend`, `RESEND_API_KEY`, and a verified `PASSWORD_RESET_FROM_EMAIL` directly in Render.
 - Complete a real test-account password reset from delivered email through the native app and confirm the old password and old sessions are invalid.
 
-Step 03 must remain incomplete in `mvp.md` until these database, CI, staging, and real-delivery checks pass.
+Step 03 must remain incomplete in `mvp.md` until real email delivery and the delivered-token reset path pass.
