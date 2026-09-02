@@ -104,7 +104,7 @@ describe('public error contract', () => {
 
   it('returns a safe 400 for malformed JSON', async () => {
     const response = await request(createTestApp())
-      .post('/healthz')
+      .post('/v1/auth/login')
       .set('Content-Type', 'application/json')
       .send('{"broken":');
 

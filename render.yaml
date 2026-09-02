@@ -18,6 +18,22 @@ services:
         value: info
       - key: SHUTDOWN_TIMEOUT_MS
         value: 25000
+      - key: AUTH_ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: AUTH_ACCESS_TOKEN_TTL_SECONDS
+        value: 900
+      - key: AUTH_REFRESH_TOKEN_TTL_SECONDS
+        value: 2592000
+      - key: AUTH_PASSWORD_RESET_TTL_SECONDS
+        value: 900
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: AUTH_RATE_LIMIT_MAX_ATTEMPTS
+        value: 10
+      - key: PASSWORD_RESET_DELIVERY
+        value: disabled
+      # After verifying a sender domain, add RESEND_API_KEY and
+      # PASSWORD_RESET_FROM_EMAIL in Render, then change the mode to `resend`.
       - key: DATABASE_URL
         fromDatabase:
           name: lauver-postgres-staging

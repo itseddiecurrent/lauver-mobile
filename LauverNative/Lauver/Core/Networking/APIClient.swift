@@ -30,19 +30,25 @@ struct APIErrorPayload: Codable, Equatable {
     let requestId: String?
 }
 
+struct EmptyResponse: Decodable, Equatable {}
+
 enum APIError: Error, Equatable {
     case invalidRequest
     case invalidResponse
-    case unauthorized(requestID: String?)
+    case unauthorized(code: String, message: String?, requestID: String?)
     case validation(code: String, message: String, requestID: String?)
+    case conflict(code: String, message: String, requestID: String?)
+    case rateLimited(message: String, requestID: String?)
     case server(statusCode: Int, requestID: String?)
     case transport(URLError.Code)
     case decoding
 
     var requestID: String? {
         switch self {
-        case let .unauthorized(requestID),
+        case let .unauthorized(_, _, requestID),
              let .validation(_, _, requestID),
+             let .conflict(_, _, requestID),
+             let .rateLimited(_, requestID),
              let .server(_, requestID):
             requestID
         case .invalidRequest, .invalidResponse, .transport, .decoding:
@@ -52,9 +58,13 @@ enum APIError: Error, Equatable {
 
     var userMessage: String {
         switch self {
-        case .unauthorized:
-            "Your session is no longer valid."
+        case let .unauthorized(_, message, _):
+            message ?? "Your session is no longer valid."
         case let .validation(_, message, _):
+            message
+        case let .conflict(_, message, _):
+            message
+        case let .rateLimited(message, _):
             message
         case .server:
             "The service is temporarily unavailable."
@@ -89,7 +99,7 @@ struct RetryPolicy: Equatable {
             return (500...599).contains(statusCode)
         case let .transport(code):
             return [.timedOut, .networkConnectionLost, .notConnectedToInternet].contains(code)
-        case .invalidRequest, .invalidResponse, .unauthorized, .validation, .decoding:
+        case .invalidRequest, .invalidResponse, .unauthorized, .validation, .conflict, .rateLimited, .decoding:
             return false
         }
     }
@@ -158,18 +168,39 @@ final class APIClient {
         let requestID = httpResponse.value(forHTTPHeaderField: "x-request-id")
         switch httpResponse.statusCode {
         case 200...299:
+            if Response.self == EmptyResponse.self {
+                return EmptyResponse() as! Response
+            }
             do {
                 return try decoder.decode(Response.self, from: data)
             } catch {
                 throw APIError.decoding
             }
         case 401:
-            throw APIError.unauthorized(requestID: requestID)
+            let payload = try? decoder.decode(APIErrorPayload.self, from: data)
+            throw APIError.unauthorized(
+                code: payload?.code ?? "unauthorized",
+                message: payload?.message,
+                requestID: payload?.requestId ?? requestID
+            )
         case 422:
             let payload = try? decoder.decode(APIErrorPayload.self, from: data)
             throw APIError.validation(
                 code: payload?.code ?? "validation_failed",
                 message: payload?.message ?? "The request could not be validated.",
+                requestID: payload?.requestId ?? requestID
+            )
+        case 409:
+            let payload = try? decoder.decode(APIErrorPayload.self, from: data)
+            throw APIError.conflict(
+                code: payload?.code ?? "conflict",
+                message: payload?.message ?? "The request could not be completed.",
+                requestID: payload?.requestId ?? requestID
+            )
+        case 429:
+            let payload = try? decoder.decode(APIErrorPayload.self, from: data)
+            throw APIError.rateLimited(
+                message: payload?.message ?? "Too many requests. Try again later.",
                 requestID: payload?.requestId ?? requestID
             )
         case 500...599:

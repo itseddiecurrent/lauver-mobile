@@ -6,7 +6,11 @@ import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
 
+import { AuthError } from './auth.js';
+import type { AuthServicing } from './auth.js';
+import { installAuthRoutes } from './auth-routes.js';
 import type { Database } from './database.js';
+import type { InMemoryRateLimiter } from './rate-limiter.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -30,6 +34,8 @@ export type AppDependencies = {
   database: Database;
   corsAllowedOrigins: readonly string[];
   logger: Logger;
+  authService: AuthServicing;
+  authRateLimiter: InMemoryRateLimiter;
 };
 
 class CorsOriginError extends Error {
@@ -57,6 +63,7 @@ export function createApp(dependencies: AppDependencies): Express {
   const app = express();
 
   app.disable('x-powered-by');
+  app.set('trust proxy', 1);
   app.use(
     pinoHttp({
       logger: dependencies.logger,
@@ -107,6 +114,11 @@ export function createApp(dependencies: AppDependencies): Express {
     }
   });
 
+  installAuthRoutes(app, {
+    authService: dependencies.authService,
+    rateLimiter: dependencies.authRateLimiter,
+  });
+
   app.use((_request: Request, response: Response<ErrorResponse>) => {
     response.status(404).json({
       code: 'not_found',
@@ -131,6 +143,15 @@ export function createApp(dependencies: AppDependencies): Express {
       response.status(400).json({
         code: 'invalid_json',
         message: 'Request body must contain valid JSON',
+        requestId: requestId(response),
+      });
+      return;
+    }
+
+    if (error instanceof AuthError) {
+      response.status(error.statusCode).json({
+        code: error.code,
+        message: error.publicMessage,
         requestId: requestId(response),
       });
       return;

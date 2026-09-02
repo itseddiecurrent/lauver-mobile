@@ -55,7 +55,11 @@ final class APIClientTests: XCTestCase {
             )
         }
 
-        await assertError(.unauthorized(requestID: "request-401"))
+        await assertError(.unauthorized(
+            code: "unauthorized",
+            message: "Unauthorized",
+            requestID: "request-401"
+        ))
         XCTAssertEqual(attempts, 1)
     }
 
@@ -92,6 +96,27 @@ final class APIClientTests: XCTestCase {
 
         await assertError(.server(statusCode: 500, requestID: "request-500"))
         XCTAssertEqual(attempts, 2)
+    }
+
+    func testMaps409And429WithoutRetry() async {
+        var statusCode = 409
+        URLProtocolStub.requestHandler = { request in
+            Self.response(
+                request: request,
+                statusCode: statusCode,
+                body: statusCode == 409
+                    ? #"{"code":"registration_unavailable","message":"Registration could not be completed","requestId":"conflict-id"}"#
+                    : #"{"code":"rate_limited","message":"Too many requests","requestId":"rate-id"}"#
+            )
+        }
+
+        await assertError(.conflict(
+            code: "registration_unavailable",
+            message: "Registration could not be completed",
+            requestID: "conflict-id"
+        ))
+        statusCode = 429
+        await assertError(.rateLimited(message: "Too many requests", requestID: "rate-id"))
     }
 
     func testRetriesTimeoutWithinBoundary() async {

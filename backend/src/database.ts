@@ -1,6 +1,8 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
+import { PrismaAuthRepository, type AuthRepository } from './auth-repository.js';
+
 export interface Database {
   checkHealth(): Promise<void>;
   disconnect(): Promise<void>;
@@ -8,6 +10,7 @@ export interface Database {
 
 export class PrismaDatabase implements Database {
   readonly #client: PrismaClient;
+  readonly authRepository: AuthRepository;
 
   constructor(databaseURL: string) {
     const adapter = new PrismaPg({
@@ -17,6 +20,7 @@ export class PrismaDatabase implements Database {
     });
 
     this.#client = new PrismaClient({ adapter });
+    this.authRepository = new PrismaAuthRepository(this.#client);
   }
 
   async checkHealth(): Promise<void> {
@@ -28,6 +32,6 @@ export class PrismaDatabase implements Database {
   }
 }
 
-export function createDatabase(databaseURL: string): Database {
+export function createDatabase(databaseURL: string): PrismaDatabase {
   return new PrismaDatabase(databaseURL);
 }

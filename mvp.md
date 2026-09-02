@@ -776,6 +776,8 @@ xcodebuild test \
 
 ### Step 03：Email/Password Authentication
 
+**状态：🚧 实现及本地非数据库验证已完成（2026-09-02），但 PostgreSQL/CI、Render staging 与真实邮件投递验收尚未完成。** 当前工作树已包含后端 migration/auth API、Resend reset delivery adapter、iOS Auth/Keychain flow、自动测试和配置文档；证据与准确待办见 `artifacts/acceptance/step-03.md`。在这些外部验收通过前不得进入 Step 04，也不得标记本 Step 完成。
+
 **依赖：** Step 01、Step 02。
 
 **实现任务：**

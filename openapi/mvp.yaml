@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: Contract-first API for the native Lauver iOS MVP.
 servers:
-  - url: https://api-staging.lauver.ai
+  - url: https://lauver-api-staging.onrender.com
     description: Staging
   - url: https://api.lauver.ai
     description: Production
@@ -48,7 +48,184 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /v1/auth/register:
+    post:
+      operationId: registerWithEmail
+      summary: Register an email/password account and create a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailPasswordRequest'
+      responses:
+        '201':
+          description: Account and session created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '409':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/login:
+    post:
+      operationId: loginWithEmail
+      summary: Create a session using email/password credentials
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailPasswordRequest'
+      responses:
+        '200':
+          description: Authenticated session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/refresh:
+    post:
+      operationId: refreshSession
+      summary: Rotate a refresh token and issue a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Rotated authenticated session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/logout:
+    post:
+      operationId: logoutSession
+      summary: Revoke a refresh-token session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: Session revoked or already absent.
+  /v1/auth/password/forgot:
+    post:
+      operationId: requestPasswordReset
+      summary: Request a generic password-reset delivery response
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  maxLength: 320
+      responses:
+        '202':
+          description: Generic response for existing and non-existing accounts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/password/reset:
+    post:
+      operationId: resetPassword
+      summary: Consume a single-use reset token and revoke existing sessions
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, password]
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                  maxLength: 512
+                password:
+                  $ref: '#/components/schemas/Password'
+      responses:
+        '200':
+          description: Password reset completed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+  /v1/auth/session:
+    get:
+      operationId: restoreSession
+      summary: Restore identity from a signed access token and active server session
+      responses:
+        '200':
+          description: Verified current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [user]
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AuthUser'
+        '401':
+          $ref: '#/components/responses/AuthError'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    AuthError:
+      description: Authentication, validation, conflict, or rate-limit failure.
+      headers:
+        x-request-id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   headers:
     RequestId:
       description: Server-generated request correlation identifier.
@@ -95,3 +272,63 @@ components:
         details:
           type: object
           additionalProperties: true
+    Password:
+      type: string
+      format: password
+      minLength: 12
+      maxLength: 128
+      pattern: '^(?=.*[A-Za-z])(?=.*[0-9]).+$'
+    EmailPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 320
+        password:
+          $ref: '#/components/schemas/Password'
+    RefreshTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          maxLength: 512
+    AuthUser:
+      type: object
+      additionalProperties: false
+      required: [id, email]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+    AuthSession:
+      type: object
+      additionalProperties: false
+      required: [user, accessToken, refreshToken, expiresIn]
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUser'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 60
+    MessageResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          type: string
+security:
+  - bearerAuth: []

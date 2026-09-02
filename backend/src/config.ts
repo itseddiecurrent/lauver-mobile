@@ -12,6 +12,31 @@ const environmentSchema = z.object({
   CORS_ALLOWED_ORIGINS: z.string().default(''),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().max(300_000).default(25_000),
+  AUTH_ACCESS_TOKEN_SECRET: z.string().min(32),
+  AUTH_ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+  AUTH_REFRESH_TOKEN_TTL_SECONDS: z.coerce.number().int().min(3_600).max(7_776_000).default(2_592_000),
+  AUTH_PASSWORD_RESET_TTL_SECONDS: z.coerce.number().int().min(300).max(86_400).default(900),
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(1_000).max(3_600_000).default(60_000),
+  AUTH_RATE_LIMIT_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(1_000).default(10),
+  PASSWORD_RESET_DELIVERY: z.enum(['disabled', 'resend']).default('disabled'),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  PASSWORD_RESET_FROM_EMAIL: z.email().optional(),
+}).superRefine((environment, context) => {
+  if (environment.PASSWORD_RESET_DELIVERY !== 'resend') return;
+  if (environment.RESEND_API_KEY === undefined) {
+    context.addIssue({
+      code: 'custom',
+      path: ['RESEND_API_KEY'],
+      message: 'RESEND_API_KEY is required when PASSWORD_RESET_DELIVERY=resend',
+    });
+  }
+  if (environment.PASSWORD_RESET_FROM_EMAIL === undefined) {
+    context.addIssue({
+      code: 'custom',
+      path: ['PASSWORD_RESET_FROM_EMAIL'],
+      message: 'PASSWORD_RESET_FROM_EMAIL is required when PASSWORD_RESET_DELIVERY=resend',
+    });
+  }
 });
 
 export type AppConfig = {
@@ -22,6 +47,15 @@ export type AppConfig = {
   corsAllowedOrigins: string[];
   logLevel: z.infer<typeof environmentSchema>['LOG_LEVEL'];
   shutdownTimeoutMilliseconds: number;
+  authAccessTokenSecret: string;
+  authAccessTokenTTLSeconds: number;
+  authRefreshTokenTTLSeconds: number;
+  authPasswordResetTTLSeconds: number;
+  authRateLimitWindowMilliseconds: number;
+  authRateLimitMaxAttempts: number;
+  passwordResetDelivery: 'disabled' | 'resend';
+  resendAPIKey?: string;
+  passwordResetFromEmail?: string;
 };
 
 function parseAllowedOrigins(value: string): string[] {
@@ -51,5 +85,14 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     corsAllowedOrigins: parseAllowedOrigins(parsed.CORS_ALLOWED_ORIGINS),
     logLevel: parsed.LOG_LEVEL,
     shutdownTimeoutMilliseconds: parsed.SHUTDOWN_TIMEOUT_MS,
+    authAccessTokenSecret: parsed.AUTH_ACCESS_TOKEN_SECRET,
+    authAccessTokenTTLSeconds: parsed.AUTH_ACCESS_TOKEN_TTL_SECONDS,
+    authRefreshTokenTTLSeconds: parsed.AUTH_REFRESH_TOKEN_TTL_SECONDS,
+    authPasswordResetTTLSeconds: parsed.AUTH_PASSWORD_RESET_TTL_SECONDS,
+    authRateLimitWindowMilliseconds: parsed.AUTH_RATE_LIMIT_WINDOW_MS,
+    authRateLimitMaxAttempts: parsed.AUTH_RATE_LIMIT_MAX_ATTEMPTS,
+    passwordResetDelivery: parsed.PASSWORD_RESET_DELIVERY,
+    resendAPIKey: parsed.RESEND_API_KEY,
+    passwordResetFromEmail: parsed.PASSWORD_RESET_FROM_EMAIL,
   };
 }

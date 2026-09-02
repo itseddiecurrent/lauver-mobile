@@ -3,6 +3,7 @@ import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createDatabase } from '../../src/database.js';
+import { AuthService, type PasswordResetDelivery } from '../../src/auth.js';
 import { createTestApp } from '../helpers/test-app.js';
 
 const testDatabaseURL = process.env.TEST_DATABASE_URL;
@@ -10,8 +11,28 @@ if (testDatabaseURL === undefined) {
   throw new Error('TEST_DATABASE_URL is required for PostgreSQL integration tests');
 }
 
+class CapturingResetDelivery implements PasswordResetDelivery {
+  lastToken: string | undefined;
+
+  sendPasswordReset(_email: string, token: string): Promise<void> {
+    void _email;
+    this.lastToken = token;
+    return Promise.resolve();
+  }
+}
+
 const database = createDatabase(testDatabaseURL);
 const sqlClient = new Client({ connectionString: testDatabaseURL });
+const resetDelivery = new CapturingResetDelivery();
+const authService = new AuthService({
+  repository: database.authRepository,
+  passwordResetDelivery: resetDelivery,
+  accessTokenSecret: 'integration-auth-secret-at-least-32-characters',
+  accessTokenTTLSeconds: 900,
+  refreshTokenTTLSeconds: 2_592_000,
+  passwordResetTTLSeconds: 900,
+});
+const authApp = createTestApp({ database, authService });
 
 beforeAll(async () => {
   await sqlClient.connect();
@@ -40,5 +61,163 @@ describe('PostgreSQL integration', () => {
     );
 
     expect(result.rows[0]?.table_name).toBe('service_metadata');
+  });
+
+  it('applied all Step 03 authentication tables to the initially empty schema', async () => {
+    const result = await sqlClient.query<{ table_name: string }>(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = 'public'
+         AND table_name IN ('users', 'auth_identities', 'password_credentials', 'sessions', 'email_tokens')
+       ORDER BY table_name`,
+    );
+
+    expect(result.rows.map((row) => row.table_name)).toEqual([
+      'auth_identities',
+      'email_tokens',
+      'password_credentials',
+      'sessions',
+      'users',
+    ]);
+  });
+
+  it('registers, logs out, logs in, and never persists raw credentials', async () => {
+    const email = 'integration-runner@example.com';
+    const password = 'IntegrationHorse9';
+    const registration = await request(authApp)
+      .post('/v1/auth/register')
+      .send({ email, password });
+
+    expect(registration.status).toBe(201);
+    const registrationBody = registration.body as {
+      user: { email: string };
+      refreshToken: string;
+    };
+    expect(registrationBody.user.email).toBe(email);
+
+    const duplicate = await request(authApp)
+      .post('/v1/auth/register')
+      .send({ email, password });
+    expect(duplicate.status).toBe(409);
+    expect((duplicate.body as { code: string }).code).toBe('registration_unavailable');
+
+    await request(authApp)
+      .post('/v1/auth/logout')
+      .send({ refreshToken: registrationBody.refreshToken })
+      .expect(204);
+    await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email, password: 'WrongPassword7' })
+      .expect(401);
+    const login = await request(authApp).post('/v1/auth/login').send({ email, password });
+    expect(login.status).toBe(200);
+
+    const stored = await sqlClient.query<{
+      password_hash: string;
+      refresh_token_hash: string;
+    }>(
+      `SELECT pc.password_hash, s.refresh_token_hash
+       FROM password_credentials pc
+       JOIN auth_identities ai ON ai.id = pc.identity_id
+       JOIN sessions s ON s.user_id = ai.user_id
+       WHERE ai.provider_subject = $1
+       ORDER BY s.created_at DESC
+       LIMIT 1`,
+      [email],
+    );
+    expect(stored.rows[0]?.password_hash).toMatch(/^\$argon2id\$/);
+    expect(stored.rows[0]?.password_hash).not.toContain(password);
+    expect(stored.rows[0]?.refresh_token_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(stored.rows[0]?.refresh_token_hash).not.toBe(
+      (login.body as { refreshToken: string }).refreshToken,
+    );
+  });
+
+  it('uses identical login errors for wrong passwords and suspended accounts', async () => {
+    const email = 'integration-runner@example.com';
+    const wrongPassword = await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email, password: 'WrongPassword7' });
+    await sqlClient.query(
+      `UPDATE users SET status = 'SUSPENDED'
+       WHERE id = (SELECT user_id FROM auth_identities WHERE provider_subject = $1)`,
+      [email],
+    );
+    const suspended = await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email, password: 'IntegrationHorse9' });
+    expect(suspended.status).toBe(401);
+    expect(suspended.body as { code: string; message: string }).toMatchObject({
+      code: (wrongPassword.body as { code: string }).code,
+      message: (wrongPassword.body as { message: string }).message,
+    });
+    await sqlClient.query(
+      `UPDATE users SET status = 'ACTIVE'
+       WHERE id = (SELECT user_id FROM auth_identities WHERE provider_subject = $1)`,
+      [email],
+    );
+  });
+
+  it('detects refresh-token reuse and revokes the compromised session', async () => {
+    const login = await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email: 'integration-runner@example.com', password: 'IntegrationHorse9' });
+    const initialRefreshToken = (login.body as { refreshToken: string }).refreshToken;
+    const rotated = await request(authApp)
+      .post('/v1/auth/refresh')
+      .send({ refreshToken: initialRefreshToken });
+    expect(rotated.status).toBe(200);
+    const rotatedRefreshToken = (rotated.body as { refreshToken: string }).refreshToken;
+    expect(rotatedRefreshToken).not.toBe(initialRefreshToken);
+
+    await request(authApp)
+      .post('/v1/auth/refresh')
+      .send({ refreshToken: initialRefreshToken })
+      .expect(401);
+    await request(authApp)
+      .post('/v1/auth/refresh')
+      .send({ refreshToken: rotatedRefreshToken })
+      .expect(401);
+
+    const sessionId = initialRefreshToken.split('.')[0];
+    const result = await sqlClient.query<{ revoked_at: Date | null; compromised_at: Date | null }>(
+      'SELECT revoked_at, compromised_at FROM sessions WHERE id = $1',
+      [sessionId],
+    );
+    expect(result.rows[0]?.revoked_at).not.toBeNull();
+    expect(result.rows[0]?.compromised_at).not.toBeNull();
+  });
+
+  it('resets the password with a single-use token and revokes existing sessions', async () => {
+    const email = 'integration-runner@example.com';
+    const forgot = await request(authApp).post('/v1/auth/password/forgot').send({ email });
+    expect(forgot.status).toBe(202);
+    const resetToken = resetDelivery.lastToken;
+    expect(resetToken).toBeDefined();
+
+    await request(authApp)
+      .post('/v1/auth/password/reset')
+      .send({ token: resetToken, password: 'ReplacementHorse8' })
+      .expect(200);
+    await request(authApp)
+      .post('/v1/auth/password/reset')
+      .send({ token: resetToken, password: 'ReplacementHorse8' })
+      .expect(401);
+    await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email, password: 'IntegrationHorse9' })
+      .expect(401);
+    await request(authApp)
+      .post('/v1/auth/login')
+      .send({ email, password: 'ReplacementHorse8' })
+      .expect(200);
+
+    const persisted = await sqlClient.query<{ token_hash: string }>(
+      `SELECT token_hash FROM email_tokens
+       WHERE user_id = (SELECT user_id FROM auth_identities WHERE provider_subject = $1)`,
+      [email],
+    );
+    expect(persisted.rows[0]?.token_hash).toMatch(/^[0-9a-f]{64}$/);
+    expect(persisted.rows[0]?.token_hash).not.toBe(resetToken);
   });
 });

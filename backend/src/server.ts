@@ -3,19 +3,41 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 
 import { createApp } from './app.js';
+import { AuthService, NoopPasswordResetDelivery } from './auth.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './database.js';
 import { createLogger } from './logger.js';
+import { ResendPasswordResetDelivery } from './password-reset-delivery.js';
+import { InMemoryRateLimiter } from './rate-limiter.js';
 import { shutdownServer } from './server-lifecycle.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
 const database = createDatabase(config.databaseURL);
+const passwordResetDelivery = config.passwordResetDelivery === 'resend'
+  ? new ResendPasswordResetDelivery(config.resendAPIKey!, config.passwordResetFromEmail!)
+  : new NoopPasswordResetDelivery();
+const authService = new AuthService({
+  repository: database.authRepository,
+  passwordResetDelivery,
+  onPasswordResetDeliveryFailure: (error) => {
+    logger.warn({ err: error }, 'Password-reset delivery failed');
+  },
+  accessTokenSecret: config.authAccessTokenSecret,
+  accessTokenTTLSeconds: config.authAccessTokenTTLSeconds,
+  refreshTokenTTLSeconds: config.authRefreshTokenTTLSeconds,
+  passwordResetTTLSeconds: config.authPasswordResetTTLSeconds,
+});
 const server = createServer(
   createApp({
     database,
     corsAllowedOrigins: config.corsAllowedOrigins,
     logger,
+    authService,
+    authRateLimiter: new InMemoryRateLimiter(
+      config.authRateLimitWindowMilliseconds,
+      config.authRateLimitMaxAttempts,
+    ),
   }),
 );
 

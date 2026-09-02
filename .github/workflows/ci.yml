@@ -33,6 +33,8 @@ jobs:
         run: ./scripts/tests/check-step-01-structure.test.sh
       - name: Check Step 02 repository structure
         run: ./scripts/tests/check-step-02-structure.test.sh
+      - name: Check Step 03 repository structure
+        run: ./scripts/tests/check-step-03-structure.test.sh
       - name: Check working tree for secrets
         run: ./scripts/check-secrets.sh
       - name: Scan Git history with Gitleaks
@@ -45,6 +47,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://lauver:lauver_test@127.0.0.1:5432/lauver_test
       NODE_ENV: test
       LOG_LEVEL: silent
+      AUTH_ACCESS_TOKEN_SECRET: ci-only-auth-secret-at-least-32-characters
     services:
       postgres:
         image: postgres:17-alpine

@@ -72,6 +72,20 @@ Expected responses:
 {"status":"ready","service":"lauver-api","database":"ok"}
 ```
 
+## Email/password authentication
+
+Step 03 adds Argon2id password credentials, short-lived signed access tokens, rotating hashed refresh sessions, logout/session restore, and single-use password-reset tokens. The iOS app stores both session tokens only in Keychain.
+
+Local and newly created Render environments default to `PASSWORD_RESET_DELIVERY=disabled`. Registration, login, refresh, logout, and session restore still work in that mode, but password-reset email cannot be delivered. To enable reset delivery with Resend:
+
+1. verify a sender domain in Resend;
+2. set `PASSWORD_RESET_DELIVERY=resend`;
+3. set `RESEND_API_KEY` as a secret environment variable;
+4. set `PASSWORD_RESET_FROM_EMAIL` to an address on the verified domain;
+5. restart the API and run a reset request against a non-production test account.
+
+The API key and reset token must never be logged or placed in iOS configuration. The public forgot-password response is deliberately identical whether an account exists or delivery succeeds. Reset messages contain a short-lived, one-time token that users enter in the native app.
+
 ## Tests
 
 Run all Step 00 checks:
@@ -92,6 +106,12 @@ Run the Step 02 native shell, API client, Keychain, state-component, and UI navi
 ./scripts/test-step-02.sh
 ```
 
+Run all Step 03 backend migration/authentication and native auth-flow checks after PostgreSQL is healthy:
+
+```bash
+./scripts/test-step-03.sh
+```
+
 `npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
@@ -103,6 +123,7 @@ Run checks separately:
 ./scripts/tests/check-step-00-structure.test.sh
 ./scripts/tests/check-step-01-structure.test.sh
 ./scripts/tests/check-step-02-structure.test.sh
+./scripts/tests/check-step-03-structure.test.sh
 ./scripts/check-mvp-scope.sh
 ./scripts/check-secrets.sh
 
@@ -154,7 +175,7 @@ Step 01 Render staging acceptance is complete. Before later steps, the project o
 - Strava staging/production applications;
 - Stream Chat staging/production applications;
 - an S3-compatible object-storage bucket;
-- an email delivery provider and verified sender domain;
+- a Resend project, API key, and verified sender domain for password-reset delivery;
 - accessible Privacy Policy and Terms URLs.
 
 Never send secrets in chat or commit them to this repository. Add them directly to the appropriate provider dashboard or local ignored environment file.
