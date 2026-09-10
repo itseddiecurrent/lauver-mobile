@@ -21,21 +21,51 @@ const environmentSchema = z.object({
   PASSWORD_RESET_DELIVERY: z.enum(['disabled', 'resend']).default('disabled'),
   RESEND_API_KEY: z.string().min(1).optional(),
   PASSWORD_RESET_FROM_EMAIL: z.email().optional(),
+  APPLE_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+  APPLE_CLIENT_ID: z.string().min(1).optional(),
+  APPLE_TEAM_ID: z.string().min(1).optional(),
+  APPLE_KEY_ID: z.string().min(1).optional(),
+  APPLE_PRIVATE_KEY: z.string().min(1).optional(),
+  APPLE_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
 }).superRefine((environment, context) => {
-  if (environment.PASSWORD_RESET_DELIVERY !== 'resend') return;
-  if (environment.RESEND_API_KEY === undefined) {
-    context.addIssue({
-      code: 'custom',
-      path: ['RESEND_API_KEY'],
-      message: 'RESEND_API_KEY is required when PASSWORD_RESET_DELIVERY=resend',
-    });
+  if (environment.PASSWORD_RESET_DELIVERY === 'resend') {
+    if (environment.RESEND_API_KEY === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['RESEND_API_KEY'],
+        message: 'RESEND_API_KEY is required when PASSWORD_RESET_DELIVERY=resend',
+      });
+    }
+    if (environment.PASSWORD_RESET_FROM_EMAIL === undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['PASSWORD_RESET_FROM_EMAIL'],
+        message: 'PASSWORD_RESET_FROM_EMAIL is required when PASSWORD_RESET_DELIVERY=resend',
+      });
+    }
   }
-  if (environment.PASSWORD_RESET_FROM_EMAIL === undefined) {
-    context.addIssue({
-      code: 'custom',
-      path: ['PASSWORD_RESET_FROM_EMAIL'],
-      message: 'PASSWORD_RESET_FROM_EMAIL is required when PASSWORD_RESET_DELIVERY=resend',
-    });
+  if (environment.APPLE_AUTH_ENABLED === 'true') {
+    for (const key of [
+      'APPLE_CLIENT_ID',
+      'APPLE_TEAM_ID',
+      'APPLE_KEY_ID',
+      'APPLE_PRIVATE_KEY',
+      'APPLE_TOKEN_ENCRYPTION_KEY',
+    ] as const) {
+      if (environment[key] === undefined) {
+        context.addIssue({ code: 'custom', path: [key], message: `${key} is required when APPLE_AUTH_ENABLED=true` });
+      }
+    }
+    if (
+      environment.APPLE_TOKEN_ENCRYPTION_KEY !== undefined &&
+      Buffer.from(environment.APPLE_TOKEN_ENCRYPTION_KEY, 'base64').length !== 32
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['APPLE_TOKEN_ENCRYPTION_KEY'],
+        message: 'APPLE_TOKEN_ENCRYPTION_KEY must be a base64-encoded 32-byte key',
+      });
+    }
   }
 });
 
@@ -56,6 +86,12 @@ export type AppConfig = {
   passwordResetDelivery: 'disabled' | 'resend';
   resendAPIKey?: string;
   passwordResetFromEmail?: string;
+  appleAuthEnabled: boolean;
+  appleClientID?: string;
+  appleTeamID?: string;
+  appleKeyID?: string;
+  applePrivateKey?: string;
+  appleTokenEncryptionKey?: string;
 };
 
 function parseAllowedOrigins(value: string): string[] {
@@ -94,5 +130,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     passwordResetDelivery: parsed.PASSWORD_RESET_DELIVERY,
     resendAPIKey: parsed.RESEND_API_KEY,
     passwordResetFromEmail: parsed.PASSWORD_RESET_FROM_EMAIL,
+    appleAuthEnabled: parsed.APPLE_AUTH_ENABLED === 'true',
+    appleClientID: parsed.APPLE_CLIENT_ID,
+    appleTeamID: parsed.APPLE_TEAM_ID,
+    appleKeyID: parsed.APPLE_KEY_ID,
+    applePrivateKey: parsed.APPLE_PRIVATE_KEY,
+    appleTokenEncryptionKey: parsed.APPLE_TOKEN_ENCRYPTION_KEY,
   };
 }

@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { createServer } from 'node:http';
 
 import { createApp } from './app.js';
+import { AppleAuthorizationProvider, AppleTokenCipher } from './apple-auth.js';
 import { AuthService, NoopPasswordResetDelivery } from './auth.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './database.js';
@@ -17,8 +18,21 @@ const database = createDatabase(config.databaseURL);
 const passwordResetDelivery = config.passwordResetDelivery === 'resend'
   ? new ResendPasswordResetDelivery(config.resendAPIKey!, config.passwordResetFromEmail!)
   : new NoopPasswordResetDelivery();
+const appleProvider = config.appleAuthEnabled
+  ? new AppleAuthorizationProvider({
+      clientID: config.appleClientID!,
+      teamID: config.appleTeamID!,
+      keyID: config.appleKeyID!,
+      privateKey: config.applePrivateKey!,
+    })
+  : undefined;
+const appleTokenCipher = config.appleAuthEnabled
+  ? new AppleTokenCipher(config.appleTokenEncryptionKey!)
+  : undefined;
 const authService = new AuthService({
   repository: database.authRepository,
+  appleProvider,
+  appleTokenCipher,
   passwordResetDelivery,
   onPasswordResetDeliveryFailure: (error) => {
     logger.warn({ err: error }, 'Password-reset delivery failed');

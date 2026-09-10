@@ -34,6 +34,7 @@ export function createAuthServiceStub(overrides: Partial<AuthServicing> = {}): A
   return {
     register: unavailable,
     login: unavailable,
+    signInWithApple: unavailable,
     refresh: unavailable,
     logout: unavailable,
     forgotPassword: unavailable,

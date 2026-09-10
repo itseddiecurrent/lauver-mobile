@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 enum AuthenticationState: Equatable {
@@ -35,6 +36,8 @@ final class AppViewModel: ObservableObject {
     private let healthService: any HealthServicing
     private let authService: any AuthServicing
     private let authSessionStore: any AuthSessionStoring
+    private let appleUserIdentifierStore: any AppleUserIdentifierStoring
+    private let appleCredentialStateChecker: any AppleCredentialStateChecking
     private let uiStateStore: any UIStateStoring
     private let startsAuthenticated: Bool
 
@@ -43,6 +46,8 @@ final class AppViewModel: ObservableObject {
         healthService: any HealthServicing,
         authService: any AuthServicing,
         authSessionStore: any AuthSessionStoring,
+        appleUserIdentifierStore: any AppleUserIdentifierStoring,
+        appleCredentialStateChecker: any AppleCredentialStateChecking,
         uiStateStore: any UIStateStoring,
         startsAuthenticated: Bool = ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
     ) {
@@ -50,6 +55,8 @@ final class AppViewModel: ObservableObject {
         self.healthService = healthService
         self.authService = authService
         self.authSessionStore = authSessionStore
+        self.appleUserIdentifierStore = appleUserIdentifierStore
+        self.appleCredentialStateChecker = appleCredentialStateChecker
         self.uiStateStore = uiStateStore
         self.startsAuthenticated = startsAuthenticated
         authenticationState = startsAuthenticated ? .authenticated : .signedOut
@@ -59,7 +66,22 @@ final class AppViewModel: ObservableObject {
     func restoreSession() async {
         guard !startsAuthenticated, authenticationState == .signedOut else { return }
         do {
-            guard let tokens = try authSessionStore.read() else { return }
+            if let appleUserIdentifier = try appleUserIdentifierStore.read() {
+                do {
+                    let state = try await appleCredentialStateChecker.state(for: appleUserIdentifier)
+                    if [.revoked, .notFound, .transferred].contains(state) {
+                        clearLocalAuthentication()
+                        authMessage = "Your Apple authorization is no longer active. Please sign in again."
+                        return
+                    }
+                } catch {
+                    // A transient Apple status failure must not destroy a valid Lauver session.
+                }
+            }
+            guard let tokens = try authSessionStore.read() else {
+                try? appleUserIdentifierStore.clear()
+                return
+            }
             do {
                 let user = try await authService.restore(accessToken: tokens.accessToken)
                 authenticatedEmail = user.email
@@ -72,21 +94,45 @@ final class AppViewModel: ObservableObject {
             }
         } catch let error as APIError {
             if case .unauthorized = error {
-                try? authSessionStore.clear()
+                clearLocalAuthentication()
             }
             authMessage = error.userMessage
         } catch {
-            try? authSessionStore.clear()
+            clearLocalAuthentication()
             authMessage = "Your saved session could not be restored."
         }
     }
 
     func register(email: String, password: String) async {
-        await authenticate { try await authService.register(email: email, password: password) }
+        await authenticate(appleUserIdentifier: nil) {
+            try await authService.register(email: email, password: password)
+        }
     }
 
     func login(email: String, password: String) async {
-        await authenticate { try await authService.login(email: email, password: password) }
+        await authenticate(appleUserIdentifier: nil) {
+            try await authService.login(email: email, password: password)
+        }
+    }
+
+    func signInWithApple(credential: AppleSignInCredential) async {
+        await authenticate(appleUserIdentifier: credential.userIdentifier) {
+            try await authService.signInWithApple(credential: credential)
+        }
+    }
+
+    func appleSignInDidFail(_ error: Error) {
+        if let authorizationError = error as? ASAuthorizationError,
+           authorizationError.code == .canceled {
+            return
+        }
+        authMessage = (error as? LocalizedError)?.errorDescription
+            ?? "Sign in with Apple could not be completed."
+    }
+
+    func handleAppleCredentialRevoked() async {
+        await signOut()
+        authMessage = "Your Apple authorization was revoked. Please sign in again."
     }
 
     func forgotPassword(email: String) async {
@@ -132,6 +178,7 @@ final class AppViewModel: ObservableObject {
             try? await authService.logout(refreshToken: refreshToken)
         }
         try? authSessionStore.clear()
+        try? appleUserIdentifierStore.clear()
         authenticationState = .signedOut
         authenticatedEmail = nil
         authScreenMode = .login
@@ -139,10 +186,24 @@ final class AppViewModel: ObservableObject {
         selectedTab = .discover
     }
 
-    private func authenticate(_ action: () async throws -> AuthSession) async {
+    private func authenticate(
+        appleUserIdentifier: String?,
+        _ action: () async throws -> AuthSession
+    ) async {
         await performAuthAction {
             let session = try await action()
-            try authSessionStore.save(session)
+            do {
+                try authSessionStore.save(session)
+                if let appleUserIdentifier {
+                    try appleUserIdentifierStore.save(appleUserIdentifier)
+                } else {
+                    try appleUserIdentifierStore.clear()
+                }
+            } catch {
+                try? authSessionStore.clear()
+                try? appleUserIdentifierStore.clear()
+                throw error
+            }
             authenticatedEmail = session.user.email
             authenticationState = .authenticated
             authMessage = nil
@@ -162,6 +223,14 @@ final class AppViewModel: ObservableObject {
             authMessage = "The authentication request failed."
         }
     }
+
+    private func clearLocalAuthentication() {
+        try? authSessionStore.clear()
+        try? appleUserIdentifierStore.clear()
+        authenticationState = .signedOut
+        authenticatedEmail = nil
+        authScreenMode = .login
+    }
 }
 
 struct ContentView: View {
@@ -173,6 +242,8 @@ struct ContentView: View {
             healthService: container.healthService,
             authService: container.authService,
             authSessionStore: container.authSessionStore,
+            appleUserIdentifierStore: container.appleUserIdentifierStore,
+            appleCredentialStateChecker: container.appleCredentialStateChecker,
             uiStateStore: container.uiStateStore
         ))
     }
@@ -191,6 +262,11 @@ struct ContentView: View {
             async let session: Void = viewModel.restoreSession()
             _ = await (health, session)
         }
+        .onReceive(NotificationCenter.default.publisher(
+            for: ASAuthorizationAppleIDProvider.credentialRevokedNotification
+        )) { _ in
+            Task { await viewModel.handleAppleCredentialRevoked() }
+        }
     }
 }
 
@@ -199,6 +275,7 @@ private struct LoginPlaceholderView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var resetToken = ""
+    @State private var appleNonce: String?
 
     var body: some View {
         NavigationStack {
@@ -277,6 +354,43 @@ private struct LoginPlaceholderView: View {
             .tint(LauverDesign.ColorToken.accent)
             .disabled(viewModel.isAuthSubmitting)
             .accessibilityIdentifier(viewModel.authScreenMode == .register ? "auth-register" : "auth-login")
+
+            HStack {
+                Divider()
+                Text("or").font(.caption).foregroundStyle(.secondary)
+                Divider()
+            }
+
+            SignInWithAppleButton(.continue) { request in
+                do {
+                    let nonce = try AppleSignInNonce.generate()
+                    appleNonce = nonce
+                    request.requestedScopes = [.fullName, .email]
+                    request.nonce = AppleSignInNonce.hash(nonce)
+                } catch {
+                    appleNonce = nil
+                    viewModel.appleSignInDidFail(error)
+                }
+            } onCompletion: { result in
+                defer { appleNonce = nil }
+                do {
+                    guard let nonce = appleNonce else {
+                        throw AppleSignInError.nonceGenerationFailed
+                    }
+                    let authorization = try result.get()
+                    let credential = try AppleSignInCredential(
+                        authorization: authorization,
+                        nonce: nonce
+                    )
+                    Task { await viewModel.signInWithApple(credential: credential) }
+                } catch {
+                    viewModel.appleSignInDidFail(error)
+                }
+            }
+            .signInWithAppleButtonStyle(.black)
+            .frame(height: 48)
+            .disabled(viewModel.isAuthSubmitting)
+            .accessibilityIdentifier("auth-apple")
 
             Button(viewModel.authScreenMode == .register ? "Already have an account?" : "Create an account") {
                 viewModel.showAuthScreen(viewModel.authScreenMode == .register ? .login : .register)

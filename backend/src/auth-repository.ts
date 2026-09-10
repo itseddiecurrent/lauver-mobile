@@ -9,6 +9,12 @@ export type EmailAccount = {
   passwordHash: string;
 };
 
+export type AppleAccount = {
+  userId: string;
+  email: string;
+  status: UserStatus;
+};
+
 export type StoredSession = {
   id: string;
   userId: string;
@@ -34,6 +40,13 @@ export interface AuthRepository {
   createEmailAccount(email: string, passwordHash: string): Promise<EmailAccount>;
   findEmailAccount(email: string): Promise<EmailAccount | null>;
   findEmailForUser(userId: string): Promise<string | null>;
+  linkOrCreateAppleAccount(input: {
+    subject: string;
+    email: string | null;
+    givenName: string | null;
+    familyName: string | null;
+    refreshTokenEncrypted: string;
+  }): Promise<AppleAccount | null>;
   createSession(session: {
     id: string;
     userId: string;
@@ -122,7 +135,78 @@ export class PrismaAuthRepository implements AuthRepository {
       where: { userId, provider: 'EMAIL' },
       select: { providerSubject: true },
     });
-    return identity?.providerSubject ?? null;
+    if (identity !== null) return identity.providerSubject;
+    const apple = await this.#client.appleCredential.findFirst({
+      where: { identity: { userId, provider: 'APPLE' } },
+      select: { email: true },
+    });
+    return apple?.email ?? null;
+  }
+
+  async linkOrCreateAppleAccount(input: {
+    subject: string;
+    email: string | null;
+    givenName: string | null;
+    familyName: string | null;
+    refreshTokenEncrypted: string;
+  }): Promise<AppleAccount | null> {
+    return this.#client.$transaction(async (transaction) => {
+      const existing = await transaction.authIdentity.findUnique({
+        where: { provider_providerSubject: { provider: 'APPLE', providerSubject: input.subject } },
+        include: { user: true, appleCredential: true },
+      });
+      if (existing !== null) {
+        const savedEmail = existing.appleCredential?.email ?? input.email;
+        if (savedEmail === null) return null;
+        await transaction.appleCredential.upsert({
+          where: { identityId: existing.id },
+          create: {
+            identityId: existing.id,
+            email: savedEmail,
+            givenName: input.givenName,
+            familyName: input.familyName,
+            refreshTokenEncrypted: input.refreshTokenEncrypted,
+          },
+          update: {
+            refreshTokenEncrypted: input.refreshTokenEncrypted,
+            ...(existing.appleCredential?.email === null && input.email !== null
+              ? { email: input.email }
+              : {}),
+            ...(existing.appleCredential?.givenName === null && input.givenName !== null
+              ? { givenName: input.givenName }
+              : {}),
+            ...(existing.appleCredential?.familyName === null && input.familyName !== null
+              ? { familyName: input.familyName }
+              : {}),
+          },
+        });
+        return { userId: existing.userId, email: savedEmail, status: existing.user.status };
+      }
+
+      if (input.email === null) return null;
+      const emailIdentity = await transaction.authIdentity.findUnique({
+        where: { provider_providerSubject: { provider: 'EMAIL', providerSubject: input.email } },
+        include: { user: true },
+      });
+      const user = emailIdentity?.user ?? await transaction.user.create({ data: { id: randomUUID() } });
+      await transaction.authIdentity.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          provider: 'APPLE',
+          providerSubject: input.subject,
+          appleCredential: {
+            create: {
+              email: input.email,
+              givenName: input.givenName,
+              familyName: input.familyName,
+              refreshTokenEncrypted: input.refreshTokenEncrypted,
+            },
+          },
+        },
+      });
+      return { userId: user.id, email: input.email, status: user.status };
+    });
   }
 
   async createSession(session: {

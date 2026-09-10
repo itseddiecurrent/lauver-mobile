@@ -40,7 +40,7 @@ scan_pattern() {
 
 scan_pattern "a private key block" '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'
 scan_pattern "a high-confidence access token" '(AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{30,}|sk-(proj-)?[A-Za-z0-9_-]{20,})'
-scan_pattern "a populated sensitive environment assignment" '(STRAVA_CLIENT_SECRET|STREAM_API_SECRET|APPLE_PRIVATE_KEY|JWT_SECRET)[[:space:]]*=[[:space:]]*[A-Za-z0-9_+/.=-]{12,}'
+scan_pattern "a populated sensitive environment assignment" '(STRAVA_CLIENT_SECRET|STREAM_API_SECRET|APPLE_PRIVATE_KEY|APPLE_TOKEN_ENCRYPTION_KEY|JWT_SECRET)[[:space:]]*=[[:space:]]*[A-Za-z0-9_+/.=-]{12,}'
 
 if [ "$failed" -ne 0 ]; then
   echo "Secret scan failed. Only file names are shown; secret values are intentionally suppressed." >&2

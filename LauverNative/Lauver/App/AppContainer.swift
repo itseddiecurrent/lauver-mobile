@@ -5,6 +5,8 @@ struct AppContainer {
     let healthService: any HealthServicing
     let authService: any AuthServicing
     let authSessionStore: any AuthSessionStoring
+    let appleUserIdentifierStore: any AppleUserIdentifierStoring
+    let appleCredentialStateChecker: any AppleCredentialStateChecking
     let tokenStore: any SecureTokenStoring
     let uiStateStore: any UIStateStoring
 
@@ -17,12 +19,14 @@ struct AppContainer {
         let uiStateStore = UIStateStore()
         let tokenStore = KeychainStore()
         let authSessionStore = KeychainAuthSessionStore(tokenStore: tokenStore)
+        let appleUserIdentifierStore = KeychainAppleUserIdentifierStore(tokenStore: tokenStore)
 
         if arguments.contains("-ui-testing-reset-state") {
             uiStateStore.reset()
         }
         if arguments.contains("-ui-testing-reset-auth") {
             try? authSessionStore.clear()
+            try? appleUserIdentifierStore.clear()
         }
 
         let sessionConfiguration = URLSessionConfiguration.ephemeral
@@ -52,6 +56,8 @@ struct AppContainer {
             healthService: healthService,
             authService: authService,
             authSessionStore: authSessionStore,
+            appleUserIdentifierStore: appleUserIdentifierStore,
+            appleCredentialStateChecker: AppleCredentialStateChecker(),
             tokenStore: tokenStore,
             uiStateStore: uiStateStore
         )
@@ -65,6 +71,10 @@ private struct UITestAuthService: AuthServicing {
 
     func login(email: String, password: String) async throws -> AuthSession {
         session(email: email)
+    }
+
+    func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
+        session(email: credential.email ?? "runner@privaterelay.appleid.com")
     }
 
     func refresh(refreshToken: String) async throws -> AuthSession {

@@ -116,6 +116,32 @@ paths:
                 $ref: '#/components/schemas/AuthSession'
         '401':
           $ref: '#/components/responses/AuthError'
+  /v1/auth/apple:
+    post:
+      operationId: signInWithApple
+      summary: Verify an Apple identity proof, exchange its one-time code, and create a session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppleSignInRequest'
+      responses:
+        '200':
+          description: Authenticated Apple-backed session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+        '503':
+          $ref: '#/components/responses/AuthError'
   /v1/auth/logout:
     post:
       operationId: logoutSession
@@ -298,6 +324,34 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+    AppleSignInRequest:
+      type: object
+      additionalProperties: false
+      required: [identityToken, authorizationCode, nonce, email, givenName, familyName]
+      properties:
+        identityToken:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        authorizationCode:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        nonce:
+          type: string
+          minLength: 32
+          maxLength: 128
+        email:
+          type: [string, 'null']
+          format: email
+          maxLength: 320
+          description: First-authorization value; the API accepts it only when it matches the verified token.
+        givenName:
+          type: [string, 'null']
+          maxLength: 100
+        familyName:
+          type: [string, 'null']
+          maxLength: 100
     AuthUser:
       type: object
       additionalProperties: false

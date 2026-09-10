@@ -4,6 +4,12 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createDatabase } from '../../src/database.js';
 import { AuthService, type PasswordResetDelivery } from '../../src/auth.js';
+import {
+  AppleTokenCipher,
+  type AppleAuthorization,
+  type AppleAuthorizationInput,
+  type AppleAuthorizing,
+} from '../../src/apple-auth.js';
 import { createTestApp } from '../helpers/test-app.js';
 
 const testDatabaseURL = process.env.TEST_DATABASE_URL;
@@ -21,6 +27,16 @@ class CapturingResetDelivery implements PasswordResetDelivery {
   }
 }
 
+class IntegrationAppleProvider implements AppleAuthorizing {
+  authorize(input: AppleAuthorizationInput): Promise<AppleAuthorization> {
+    return Promise.resolve({
+      subject: 'integration-apple-subject',
+      email: input.authorizationCode === 'second-code' ? null : 'integration-apple@example.com',
+      refreshToken: `integration-apple-refresh-token-${input.authorizationCode}`,
+    });
+  }
+}
+
 const database = createDatabase(testDatabaseURL);
 const sqlClient = new Client({ connectionString: testDatabaseURL });
 const resetDelivery = new CapturingResetDelivery();
@@ -33,6 +49,18 @@ const authService = new AuthService({
   passwordResetTTLSeconds: 900,
 });
 const authApp = createTestApp({ database, authService });
+const appleAuthApp = createTestApp({
+  database,
+  authService: new AuthService({
+    repository: database.authRepository,
+    appleProvider: new IntegrationAppleProvider(),
+    appleTokenCipher: new AppleTokenCipher(Buffer.alloc(32, 5).toString('base64')),
+    accessTokenSecret: 'integration-auth-secret-at-least-32-characters',
+    accessTokenTTLSeconds: 900,
+    refreshTokenTTLSeconds: 2_592_000,
+    passwordResetTTLSeconds: 900,
+  }),
+});
 
 beforeAll(async () => {
   await sqlClient.connect();
@@ -79,6 +107,20 @@ describe('PostgreSQL integration', () => {
       'sessions',
       'users',
     ]);
+  });
+
+  it('applied the Step 04 Apple credential table and provider enum value', async () => {
+    const table = await sqlClient.query<{ table_name: string | null }>(
+      "SELECT to_regclass('public.apple_credentials')::text AS table_name",
+    );
+    const provider = await sqlClient.query<{ enumlabel: string }>(
+      `SELECT enumlabel FROM pg_enum
+       JOIN pg_type ON pg_type.oid = pg_enum.enumtypid
+       WHERE pg_type.typname = 'AuthProvider' AND enumlabel = 'APPLE'`,
+    );
+
+    expect(table.rows[0]?.table_name).toBe('apple_credentials');
+    expect(provider.rows.map((row) => row.enumlabel)).toEqual(['APPLE']);
   });
 
   it('registers, logs out, logs in, and never persists raw credentials', async () => {
@@ -219,5 +261,43 @@ describe('PostgreSQL integration', () => {
     );
     expect(persisted.rows[0]?.token_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(persisted.rows[0]?.token_hash).not.toBe(resetToken);
+  });
+
+  it('persists one Apple identity and only an encrypted provider refresh token', async () => {
+    const first = await request(appleAuthApp).post('/v1/auth/apple').send({
+      identityToken: 'integration-identity-token',
+      authorizationCode: 'first-code',
+      nonce: 'integration-nonce-with-at-least-thirty-two-characters',
+      email: 'integration-apple@example.com',
+      givenName: 'Apple',
+      familyName: 'Runner',
+    });
+    const second = await request(appleAuthApp).post('/v1/auth/apple').send({
+      identityToken: 'integration-identity-token-2',
+      authorizationCode: 'second-code',
+      nonce: 'another-integration-nonce-over-thirty-two-characters',
+      email: null,
+      givenName: null,
+      familyName: null,
+    });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect((second.body as { user: { id: string } }).user.id)
+      .toBe((first.body as { user: { id: string } }).user.id);
+    const stored = await sqlClient.query<{
+      provider_subject: string;
+      refresh_token_encrypted: string;
+      given_name: string;
+    }>(
+      `SELECT ai.provider_subject, ac.refresh_token_encrypted, ac.given_name
+       FROM auth_identities ai
+       JOIN apple_credentials ac ON ac.identity_id = ai.id
+       WHERE ai.provider_subject = 'integration-apple-subject'`,
+    );
+    expect(stored.rows).toHaveLength(1);
+    expect(stored.rows[0]?.refresh_token_encrypted).toMatch(/^v1\./);
+    expect(stored.rows[0]?.refresh_token_encrypted).not.toContain('integration-apple-refresh-token');
+    expect(stored.rows[0]?.given_name).toBe('Apple');
   });
 });

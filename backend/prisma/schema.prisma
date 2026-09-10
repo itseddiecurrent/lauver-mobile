@@ -25,6 +25,7 @@ enum UserStatus {
 
 enum AuthProvider {
   EMAIL
+  APPLE
 }
 
 enum EmailTokenPurpose {
@@ -52,17 +53,31 @@ model AuthIdentity {
   updatedAt          DateTime            @updatedAt @map("updated_at")
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   passwordCredential PasswordCredential?
+  appleCredential    AppleCredential?
 
   @@unique([provider, providerSubject])
   @@index([userId])
   @@map("auth_identities")
 }
 
+model AppleCredential {
+  identityId            String       @id @map("identity_id") @db.Uuid
+  email                 String?      @db.VarChar(320)
+  givenName             String?      @map("given_name") @db.VarChar(100)
+  familyName            String?      @map("family_name") @db.VarChar(100)
+  refreshTokenEncrypted String       @map("refresh_token_encrypted")
+  createdAt             DateTime     @default(now()) @map("created_at")
+  updatedAt             DateTime     @updatedAt @map("updated_at")
+  identity              AuthIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+
+  @@map("apple_credentials")
+}
+
 model PasswordCredential {
-  identityId  String       @id @map("identity_id") @db.Uuid
-  passwordHash String      @map("password_hash")
-  changedAt   DateTime     @default(now()) @map("changed_at")
-  identity    AuthIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  identityId   String       @id @map("identity_id") @db.Uuid
+  passwordHash String       @map("password_hash")
+  changedAt    DateTime     @default(now()) @map("changed_at")
+  identity     AuthIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
 
   @@map("password_credentials")
 }

@@ -15,6 +15,14 @@ const passwordSchema = z
   .regex(/[A-Za-z]/)
   .regex(/[0-9]/);
 const emailPasswordSchema = z.object({ email: emailSchema, password: passwordSchema }).strict();
+const appleSignInSchema = z.object({
+  identityToken: z.string().min(1).max(10_000),
+  authorizationCode: z.string().min(1).max(2_000),
+  nonce: z.string().min(32).max(128),
+  email: emailSchema.nullable().default(null),
+  givenName: z.string().trim().min(1).max(100).nullable().default(null),
+  familyName: z.string().trim().min(1).max(100).nullable().default(null),
+}).strict();
 const refreshSchema = z.object({ refreshToken: z.string().min(1).max(512) }).strict();
 const forgotPasswordSchema = z.object({ email: emailSchema }).strict();
 const resetPasswordSchema = z.object({
@@ -45,6 +53,17 @@ export function installAuthRoutes(app: Express, dependencies: AuthRouteDependenc
     if (!consumeRateLimit('login', request, body.email, response, dependencies.rateLimiter)) return;
     try {
       response.status(200).json(await dependencies.authService.login(body.email, body.password));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/v1/auth/apple', async (request, response, next) => {
+    const body = parseBody(appleSignInSchema, request, response);
+    if (body === null) return;
+    if (!consumeRateLimit('apple', request, body.nonce, response, dependencies.rateLimiter)) return;
+    try {
+      response.status(200).json(await dependencies.authService.signInWithApple(body));
     } catch (error) {
       next(error);
     }

@@ -60,6 +60,34 @@ final class AuthServiceTests: XCTestCase {
         try await service.forgotPassword(email: "runner@example.com")
     }
 
+    func testAppleSignInSendsProofAndFirstLoginDataButNotTheLocalUserIdentifier() async throws {
+        AuthURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/auth/apple")
+            XCTAssertEqual(request.httpMethod, "POST")
+            let body = try XCTUnwrap(Self.bodyData(from: request))
+            let payload = try JSONSerialization.jsonObject(with: body) as? [String: String]
+            XCTAssertEqual(payload?["identityToken"], "signed-identity-token")
+            XCTAssertEqual(payload?["authorizationCode"], "single-use-code")
+            XCTAssertEqual(payload?["nonce"], "raw-nonce-with-at-least-thirty-two-characters")
+            XCTAssertEqual(payload?["email"], "runner@privaterelay.appleid.com")
+            XCTAssertEqual(payload?["givenName"], "Alex")
+            XCTAssertEqual(payload?["familyName"], "Runner")
+            XCTAssertNil(payload?["userIdentifier"])
+            XCTAssertNil(payload?["userId"])
+            return Self.response(request, statusCode: 200, body: Self.sessionJSON)
+        }
+
+        _ = try await service.signInWithApple(credential: AppleSignInCredential(
+            identityToken: "signed-identity-token",
+            authorizationCode: "single-use-code",
+            nonce: "raw-nonce-with-at-least-thirty-two-characters",
+            userIdentifier: "local-apple-user-id",
+            email: "runner@privaterelay.appleid.com",
+            givenName: "Alex",
+            familyName: "Runner"
+        ))
+    }
+
     func testResetPasswordUsesTheContractPathAndDoesNotSendAnIdentity() async throws {
         AuthURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/auth/password/reset")

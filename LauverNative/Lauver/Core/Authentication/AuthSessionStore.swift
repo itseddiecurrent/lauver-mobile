@@ -11,6 +11,29 @@ protocol AuthSessionStoring {
     func clear() throws
 }
 
+protocol AppleUserIdentifierStoring {
+    func read() throws -> String?
+    func save(_ userIdentifier: String) throws
+    func clear() throws
+}
+
+struct KeychainAppleUserIdentifierStore: AppleUserIdentifierStoring {
+    private static let account = "auth.apple-user-id"
+    let tokenStore: any SecureTokenStoring
+
+    func read() throws -> String? {
+        try tokenStore.readToken(for: Self.account)
+    }
+
+    func save(_ userIdentifier: String) throws {
+        try tokenStore.save(userIdentifier, for: Self.account)
+    }
+
+    func clear() throws {
+        try tokenStore.deleteToken(for: Self.account)
+    }
+}
+
 struct KeychainAuthSessionStore: AuthSessionStoring {
     private enum Accounts {
         static let accessToken = "auth.access-token"

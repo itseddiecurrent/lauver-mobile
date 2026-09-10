@@ -8,6 +8,11 @@ import {
   type AuthRepository,
   type EmailAccount,
 } from './auth-repository.js';
+import {
+  AppleAuthorizationError,
+  type AppleAuthorizing,
+  type AppleTokenCipher,
+} from './apple-auth.js';
 
 const accessTokenIssuer = 'lauver-api';
 const accessTokenAudience = 'lauver-ios';
@@ -124,6 +129,8 @@ class AccessTokenCodec {
 
 export type AuthServiceOptions = {
   repository: AuthRepository;
+  appleProvider?: AppleAuthorizing;
+  appleTokenCipher?: AppleTokenCipher;
   passwordHasher?: PasswordHasher;
   passwordResetDelivery?: PasswordResetDelivery;
   onPasswordResetDeliveryFailure?: (error: unknown) => void;
@@ -137,6 +144,14 @@ export type AuthServiceOptions = {
 export interface AuthServicing {
   register(email: string, password: string): Promise<AuthSession>;
   login(email: string, password: string): Promise<AuthSession>;
+  signInWithApple(input: {
+    identityToken: string;
+    authorizationCode: string;
+    nonce: string;
+    email: string | null;
+    givenName: string | null;
+    familyName: string | null;
+  }): Promise<AuthSession>;
   refresh(refreshToken: string): Promise<AuthSession>;
   logout(refreshToken: string): Promise<void>;
   forgotPassword(email: string): Promise<void>;
@@ -146,6 +161,8 @@ export interface AuthServicing {
 
 export class AuthService implements AuthServicing {
   readonly #repository: AuthRepository;
+  readonly #appleProvider: AppleAuthorizing | undefined;
+  readonly #appleTokenCipher: AppleTokenCipher | undefined;
   readonly #passwordHasher: PasswordHasher;
   readonly #passwordResetDelivery: PasswordResetDelivery;
   readonly #onPasswordResetDeliveryFailure: (error: unknown) => void;
@@ -157,6 +174,8 @@ export class AuthService implements AuthServicing {
 
   constructor(options: AuthServiceOptions) {
     this.#repository = options.repository;
+    this.#appleProvider = options.appleProvider;
+    this.#appleTokenCipher = options.appleTokenCipher;
     this.#passwordHasher = options.passwordHasher ?? new Argon2idPasswordHasher();
     this.#passwordResetDelivery = options.passwordResetDelivery ?? new NoopPasswordResetDelivery();
     this.#onPasswordResetDeliveryFailure = options.onPasswordResetDeliveryFailure ?? (() => {});
@@ -196,6 +215,45 @@ export class AuthService implements AuthServicing {
       throw invalidCredentialsError();
     }
     return this.#createSession(account.userId, account.email);
+  }
+
+  async signInWithApple(input: {
+    identityToken: string;
+    authorizationCode: string;
+    nonce: string;
+    email: string | null;
+    givenName: string | null;
+    familyName: string | null;
+  }): Promise<AuthSession> {
+    if (this.#appleProvider === undefined || this.#appleTokenCipher === undefined) {
+      throw new AuthError(503, 'apple_sign_in_unavailable', 'Sign in with Apple is unavailable');
+    }
+    try {
+      const authorization = await this.#appleProvider.authorize(input);
+      if (input.email !== null && normalizeEmail(input.email) !== authorization.email) {
+        throw invalidAppleCredentialError();
+      }
+      const account = await this.#repository.linkOrCreateAppleAccount({
+        subject: authorization.subject,
+        email: authorization.email,
+        givenName: input.givenName,
+        familyName: input.familyName,
+        refreshTokenEncrypted: this.#appleTokenCipher.encrypt(authorization.refreshToken),
+      });
+      if (account === null || account.status !== 'ACTIVE') {
+        throw invalidAppleCredentialError();
+      }
+      return await this.#createSession(account.userId, account.email);
+    } catch (error) {
+      if (error instanceof AuthError) throw error;
+      if (error instanceof AppleAuthorizationError) {
+        if (error.reason === 'unavailable') {
+          throw new AuthError(503, 'apple_sign_in_unavailable', 'Sign in with Apple is unavailable');
+        }
+        throw invalidAppleCredentialError();
+      }
+      throw error;
+    }
   }
 
   async refresh(refreshToken: string): Promise<AuthSession> {
@@ -332,4 +390,8 @@ function invalidCredentialsError(): AuthError {
 
 function invalidSessionError(): AuthError {
   return new AuthError(401, 'invalid_session', 'The session is invalid or expired');
+}
+
+function invalidAppleCredentialError(): AuthError {
+  return new AuthError(401, 'invalid_apple_credential', 'The Apple credential is invalid or expired');
 }

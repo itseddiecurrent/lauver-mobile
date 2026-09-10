@@ -34,6 +34,11 @@ services:
         value: disabled
       # After verifying a sender domain, add RESEND_API_KEY and
       # PASSWORD_RESET_FROM_EMAIL in Render, then change the mode to `resend`.
+      - key: APPLE_AUTH_ENABLED
+        value: false
+      # Configure APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID,
+      # APPLE_PRIVATE_KEY, and APPLE_TOKEN_ENCRYPTION_KEY directly in Render,
+      # then enable Apple auth. Never commit the p8 key.
       - key: DATABASE_URL
         fromDatabase:
           name: lauver-postgres-staging

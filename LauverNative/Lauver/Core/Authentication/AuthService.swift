@@ -17,6 +17,15 @@ private struct EmailPasswordPayload: Encodable {
     let password: String
 }
 
+private struct AppleSignInPayload: Encodable {
+    let identityToken: String
+    let authorizationCode: String
+    let nonce: String
+    let email: String?
+    let givenName: String?
+    let familyName: String?
+}
+
 private struct RefreshTokenPayload: Encodable {
     let refreshToken: String
 }
@@ -41,6 +50,7 @@ private struct MessageResponse: Decodable {
 protocol AuthServicing {
     func register(email: String, password: String) async throws -> AuthSession
     func login(email: String, password: String) async throws -> AuthSession
+    func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession
     func refresh(refreshToken: String) async throws -> AuthSession
     func logout(refreshToken: String) async throws
     func forgotPassword(email: String) async throws
@@ -63,6 +73,20 @@ struct AuthService: AuthServicing {
         try await sendSession(
             path: "/v1/auth/login",
             payload: EmailPasswordPayload(email: email, password: password)
+        )
+    }
+
+    func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
+        try await sendSession(
+            path: "/v1/auth/apple",
+            payload: AppleSignInPayload(
+                identityToken: credential.identityToken,
+                authorizationCode: credential.authorizationCode,
+                nonce: credential.nonce,
+                email: credential.email,
+                givenName: credential.givenName,
+                familyName: credential.familyName
+            )
         )
     }
 

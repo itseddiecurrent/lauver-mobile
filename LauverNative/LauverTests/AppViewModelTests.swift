@@ -114,10 +114,60 @@ final class AppViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.authMessage, "The session is invalid or expired")
     }
 
+    func testAppleSignInSavesOnlyTheLocalCredentialIdentifierAfterBackendSuccess() async {
+        let authService = TestAuthService()
+        let sessionStore = TestAuthSessionStore()
+        let appleStore = TestAppleUserIdentifierStore()
+        let viewModel = makeViewModel(
+            authService: authService,
+            authSessionStore: sessionStore,
+            appleUserIdentifierStore: appleStore
+        )
+        let credential = AppleSignInCredential(
+            identityToken: "signed-identity-token",
+            authorizationCode: "single-use-code",
+            nonce: "raw-nonce-with-at-least-thirty-two-characters",
+            userIdentifier: "local-apple-user-id",
+            email: "runner@privaterelay.appleid.com",
+            givenName: "Alex",
+            familyName: "Runner"
+        )
+
+        await viewModel.signInWithApple(credential: credential)
+
+        XCTAssertEqual(authService.appleCredential, credential)
+        XCTAssertEqual(appleStore.userIdentifier, "local-apple-user-id")
+        XCTAssertEqual(viewModel.authenticationState, .authenticated)
+    }
+
+    func testRevokedAppleCredentialClearsSessionBeforeCallingBackendRestore() async {
+        let authService = TestAuthService()
+        let sessionStore = TestAuthSessionStore(tokens: SessionTokens(
+            accessToken: "saved-access",
+            refreshToken: "saved-refresh"
+        ))
+        let appleStore = TestAppleUserIdentifierStore(userIdentifier: "revoked-apple-user")
+        let viewModel = makeViewModel(
+            authService: authService,
+            authSessionStore: sessionStore,
+            appleUserIdentifierStore: appleStore,
+            appleCredentialStateChecker: TestAppleCredentialStateChecker(state: .revoked)
+        )
+
+        await viewModel.restoreSession()
+
+        XCTAssertEqual(viewModel.authenticationState, .signedOut)
+        XCTAssertTrue(sessionStore.clearCalled)
+        XCTAssertNil(appleStore.userIdentifier)
+        XCTAssertFalse(authService.restoreCalled)
+    }
+
     private func makeViewModel(
         healthResult: Result<HealthResponse, APIError> = .success(HealthResponse(status: "ok", service: "lauver-api")),
         authService: TestAuthService = TestAuthService(),
         authSessionStore: TestAuthSessionStore = TestAuthSessionStore(),
+        appleUserIdentifierStore: TestAppleUserIdentifierStore = TestAppleUserIdentifierStore(),
+        appleCredentialStateChecker: TestAppleCredentialStateChecker = TestAppleCredentialStateChecker(),
         uiStateStore: TestUIStateStore = TestUIStateStore()
     ) -> AppViewModel {
         AppViewModel(
@@ -128,6 +178,8 @@ final class AppViewModelTests: XCTestCase {
             healthService: StubHealthService(result: healthResult),
             authService: authService,
             authSessionStore: authSessionStore,
+            appleUserIdentifierStore: appleUserIdentifierStore,
+            appleCredentialStateChecker: appleCredentialStateChecker,
             uiStateStore: uiStateStore,
             startsAuthenticated: false
         )
@@ -146,9 +198,14 @@ private final class TestAuthService: AuthServicing {
     var refreshResult: Result<AuthSession, APIError> = .success(session)
     var restoreCalled = false
     var refreshedToken: String?
+    var appleCredential: AppleSignInCredential?
 
     func register(email: String, password: String) async throws -> AuthSession { Self.session }
     func login(email: String, password: String) async throws -> AuthSession { Self.session }
+    func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
+        appleCredential = credential
+        return Self.session
+    }
 
     func refresh(refreshToken: String) async throws -> AuthSession {
         refreshedToken = refreshToken
@@ -162,6 +219,26 @@ private final class TestAuthService: AuthServicing {
     func restore(accessToken: String) async throws -> AuthUser {
         restoreCalled = true
         return try restoreResult.get()
+    }
+}
+
+private final class TestAppleUserIdentifierStore: AppleUserIdentifierStoring {
+    var userIdentifier: String?
+
+    init(userIdentifier: String? = nil) {
+        self.userIdentifier = userIdentifier
+    }
+
+    func read() throws -> String? { userIdentifier }
+    func save(_ userIdentifier: String) throws { self.userIdentifier = userIdentifier }
+    func clear() throws { userIdentifier = nil }
+}
+
+private struct TestAppleCredentialStateChecker: AppleCredentialStateChecking {
+    var state: AppleCredentialState = .authorized
+
+    func state(for userIdentifier: String) async throws -> AppleCredentialState {
+        state
     }
 }
 

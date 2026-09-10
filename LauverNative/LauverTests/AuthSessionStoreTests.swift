@@ -45,6 +45,18 @@ final class AuthSessionStoreTests: XCTestCase {
         XCTAssertThrowsError(try store.save(session))
         XCTAssertTrue(secureStore.values.isEmpty)
     }
+
+    func testAppleUserIdentifierUsesTheDedicatedSecureAccountAndCanBeCleared() throws {
+        let secureStore = MemorySecureTokenStore()
+        let store = KeychainAppleUserIdentifierStore(tokenStore: secureStore)
+
+        try store.save("apple-local-user-id")
+        XCTAssertEqual(try store.read(), "apple-local-user-id")
+        XCTAssertEqual(secureStore.values, ["auth.apple-user-id": "apple-local-user-id"])
+
+        try store.clear()
+        XCTAssertNil(try store.read())
+    }
 }
 
 private final class MemorySecureTokenStore: SecureTokenStoring {

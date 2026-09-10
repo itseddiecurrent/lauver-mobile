@@ -14,6 +14,7 @@ final class LauverUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["app-environment"].label, "Staging environment")
         XCTAssertTrue(app.buttons["auth-login"].exists)
         XCTAssertTrue(app.buttons["auth-show-register"].exists)
+        XCTAssertTrue(app.buttons["auth-apple"].exists)
         XCTAssertTrue(app.staticTexts["api-online"].waitForExistence(timeout: 60))
     }
 

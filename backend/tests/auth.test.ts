@@ -7,6 +7,13 @@ import {
   type PasswordResetDelivery,
 } from '../src/auth.js';
 import {
+  AppleAuthorizationError,
+  AppleTokenCipher,
+  type AppleAuthorization,
+  type AppleAuthorizationInput,
+  type AppleAuthorizing,
+} from '../src/apple-auth.js';
+import {
   DuplicateEmailError,
   type AuthRepository,
   type EmailAccount,
@@ -149,6 +156,90 @@ describe('AuthService', () => {
     await expect(service.restore(session.accessToken)).rejects.toMatchObject({ code: 'invalid_session' });
     await expect(service.restore('forged-token')).rejects.toMatchObject({ code: 'invalid_session' });
   });
+
+  it('creates one Apple identity, preserves first-login profile data, and encrypts its refresh token', async () => {
+    const repository = new MemoryAuthRepository();
+    const provider = new FakeAppleProvider();
+    const service = makeService(repository, new CapturingResetDelivery(), provider);
+
+    const first = await service.signInWithApple({
+      identityToken: 'verified-token',
+      authorizationCode: 'single-use-code',
+      nonce: 'raw-nonce-with-at-least-thirty-two-characters',
+      email: 'apple@example.com',
+      givenName: 'Alex',
+      familyName: 'Runner',
+    });
+    provider.authorization = {
+      subject: 'apple-subject',
+      email: null,
+      refreshToken: 'replacement-apple-refresh-token',
+    };
+    const second = await service.signInWithApple({
+      identityToken: 'second-token',
+      authorizationCode: 'second-code',
+      nonce: 'another-nonce-with-at-least-thirty-two-chars',
+      email: null,
+      givenName: null,
+      familyName: null,
+    });
+
+    expect(second.user.id).toBe(first.user.id);
+    expect(second.user.email).toBe('apple@example.com');
+    expect(repository.appleAccounts).toHaveLength(1);
+    expect(repository.appleAccounts[0]).toMatchObject({ givenName: 'Alex', familyName: 'Runner' });
+    expect(repository.appleAccounts[0]?.refreshTokenEncrypted).not.toContain('apple-refresh-token');
+  });
+
+  it('links a verified Apple email to the existing email account', async () => {
+    const repository = new MemoryAuthRepository();
+    const service = makeService(repository, new CapturingResetDelivery(), new FakeAppleProvider());
+    const emailSession = await service.register('apple@example.com', password);
+
+    const appleSession = await service.signInWithApple({
+      identityToken: 'verified-token',
+      authorizationCode: 'single-use-code',
+      nonce: 'raw-nonce-with-at-least-thirty-two-characters',
+      email: 'apple@example.com',
+      givenName: 'Alex',
+      familyName: 'Runner',
+    });
+
+    expect(appleSession.user.id).toBe(emailSession.user.id);
+    expect(repository.accounts).toHaveLength(1);
+  });
+
+  it('rejects a revoked Apple authorization without creating a local session', async () => {
+    const repository = new MemoryAuthRepository();
+    const provider = new FakeAppleProvider();
+    provider.failure = new AppleAuthorizationError('revoked');
+    const service = makeService(repository, new CapturingResetDelivery(), provider);
+
+    await expect(service.signInWithApple({
+      identityToken: 'revoked-token',
+      authorizationCode: 'revoked-code',
+      nonce: 'raw-nonce-with-at-least-thirty-two-characters',
+      email: null,
+      givenName: null,
+      familyName: null,
+    })).rejects.toMatchObject({ statusCode: 401, code: 'invalid_apple_credential' });
+    expect(repository.sessions.size).toBe(0);
+  });
+
+  it('rejects first-login email data that does not match the verified Apple token', async () => {
+    const repository = new MemoryAuthRepository();
+    const service = makeService(repository, new CapturingResetDelivery(), new FakeAppleProvider());
+
+    await expect(service.signInWithApple({
+      identityToken: 'verified-token',
+      authorizationCode: 'single-use-code',
+      nonce: 'raw-nonce-with-at-least-thirty-two-characters',
+      email: 'attacker@example.com',
+      givenName: 'Alex',
+      familyName: 'Runner',
+    })).rejects.toMatchObject({ statusCode: 401, code: 'invalid_apple_credential' });
+    expect(repository.appleAccounts).toHaveLength(0);
+  });
 });
 
 describe('Argon2idPasswordHasher', () => {
@@ -186,9 +277,14 @@ class CapturingResetDelivery implements PasswordResetDelivery {
 function makeService(
   repository: MemoryAuthRepository,
   passwordResetDelivery: PasswordResetDelivery = new CapturingResetDelivery(),
+  appleProvider?: AppleAuthorizing,
 ): AuthService {
   return new AuthService({
     repository,
+    appleProvider,
+    appleTokenCipher: appleProvider === undefined
+      ? undefined
+      : new AppleTokenCipher(Buffer.alloc(32, 7).toString('base64')),
     passwordHasher: new FastPasswordHasher(),
     passwordResetDelivery,
     accessTokenSecret: 'test-auth-secret-at-least-32-characters',
@@ -201,11 +297,20 @@ function makeService(
 
 type MutableAccount = EmailAccount & { status: EmailAccount['status'] };
 type ResetRecord = { userId: string; expiresAt: Date; usedAt: Date | null };
+type MemoryAppleAccount = {
+  subject: string;
+  userId: string;
+  email: string;
+  givenName: string | null;
+  familyName: string | null;
+  refreshTokenEncrypted: string;
+};
 
 class MemoryAuthRepository implements AuthRepository {
   readonly accounts = new Map<string, MutableAccount>();
   readonly sessions = new Map<string, StoredSession>();
   readonly resetTokens = new Map<string, ResetRecord>();
+  readonly appleAccounts: MemoryAppleAccount[] = [];
 
   createEmailAccount(email: string, passwordHash: string): Promise<EmailAccount> {
     if (this.accounts.has(email)) throw new DuplicateEmailError();
@@ -227,6 +332,33 @@ class MemoryAuthRepository implements AuthRepository {
     return Promise.resolve(
       [...this.accounts.values()].find((account) => account.userId === userId)?.email ?? null,
     );
+  }
+
+  linkOrCreateAppleAccount(input: {
+    subject: string;
+    email: string | null;
+    givenName: string | null;
+    familyName: string | null;
+    refreshTokenEncrypted: string;
+  }): Promise<{ userId: string; email: string; status: 'ACTIVE' | 'SUSPENDED' | 'DELETED' } | null> {
+    const existing = this.appleAccounts.find((account) => account.subject === input.subject);
+    if (existing !== undefined) {
+      existing.refreshTokenEncrypted = input.refreshTokenEncrypted;
+      return Promise.resolve({ userId: existing.userId, email: existing.email, status: 'ACTIVE' });
+    }
+    if (input.email === null) return Promise.resolve(null);
+    let account = this.accounts.get(input.email);
+    if (account === undefined) {
+      account = {
+        userId: crypto.randomUUID(),
+        email: input.email,
+        status: 'ACTIVE',
+        passwordHash: '',
+      };
+      this.accounts.set(input.email, account);
+    }
+    this.appleAccounts.push({ ...input, email: input.email, userId: account.userId });
+    return Promise.resolve({ userId: account.userId, email: input.email, status: account.status });
   }
 
   createSession(session: {
@@ -328,5 +460,20 @@ class MemoryAuthRepository implements AuthRepository {
       if (session.userId === account.userId && session.revokedAt === null) session.revokedAt = input.now;
     }
     return Promise.resolve(true);
+  }
+}
+
+class FakeAppleProvider implements AppleAuthorizing {
+  authorization: AppleAuthorization = {
+    subject: 'apple-subject',
+    email: 'apple@example.com',
+    refreshToken: 'apple-refresh-token',
+  };
+  failure: AppleAuthorizationError | undefined;
+
+  authorize(_input: AppleAuthorizationInput): Promise<AppleAuthorization> {
+    void _input;
+    if (this.failure !== undefined) return Promise.reject(this.failure);
+    return Promise.resolve(this.authorization);
   }
 }

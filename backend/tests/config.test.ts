@@ -28,6 +28,12 @@ describe('loadConfig', () => {
       passwordResetDelivery: 'disabled',
       resendAPIKey: undefined,
       passwordResetFromEmail: undefined,
+      appleAuthEnabled: false,
+      appleClientID: undefined,
+      appleTeamID: undefined,
+      appleKeyID: undefined,
+      applePrivateKey: undefined,
+      appleTokenEncryptionKey: undefined,
     });
   });
 
@@ -60,6 +66,12 @@ describe('loadConfig', () => {
       passwordResetDelivery: 'disabled',
       resendAPIKey: undefined,
       passwordResetFromEmail: undefined,
+      appleAuthEnabled: false,
+      appleClientID: undefined,
+      appleTeamID: undefined,
+      appleKeyID: undefined,
+      applePrivateKey: undefined,
+      appleTokenEncryptionKey: undefined,
     });
   });
 
@@ -133,5 +145,33 @@ describe('loadConfig', () => {
       resendAPIKey: 'provider-api-key',
       passwordResetFromEmail: 'noreply@lauver.ai',
     });
+  });
+
+  it('requires every server-side Apple secret and a 32-byte encryption key when enabled', () => {
+    expect(() => loadConfig({ ...requiredEnvironment, APPLE_AUTH_ENABLED: 'true' }))
+      .toThrow('APPLE_CLIENT_ID is required');
+
+    expect(loadConfig({
+      ...requiredEnvironment,
+      APPLE_AUTH_ENABLED: 'true',
+      APPLE_CLIENT_ID: 'ai.lauver.app.staging',
+      APPLE_TEAM_ID: 'TEAM123456',
+      APPLE_KEY_ID: 'KEY1234567',
+      APPLE_PRIVATE_KEY: 'private-key-from-render-secret',
+      APPLE_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString('base64'),
+    })).toMatchObject({
+      appleAuthEnabled: true,
+      appleClientID: 'ai.lauver.app.staging',
+    });
+
+    expect(() => loadConfig({
+      ...requiredEnvironment,
+      APPLE_AUTH_ENABLED: 'true',
+      APPLE_CLIENT_ID: 'ai.lauver.app.staging',
+      APPLE_TEAM_ID: 'TEAM123456',
+      APPLE_KEY_ID: 'KEY1234567',
+      APPLE_PRIVATE_KEY: 'private-key-from-render-secret',
+      APPLE_TOKEN_ENCRYPTION_KEY: Buffer.alloc(16, 1).toString('base64'),
+    })).toThrow('base64-encoded 32-byte key');
   });
 });

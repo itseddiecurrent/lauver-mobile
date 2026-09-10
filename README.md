@@ -112,6 +112,12 @@ Run all Step 03 backend migration/authentication and native auth-flow checks aft
 ./scripts/test-step-03.sh
 ```
 
+Run Step 04 Apple authentication, encryption, migration, native capability, and regression checks:
+
+```bash
+./scripts/test-step-04.sh
+```
+
 `npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
@@ -124,6 +130,7 @@ Run checks separately:
 ./scripts/tests/check-step-01-structure.test.sh
 ./scripts/tests/check-step-02-structure.test.sh
 ./scripts/tests/check-step-03-structure.test.sh
+./scripts/tests/check-step-04-structure.test.sh
 ./scripts/check-mvp-scope.sh
 ./scripts/check-secrets.sh
 
@@ -148,6 +155,12 @@ The iOS script prefers an already booted iPhone Simulator, then falls back to th
 - Backend configuration is documented in `backend/.env.example`.
 - Real `.env` files, private keys, OAuth secrets, tokens, and signing files must never be committed.
 - Staging and production use separate API base URLs and, in later steps, separate third-party applications.
+
+## Sign in with Apple
+
+The iOS target contains the public Sign in with Apple entitlement and uses the official AuthenticationServices control. It creates a new random nonce for every attempt, sends only Apple's signed proof and one-time code to the API, and stores the local credential identifier in Keychain solely for Apple credential-state checks.
+
+Apple auth is disabled by default on a new backend. For each environment, configure `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, and a separately generated `APPLE_TOKEN_ENCRYPTION_KEY` directly in Render, then set `APPLE_AUTH_ENABLED=true`. The native iOS flow does not supply a web redirect URI; the API validates its one-time code directly against Apple's token endpoint. Never put the p8 key, generated client secret, token-encryption key, or Apple refresh token in the iOS project.
 
 ## Container and Render deployment
 

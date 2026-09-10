@@ -102,3 +102,37 @@ describe('email auth routes', () => {
     expect(restore).toHaveBeenCalledWith('signed-access-token');
   });
 });
+
+describe('Apple auth route', () => {
+  const validAppleBody = {
+    identityToken: 'signed-apple-identity-token',
+    authorizationCode: 'single-use-authorization-code',
+    nonce: 'raw-nonce-with-at-least-thirty-two-characters',
+    email: 'runner@privaterelay.appleid.com',
+    givenName: 'Alex',
+    familyName: 'Runner',
+  };
+
+  it('passes only the Apple proof and first-login name to the auth service', async () => {
+    const signInWithApple = vi.fn().mockResolvedValue({
+      user: { id: 'trusted-user', email: 'runner@privaterelay.appleid.com' },
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresIn: 900,
+    });
+    const response = await request(createTestApp({
+      authService: createAuthServiceStub({ signInWithApple }),
+    })).post('/v1/auth/apple').send(validAppleBody);
+
+    expect(response.status).toBe(200);
+    expect(signInWithApple).toHaveBeenCalledWith(validAppleBody);
+  });
+
+  it('rejects a client-supplied Apple user ID', async () => {
+    const signInWithApple = vi.fn();
+    const app = createTestApp({ authService: createAuthServiceStub({ signInWithApple }) });
+
+    await request(app).post('/v1/auth/apple').send({ ...validAppleBody, userId: 'unverified' }).expect(422);
+    expect(signInWithApple).not.toHaveBeenCalled();
+  });
+});
