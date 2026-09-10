@@ -1,6 +1,6 @@
 # Step 04 Acceptance Record
 
-> Status: implementation, CI, Apple Developer setup, and Render staging verification complete; real-device acceptance and signed-archive secret audit pending
+> Status: implementation, CI, Apple Developer setup, Render staging verification, and signed-archive secret audit complete; real-device acceptance pending
 >
 > Last updated: 2026-09-10 (Asia/Shanghai)
 
@@ -38,6 +38,7 @@ not available; it passed against PostgreSQL 17 in CI.
 | Native XCUITest | Pass — 9/9 |
 | PostgreSQL migration/integration suite | Pass in CI against PostgreSQL 17 |
 | Signed staging device build | Pass — Apple Development profile for `ai.lauver.app.staging` includes Sign in with Apple |
+| Signed staging archive and secret audit | Pass — archive, working tree, and Git history contain no Apple private-key material |
 
 [MVP CI run 34426537894](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34426537894)
 passed the `guardrails`, `backend`, and `ios` jobs for implementation commit
@@ -61,13 +62,23 @@ Completed on 2026-09-10 without recording any secret values:
    Apple route and provider are enabled without creating an account or exposing
    real credentials.
 
+## Signed archive verification
+
+The `Lauver-Staging` scheme was enabled for archiving and produced a signed
+arm64 iOS archive on 2026-09-10. Its embedded application identifier is
+`94KFUD562T.ai.lauver.app.staging`, and its signed entitlements contain
+`com.apple.developer.applesignin = Default`.
+
+An archive strings scan found no private-key blocks or the server-only
+`APPLE_PRIVATE_KEY` / `APPLE_TOKEN_ENCRYPTION_KEY` names. The same private-key
+block scan passed across the current working tree and complete Git history. CI's
+Gitleaks history scan also passed for implementation commit `43fd796`.
+
 ## External acceptance still required
 
 1. On a real iPhone, create an account, sign out, and sign in again. Confirm the
    original name/email remain when Apple no longer returns them.
 2. Revoke Lauver under Apple Account settings, relaunch, and confirm the app
    clears the saved session.
-3. Search the signed archive strings and source history for Apple private-key
-   material before marking Step 04 complete.
 
-Step 04 must remain incomplete in `mvp.md` until the real-device and signed-archive checks pass.
+Step 04 must remain incomplete in `mvp.md` until the real-device checks pass.
