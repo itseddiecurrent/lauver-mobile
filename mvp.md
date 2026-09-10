@@ -807,7 +807,7 @@ xcodebuild test \
 
 ### Step 04：Sign in with Apple
 
-**状态：🚧 实现与当前可用的本地自动化验收已完成（2026-09-06）；待 PostgreSQL CI、Apple Developer / Render staging 配置及真实 iPhone 闭环。** 原生 capability、AuthenticationServices + nonce、后端 JWKS/token exchange、加密 refresh token、账户关联、撤销检查及 FakeAppleProvider 测试均已交付；准确证据与外部验收清单见 `artifacts/acceptance/step-04.md`。真实 Apple staging 闭环通过前不得标记本 Step 完成。
+**状态：🚧 实现、PostgreSQL CI、Apple Developer 配置和 Render staging 部署验收已完成（2026-09-10）；待真实 iPhone 登录/撤销闭环及 signed archive secret audit。** 原生 capability、AuthenticationServices + nonce、后端 JWKS/token exchange、加密 refresh token、账户关联、撤销检查及 FakeAppleProvider 测试均已交付；准确证据与剩余验收清单见 `artifacts/acceptance/step-04.md`。真实 Apple staging 闭环通过前不得标记本 Step 完成。
 
 **依赖：** Step 03；Apple Developer staging 配置。
 
