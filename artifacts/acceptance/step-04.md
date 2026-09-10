@@ -1,6 +1,6 @@
 # Step 04 Acceptance Record
 
-> Status: implementation, CI, Apple Developer setup, Render staging verification, and signed-archive secret audit complete; real-device acceptance pending
+> Status: complete
 >
 > Last updated: 2026-09-10 (Asia/Shanghai)
 
@@ -74,11 +74,20 @@ An archive strings scan found no private-key blocks or the server-only
 block scan passed across the current working tree and complete Git history. CI's
 Gitleaks history scan also passed for implementation commit `43fd796`.
 
-## External acceptance still required
+## Real-device acceptance
 
-1. On a real iPhone, create an account, sign out, and sign in again. Confirm the
-   original name/email remain when Apple no longer returns them.
-2. Revoke Lauver under Apple Account settings, relaunch, and confirm the app
-   clears the saved session.
+Completed on 2026-09-10 using an iPhone 14 Plus running iOS 18.7.8 and the signed
+`Lauver-Staging` build:
 
-Step 04 must remain incomplete in `mvp.md` until the real-device checks pass.
+1. First-time Sign in with Apple succeeded against Render staging and entered the
+   authenticated four-tab app shell.
+2. After signing out, a second Sign in with Apple using the same Apple account
+   succeeded without requesting the first-authorization name fields or creating a
+   visible duplicate-account flow.
+3. The tester removed Lauver under the Apple account's Sign in with Apple
+   settings, force-quit the app, and relaunched it.
+4. On relaunch, the app automatically cleared the Lauver session, returned to the
+   login screen, and displayed the expected revoked-authorization message.
+
+No Apple credential, user identifier, email address, token, or secret is recorded
+in this artifact. All Step 04 acceptance requirements are complete.
