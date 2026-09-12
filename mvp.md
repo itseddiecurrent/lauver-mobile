@@ -776,7 +776,7 @@ xcodebuild test \
 
 ### Step 03：Email/Password Authentication
 
-**状态：🚧 实现、PostgreSQL/CI 与 Render staging 验收已完成（2026-09-02）；仅剩真实邮件投递与 delivered-token reset 验收。** 后端 migration/auth API、Resend reset delivery adapter、iOS Auth/Keychain flow、自动测试和配置文档均已交付；准确证据与唯一剩余外部配置见 `artifacts/acceptance/step-03.md`。在真实邮件闭环通过前不得进入 Step 04，也不得标记本 Step 完成。
+**状态：✅ 已完成（2026-09-06）。** 后端 migration/auth API、Resend reset delivery adapter、iOS Auth/Keychain flow、自动测试、Render staging 配置和真实邮件重置闭环均已通过；准确证据见 `artifacts/acceptance/step-03.md`。
 
 **依赖：** Step 01、Step 02。
 
@@ -838,6 +838,8 @@ xcodebuild test \
 **通过标准：** 真实 Apple 登录闭环通过，服务端不信任未经验证的 Apple user identifier，私钥只存在 Render。
 
 ### Step 05：Workout Profile、Photo 与 City Location
+
+**状态：🚧 实现与本地自动化验证已完成（2026-09-10）；CI/staging/人工验收待完成。** Profile migration/API、城市坐标隐私、S3-compatible 签名上传与图片内容校验、SwiftUI 编辑/展示页及 MapKit 城市搜索已实现；仍需通过 PostgreSQL CI、Render migration/object storage 配置和真机持久化验收后才能标记完成。准确证据见 `artifacts/acceptance/step-05.md`。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 

@@ -1,8 +1,8 @@
 # Step 03 Acceptance Record
 
-> Status: in progress — implementation, PostgreSQL/CI, and Render staging verification complete; real email delivery pending
+> Status: complete
 >
-> Last updated: 2026-09-02 (Asia/Shanghai)
+> Last updated: 2026-09-06 (Asia/Shanghai)
 
 ## Scope
 
@@ -64,9 +64,41 @@ Render deployed the Step 03 API and migration to `https://lauver-api-staging.onr
 
 The test printed no password or session token. The generated account remains isolated staging test data because account deletion is intentionally deferred to Step 14.
 
-## Acceptance still required
+## Real email acceptance
 
-- Configure `PASSWORD_RESET_DELIVERY=resend`, `RESEND_API_KEY`, and a verified `PASSWORD_RESET_FROM_EMAIL` directly in Render.
-- Complete a real test-account password reset from delivered email through the native app and confirm the old password and old sessions are invalid.
+Completed on 2026-09-06 against Render staging and the native staging app:
 
-Step 03 must remain incomplete in `mvp.md` until real email delivery and the delivered-token reset path pass.
+- Render was configured with Resend delivery and redeployed successfully;
+- the new instance passed Render's `/healthz` probe and an independent `/readyz` database check;
+- a real test account requested a password reset and received the Resend message;
+- the delivered one-time token completed the reset in the native app;
+- the old password was rejected and the new password authenticated successfully.
+
+The tester reported the complete flow as passed. The email address, password, and
+one-time token are intentionally not recorded in this artifact. Together with the
+automated session-revocation coverage, this completes Step 03.
+
+## 2026-09-06 regression verification
+
+The Step 03 baseline was reverified before resuming MVP work:
+
+| Check | Result |
+|---|---|
+| Repository structure, MVP scope, and working-tree secret guards | Pass |
+| Backend lint and typecheck | Pass |
+| Backend unit and boundary tests | Pass — 46/46 |
+| Backend production build | Pass |
+| Production dependency audit | Pass — 0 vulnerabilities |
+| Staging and production built iOS configuration | Pass |
+| Native XCTest | Pass — 36/36 |
+| Native XCUITest | Pass — 9/9 |
+
+The local PostgreSQL integration command stopped before execution because this
+workstation still has no `TEST_DATABASE_URL`. No integration assertion failed;
+the real PostgreSQL 17 suite remains covered by the successful CI run recorded
+above.
+
+The initial local Resend credential probe could not enumerate verified sender
+domains because the credential is intentionally restricted to sending. The
+required values were subsequently configured directly in Render without exposing
+them to source control or the acceptance artifact.

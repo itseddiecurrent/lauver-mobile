@@ -41,6 +41,20 @@ final class LauverUITests: XCTestCase {
         assertNavigation(tab: "Profile", screen: "screen-profile")
     }
 
+    func testProfileCanOpenEditorAndShowsPersistedWorkoutFields() {
+        let app = launchAuthenticatedShell()
+        app.tabBars.firstMatch.buttons["Profile"].tap()
+
+        XCTAssertTrue(app.staticTexts["UI Test Runner"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Shanghai, CN"].exists)
+        XCTAssertTrue(app.staticTexts["Running"].exists)
+        app.buttons["profile-edit"].tap()
+        XCTAssertTrue(app.textFields["profile-name-field"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["profile-name-field"].value as? String, "UI Test Runner")
+        XCTAssertTrue(app.buttons["profile-city-picker"].exists)
+        XCTAssertTrue(app.buttons["profile-save"].exists)
+    }
+
     func testUnreachableAPIShowsErrorAndRetry() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-offline", "-ui-testing-reset-state", "-ui-testing-reset-auth"]

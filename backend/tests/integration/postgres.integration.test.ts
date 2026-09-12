@@ -11,6 +11,8 @@ import {
   type AppleAuthorizing,
 } from '../../src/apple-auth.js';
 import { createTestApp } from '../helpers/test-app.js';
+import { ProfileService } from '../../src/profile.js';
+import { UnavailableProfilePhotoStorage } from '../../src/object-storage.js';
 
 const testDatabaseURL = process.env.TEST_DATABASE_URL;
 if (testDatabaseURL === undefined) {
@@ -49,6 +51,14 @@ const authService = new AuthService({
   passwordResetTTLSeconds: 900,
 });
 const authApp = createTestApp({ database, authService });
+const profileApp = createTestApp({
+  database,
+  authService,
+  profileService: new ProfileService({
+    repository: database.profileRepository,
+    storage: new UnavailableProfilePhotoStorage(),
+  }),
+});
 const appleAuthApp = createTestApp({
   database,
   authService: new AuthService({
@@ -121,6 +131,24 @@ describe('PostgreSQL integration', () => {
 
     expect(table.rows[0]?.table_name).toBe('apple_credentials');
     expect(provider.rows.map((row) => row.enumlabel)).toEqual(['APPLE']);
+  });
+
+  it('applied all Step 05 profile and photo lifecycle tables', async () => {
+    const result = await sqlClient.query<{ table_name: string }>(
+      `SELECT table_name
+       FROM information_schema.tables
+       WHERE table_schema = 'public'
+         AND table_name IN ('profiles', 'user_sports', 'training_times', 'profile_photo_uploads', 'photo_cleanup_jobs')
+       ORDER BY table_name`,
+    );
+
+    expect(result.rows.map((row) => row.table_name)).toEqual([
+      'photo_cleanup_jobs',
+      'profile_photo_uploads',
+      'profiles',
+      'training_times',
+      'user_sports',
+    ]);
   });
 
   it('registers, logs out, logs in, and never persists raw credentials', async () => {
@@ -299,5 +327,46 @@ describe('PostgreSQL integration', () => {
     expect(stored.rows[0]?.refresh_token_encrypted).toMatch(/^v1\./);
     expect(stored.rows[0]?.refresh_token_encrypted).not.toContain('integration-apple-refresh-token');
     expect(stored.rows[0]?.given_name).toBe('Apple');
+  });
+
+  it('persists a complete workout profile and omits city coordinates from the public contract', async () => {
+    const registration = await request(profileApp)
+      .post('/v1/auth/register')
+      .send({ email: 'integration-profile@example.com', password: 'IntegrationProfile9' });
+    const accessToken = (registration.body as { accessToken: string }).accessToken;
+    const update = await request(profileApp)
+      .patch('/v1/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        displayName: 'Integration Runner',
+        bio: 'Morning miles',
+        city: {
+          name: 'Shanghai',
+          regionCode: 'SH',
+          countryCode: 'CN',
+          latitude: 31.2304,
+          longitude: 121.4737,
+        },
+        sports: [{ sport: 'running', paceValue: 5.2 }],
+        trainingTimes: [{ weekday: 1, timeBucket: 'morning' }],
+      });
+    expect(update.status).toBe(200);
+    const profile = (update.body as { profile: { id: string; isComplete: boolean } }).profile;
+    expect(profile.isComplete).toBe(true);
+
+    const reread = await request(profileApp)
+      .get('/v1/me')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(reread.status).toBe(200);
+    expect((reread.body as { profile: { displayName: string } }).profile.displayName)
+      .toBe('Integration Runner');
+
+    const publicResponse = await request(profileApp)
+      .get(`/v1/users/${profile.id}`)
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(publicResponse.status).toBe(200);
+    expect(JSON.stringify(publicResponse.body)).not.toContain('latitude');
+    expect(JSON.stringify(publicResponse.body)).not.toContain('longitude');
+    expect(JSON.stringify(publicResponse.body)).not.toContain('photoKey');
   });
 });

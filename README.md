@@ -118,6 +118,12 @@ Run Step 04 Apple authentication, encryption, migration, native capability, and 
 ./scripts/test-step-04.sh
 ```
 
+Run Step 05 workout-profile, location privacy, image validation, and native Profile checks:
+
+```bash
+./scripts/test-step-05.sh
+```
+
 `npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
@@ -131,6 +137,7 @@ Run checks separately:
 ./scripts/tests/check-step-02-structure.test.sh
 ./scripts/tests/check-step-03-structure.test.sh
 ./scripts/tests/check-step-04-structure.test.sh
+./scripts/tests/check-step-05-structure.test.sh
 ./scripts/check-mvp-scope.sh
 ./scripts/check-secrets.sh
 
@@ -161,6 +168,25 @@ The iOS script prefers an already booted iPhone Simulator, then falls back to th
 The iOS target contains the public Sign in with Apple entitlement and uses the official AuthenticationServices control. It creates a new random nonce for every attempt, sends only Apple's signed proof and one-time code to the API, and stores the local credential identifier in Keychain solely for Apple credential-state checks.
 
 Apple auth is disabled by default on a new backend. For each environment, configure `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, and a separately generated `APPLE_TOKEN_ENCRYPTION_KEY` directly in Render, then set `APPLE_AUTH_ENABLED=true`. The native iOS flow does not supply a web redirect URI; the API validates its one-time code directly against Apple's token endpoint. Never put the p8 key, generated client secret, token-encryption key, or Apple refresh token in the iOS project.
+
+## Workout profiles, city privacy, and photos
+
+Step 05 adds authenticated `GET/PATCH /v1/me`, public-profile reads, deterministic pace units/brackets, preferred training times, and profile completeness. The iOS app uses MapKit only after the user opens the city picker. The API stores the selected city center for later approximate-distance filtering, while `GET /v1/users/:userId` deliberately omits latitude and longitude.
+
+Profile photos use a short-lived signed PUT followed by `POST /v1/me/photo/complete`. Completion fully decodes the object, checks its declared content type, byte count, and pixel dimensions, then re-encodes it as a bounded JPEG without EXIF/GPS metadata before exposing it. Pending, replaced, and deleted keys enter a durable cleanup queue so transient storage failures do not create permanent orphan objects. Configure a private upload-capable S3-compatible bucket and a public read/CDN base URL per environment, then set:
+
+```text
+PROFILE_PHOTO_STORAGE_ENABLED=true
+OBJECT_STORAGE_ENDPOINT=...
+OBJECT_STORAGE_REGION=...
+OBJECT_STORAGE_BUCKET=...
+OBJECT_STORAGE_ACCESS_KEY_ID=...
+OBJECT_STORAGE_SECRET_ACCESS_KEY=...
+OBJECT_STORAGE_PUBLIC_BASE_URL=...
+OBJECT_STORAGE_FORCE_PATH_STYLE=false
+```
+
+Only the backend receives storage credentials. Use a bucket policy or CDN configuration that permits public reads solely for the `profile-photos/` prefix; keep listing and writes private. CORS must permit PUT from the native upload client as required by the chosen provider. JPEG/PNG/HEIC/HEIF files are accepted up to 5 MB, with dimensions from 128 through 4096 pixels. The native picker center-crops and compresses selections to JPEG before upload.
 
 ## Container and Render deployment
 

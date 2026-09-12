@@ -33,15 +33,87 @@ enum EmailTokenPurpose {
 }
 
 model User {
-  id          String         @id @default(uuid()) @db.Uuid
-  status      UserStatus     @default(ACTIVE)
-  createdAt   DateTime       @default(now()) @map("created_at")
-  updatedAt   DateTime       @updatedAt @map("updated_at")
-  identities  AuthIdentity[]
-  sessions    Session[]
-  emailTokens EmailToken[]
+  id            String               @id @default(uuid()) @db.Uuid
+  status        UserStatus           @default(ACTIVE)
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+  identities    AuthIdentity[]
+  sessions      Session[]
+  emailTokens   EmailToken[]
+  profile       Profile?
+  sports        UserSport[]
+  trainingTimes TrainingTime[]
+  photoUploads  ProfilePhotoUpload[]
 
   @@map("users")
+}
+
+model Profile {
+  userId        String   @id @map("user_id") @db.Uuid
+  displayName   String?  @map("display_name") @db.VarChar(80)
+  bio           String?  @db.VarChar(500)
+  photoKey      String?  @map("photo_key") @db.VarChar(512)
+  cityName      String?  @map("city_name") @db.VarChar(120)
+  regionCode    String?  @map("region_code") @db.VarChar(16)
+  countryCode   String?  @map("country_code") @db.Char(2)
+  cityLatitude  Decimal? @map("city_latitude") @db.Decimal(9, 6)
+  cityLongitude Decimal? @map("city_longitude") @db.Decimal(9, 6)
+  isComplete    Boolean  @default(false) @map("is_complete")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isComplete])
+  @@map("profiles")
+}
+
+model UserSport {
+  userId      String   @map("user_id") @db.Uuid
+  sport       String   @db.VarChar(32)
+  paceValue   Decimal? @map("pace_value") @db.Decimal(7, 2)
+  paceUnit    String?  @map("pace_unit") @db.VarChar(20)
+  paceBracket String?  @map("pace_bracket") @db.VarChar(20)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sport])
+  @@index([sport, paceBracket])
+  @@map("user_sports")
+}
+
+model TrainingTime {
+  userId     String   @map("user_id") @db.Uuid
+  weekday    Int      @db.SmallInt
+  timeBucket String   @map("time_bucket") @db.VarChar(16)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, weekday, timeBucket])
+  @@map("training_times")
+}
+
+model PhotoCleanupJob {
+  objectKey   String   @id @map("object_key") @db.VarChar(512)
+  attempts    Int      @default(0)
+  nextAttempt DateTime @default(now()) @map("next_attempt")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([nextAttempt])
+  @@map("photo_cleanup_jobs")
+}
+
+model ProfilePhotoUpload {
+  objectKey   String   @id @map("object_key") @db.VarChar(512)
+  userId      String   @map("user_id") @db.Uuid
+  contentType String   @map("content_type") @db.VarChar(32)
+  byteSize    Int      @map("byte_size")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("profile_photo_uploads")
 }
 
 model AuthIdentity {

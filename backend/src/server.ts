@@ -11,6 +11,8 @@ import { createLogger } from './logger.js';
 import { ResendPasswordResetDelivery } from './password-reset-delivery.js';
 import { InMemoryRateLimiter } from './rate-limiter.js';
 import { shutdownServer } from './server-lifecycle.js';
+import { S3ProfilePhotoStorage, UnavailableProfilePhotoStorage } from './object-storage.js';
+import { ProfileService } from './profile.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -42,6 +44,30 @@ const authService = new AuthService({
   refreshTokenTTLSeconds: config.authRefreshTokenTTLSeconds,
   passwordResetTTLSeconds: config.authPasswordResetTTLSeconds,
 });
+const photoStorage = config.profilePhotoStorageEnabled
+  ? new S3ProfilePhotoStorage({
+      endpoint: config.objectStorageEndpoint!,
+      region: config.objectStorageRegion!,
+      bucket: config.objectStorageBucket!,
+      accessKeyID: config.objectStorageAccessKeyID!,
+      secretAccessKey: config.objectStorageSecretAccessKey!,
+      publicBaseURL: config.objectStoragePublicBaseURL!,
+      forcePathStyle: config.objectStorageForcePathStyle,
+    })
+  : new UnavailableProfilePhotoStorage();
+const profileService = new ProfileService({
+  repository: database.profileRepository,
+  storage: photoStorage,
+});
+void profileService.processPhotoCleanup().catch((error: unknown) => {
+  logger.warn({ err: error }, 'Initial profile-photo cleanup failed');
+});
+const photoCleanupInterval = setInterval(() => {
+  void profileService.processPhotoCleanup().catch((error: unknown) => {
+    logger.warn({ err: error }, 'Scheduled profile-photo cleanup failed');
+  });
+}, 5 * 60 * 1_000);
+photoCleanupInterval.unref();
 const server = createServer(
   createApp({
     database,
@@ -49,6 +75,11 @@ const server = createServer(
     logger,
     authService,
     authRateLimiter: new InMemoryRateLimiter(
+      config.authRateLimitWindowMilliseconds,
+      config.authRateLimitMaxAttempts,
+    ),
+    profileService,
+    profileRateLimiter: new InMemoryRateLimiter(
       config.authRateLimitWindowMilliseconds,
       config.authRateLimitMaxAttempts,
     ),
@@ -65,6 +96,7 @@ function handleSignal(signal: string): void {
     return;
   }
   shuttingDown = true;
+  clearInterval(photoCleanupInterval);
 
   void shutdownServer(
     server,

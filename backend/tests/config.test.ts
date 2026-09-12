@@ -34,6 +34,14 @@ describe('loadConfig', () => {
       appleKeyID: undefined,
       applePrivateKey: undefined,
       appleTokenEncryptionKey: undefined,
+      profilePhotoStorageEnabled: false,
+      objectStorageEndpoint: undefined,
+      objectStorageRegion: undefined,
+      objectStorageBucket: undefined,
+      objectStorageAccessKeyID: undefined,
+      objectStorageSecretAccessKey: undefined,
+      objectStoragePublicBaseURL: undefined,
+      objectStorageForcePathStyle: false,
     });
   });
 
@@ -72,6 +80,14 @@ describe('loadConfig', () => {
       appleKeyID: undefined,
       applePrivateKey: undefined,
       appleTokenEncryptionKey: undefined,
+      profilePhotoStorageEnabled: false,
+      objectStorageEndpoint: undefined,
+      objectStorageRegion: undefined,
+      objectStorageBucket: undefined,
+      objectStorageAccessKeyID: undefined,
+      objectStorageSecretAccessKey: undefined,
+      objectStoragePublicBaseURL: undefined,
+      objectStorageForcePathStyle: false,
     });
   });
 
@@ -173,5 +189,37 @@ describe('loadConfig', () => {
       APPLE_PRIVATE_KEY: 'private-key-from-render-secret',
       APPLE_TOKEN_ENCRYPTION_KEY: Buffer.alloc(16, 1).toString('base64'),
     })).toThrow('base64-encoded 32-byte key');
+  });
+
+  it('requires complete server-only object storage configuration when photo uploads are enabled', () => {
+    expect(() => loadConfig({ ...requiredEnvironment, PROFILE_PHOTO_STORAGE_ENABLED: 'true' }))
+      .toThrow('OBJECT_STORAGE_ENDPOINT is required');
+
+    expect(loadConfig({
+      ...requiredEnvironment,
+      PROFILE_PHOTO_STORAGE_ENABLED: 'true',
+      OBJECT_STORAGE_ENDPOINT: 'https://storage.example.com',
+      OBJECT_STORAGE_REGION: 'auto',
+      OBJECT_STORAGE_BUCKET: 'lauver-profile-photos-staging',
+      OBJECT_STORAGE_ACCESS_KEY_ID: 'server-side-access-key',
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: 'server-side-secret-key',
+      OBJECT_STORAGE_PUBLIC_BASE_URL: 'https://photos-staging.lauver.ai',
+      OBJECT_STORAGE_FORCE_PATH_STYLE: 'true',
+    })).toMatchObject({
+      profilePhotoStorageEnabled: true,
+      objectStorageForcePathStyle: true,
+      objectStorageBucket: 'lauver-profile-photos-staging',
+    });
+
+    expect(() => loadConfig({
+      ...requiredEnvironment,
+      PROFILE_PHOTO_STORAGE_ENABLED: 'true',
+      OBJECT_STORAGE_ENDPOINT: 'ftp://storage.example.com',
+      OBJECT_STORAGE_REGION: 'auto',
+      OBJECT_STORAGE_BUCKET: 'photos',
+      OBJECT_STORAGE_ACCESS_KEY_ID: 'server-side-access-key',
+      OBJECT_STORAGE_SECRET_ACCESS_KEY: 'server-side-secret-key',
+      OBJECT_STORAGE_PUBLIC_BASE_URL: 'https://photos.example.com',
+    })).toThrow('Object storage URLs must use HTTP or HTTPS');
   });
 });

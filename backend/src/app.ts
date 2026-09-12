@@ -11,6 +11,8 @@ import type { AuthServicing } from './auth.js';
 import { installAuthRoutes } from './auth-routes.js';
 import type { Database } from './database.js';
 import type { InMemoryRateLimiter } from './rate-limiter.js';
+import { ProfileError, type ProfileServicing } from './profile.js';
+import { installProfileRoutes } from './profile-routes.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -36,6 +38,8 @@ export type AppDependencies = {
   logger: Logger;
   authService: AuthServicing;
   authRateLimiter: InMemoryRateLimiter;
+  profileService: ProfileServicing;
+  profileRateLimiter: InMemoryRateLimiter;
 };
 
 class CorsOriginError extends Error {
@@ -118,6 +122,11 @@ export function createApp(dependencies: AppDependencies): Express {
     authService: dependencies.authService,
     rateLimiter: dependencies.authRateLimiter,
   });
+  installProfileRoutes(app, {
+    authService: dependencies.authService,
+    profileService: dependencies.profileService,
+    rateLimiter: dependencies.profileRateLimiter,
+  });
 
   app.use((_request: Request, response: Response<ErrorResponse>) => {
     response.status(404).json({
@@ -149,6 +158,15 @@ export function createApp(dependencies: AppDependencies): Express {
     }
 
     if (error instanceof AuthError) {
+      response.status(error.statusCode).json({
+        code: error.code,
+        message: error.publicMessage,
+        requestId: requestId(response),
+      });
+      return;
+    }
+
+    if (error instanceof ProfileError) {
       response.status(error.statusCode).json({
         code: error.code,
         message: error.publicMessage,

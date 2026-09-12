@@ -4,6 +4,7 @@ struct AppContainer {
     let configuration: AppConfiguration
     let healthService: any HealthServicing
     let authService: any AuthServicing
+    let profileService: any ProfileServicing
     let authSessionStore: any AuthSessionStoring
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
     let appleCredentialStateChecker: any AppleCredentialStateChecking
@@ -50,11 +51,15 @@ struct AppContainer {
         let authService: any AuthServicing = arguments.contains("-ui-testing-auth-flow")
             ? UITestAuthService()
             : AuthService(client: client)
+        let profileService: any ProfileServicing = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            ? UITestProfileService()
+            : ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
 
         return AppContainer(
             configuration: configuration,
             healthService: healthService,
             authService: authService,
+            profileService: profileService,
             authSessionStore: authSessionStore,
             appleUserIdentifierStore: appleUserIdentifierStore,
             appleCredentialStateChecker: AppleCredentialStateChecker(),
@@ -62,6 +67,61 @@ struct AppContainer {
             uiStateStore: uiStateStore
         )
     }
+}
+
+private final class UITestProfileService: ProfileServicing {
+    private var profile = WorkoutProfile(
+        id: "ui-test-user",
+        displayName: "UI Test Runner",
+        bio: "Morning miles before coffee.",
+        photoURL: nil,
+        city: ProfileCity(
+            name: "Shanghai",
+            regionCode: "SH",
+            countryCode: "CN",
+            latitude: 31.2304,
+            longitude: 121.4737
+        ),
+        sports: [ProfileSport(
+            sport: .running,
+            paceValue: 5.5,
+            paceUnit: "min/km",
+            paceBracket: "moderate"
+        )],
+        trainingTimes: [TrainingTime(weekday: 1, timeBucket: .morning)],
+        isComplete: true
+    )
+
+    func getOwnProfile() async throws -> WorkoutProfile { profile }
+    func getProfile(userID: String) async throws -> WorkoutProfile {
+        _ = userID
+        return profile
+    }
+    func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile {
+        profile = WorkoutProfile(
+            id: profile.id,
+            displayName: draft.displayName,
+            bio: draft.bio,
+            photoURL: profile.photoURL,
+            city: draft.city,
+            sports: draft.selectedSports.sorted { $0.rawValue < $1.rawValue }.map {
+                ProfileSport(
+                    sport: $0,
+                    paceValue: Double(draft.paceValues[$0] ?? ""),
+                    paceUnit: $0.paceUnit,
+                    paceBracket: nil
+                )
+            },
+            trainingTimes: Array(draft.trainingTimes),
+            isComplete: !draft.displayName.isEmpty && draft.city != nil && !draft.selectedSports.isEmpty && !draft.trainingTimes.isEmpty
+        )
+        return profile
+    }
+    func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile {
+        _ = photo
+        return profile
+    }
+    func deletePhoto() async throws {}
 }
 
 private struct UITestAuthService: AuthServicing {

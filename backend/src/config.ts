@@ -1,5 +1,10 @@
 import { z } from 'zod';
 
+const httpURLSchema = z.url().refine(
+  (value) => ['http:', 'https:'].includes(new URL(value).protocol),
+  { message: 'Object storage URLs must use HTTP or HTTPS' },
+);
+
 const environmentSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   HOST: z.string().min(1).default('0.0.0.0'),
@@ -27,6 +32,14 @@ const environmentSchema = z.object({
   APPLE_KEY_ID: z.string().min(1).optional(),
   APPLE_PRIVATE_KEY: z.string().min(1).optional(),
   APPLE_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+  PROFILE_PHOTO_STORAGE_ENABLED: z.enum(['true', 'false']).default('false'),
+  OBJECT_STORAGE_ENDPOINT: httpURLSchema.optional(),
+  OBJECT_STORAGE_REGION: z.string().min(1).optional(),
+  OBJECT_STORAGE_BUCKET: z.string().min(1).optional(),
+  OBJECT_STORAGE_ACCESS_KEY_ID: z.string().min(1).optional(),
+  OBJECT_STORAGE_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  OBJECT_STORAGE_PUBLIC_BASE_URL: httpURLSchema.optional(),
+  OBJECT_STORAGE_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('false'),
 }).superRefine((environment, context) => {
   if (environment.PASSWORD_RESET_DELIVERY === 'resend') {
     if (environment.RESEND_API_KEY === undefined) {
@@ -42,6 +55,20 @@ const environmentSchema = z.object({
         path: ['PASSWORD_RESET_FROM_EMAIL'],
         message: 'PASSWORD_RESET_FROM_EMAIL is required when PASSWORD_RESET_DELIVERY=resend',
       });
+    }
+  }
+  if (environment.PROFILE_PHOTO_STORAGE_ENABLED === 'true') {
+    for (const key of [
+      'OBJECT_STORAGE_ENDPOINT',
+      'OBJECT_STORAGE_REGION',
+      'OBJECT_STORAGE_BUCKET',
+      'OBJECT_STORAGE_ACCESS_KEY_ID',
+      'OBJECT_STORAGE_SECRET_ACCESS_KEY',
+      'OBJECT_STORAGE_PUBLIC_BASE_URL',
+    ] as const) {
+      if (environment[key] === undefined) {
+        context.addIssue({ code: 'custom', path: [key], message: `${key} is required when profile photo storage is enabled` });
+      }
     }
   }
   if (environment.APPLE_AUTH_ENABLED === 'true') {
@@ -92,6 +119,14 @@ export type AppConfig = {
   appleKeyID?: string;
   applePrivateKey?: string;
   appleTokenEncryptionKey?: string;
+  profilePhotoStorageEnabled: boolean;
+  objectStorageEndpoint?: string;
+  objectStorageRegion?: string;
+  objectStorageBucket?: string;
+  objectStorageAccessKeyID?: string;
+  objectStorageSecretAccessKey?: string;
+  objectStoragePublicBaseURL?: string;
+  objectStorageForcePathStyle: boolean;
 };
 
 function parseAllowedOrigins(value: string): string[] {
@@ -136,5 +171,13 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     appleKeyID: parsed.APPLE_KEY_ID,
     applePrivateKey: parsed.APPLE_PRIVATE_KEY,
     appleTokenEncryptionKey: parsed.APPLE_TOKEN_ENCRYPTION_KEY,
+    profilePhotoStorageEnabled: parsed.PROFILE_PHOTO_STORAGE_ENABLED === 'true',
+    objectStorageEndpoint: parsed.OBJECT_STORAGE_ENDPOINT,
+    objectStorageRegion: parsed.OBJECT_STORAGE_REGION,
+    objectStorageBucket: parsed.OBJECT_STORAGE_BUCKET,
+    objectStorageAccessKeyID: parsed.OBJECT_STORAGE_ACCESS_KEY_ID,
+    objectStorageSecretAccessKey: parsed.OBJECT_STORAGE_SECRET_ACCESS_KEY,
+    objectStoragePublicBaseURL: parsed.OBJECT_STORAGE_PUBLIC_BASE_URL,
+    objectStorageForcePathStyle: parsed.OBJECT_STORAGE_FORCE_PATH_STYLE === 'true',
   };
 }

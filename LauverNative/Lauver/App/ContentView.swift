@@ -235,8 +235,10 @@ final class AppViewModel: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var viewModel: AppViewModel
+    private let profileService: any ProfileServicing
 
     init(container: AppContainer) {
+        profileService = container.profileService
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
             healthService: container.healthService,
@@ -254,7 +256,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService)
             }
         }
         .task {
@@ -471,6 +473,7 @@ private struct LoginPlaceholderView: View {
 
 private struct AuthenticatedShellView: View {
     @ObservedObject var viewModel: AppViewModel
+    let profileService: any ProfileServicing
 
     var body: some View {
         TabView {
@@ -495,13 +498,8 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
 
             NavigationStack {
-                VStack(spacing: LauverDesign.Spacing.large) {
-                    PlaceholderScreen(tab: .profile, message: "Your runner profile will appear here.")
-                    Button("Sign Out") {
-                        Task { await viewModel.signOut() }
-                    }
-                        .buttonStyle(.bordered)
-                        .accessibilityIdentifier("auth-sign-out")
+                OwnProfileView(service: profileService) {
+                    Task { await viewModel.signOut() }
                 }
             }
             .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }

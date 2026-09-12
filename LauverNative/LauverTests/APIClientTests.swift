@@ -119,6 +119,22 @@ final class APIClientTests: XCTestCase {
         await assertError(.rateLimited(message: "Too many requests", requestID: "rate-id"))
     }
 
+    func testMaps404WithPublicMessageAndRequestID() async {
+        URLProtocolStub.requestHandler = { request in
+            Self.response(
+                request: request,
+                statusCode: 404,
+                body: #"{"code":"profile_not_found","message":"Profile not found","requestId":"missing-profile"}"#
+            )
+        }
+
+        await assertError(.notFound(
+            code: "profile_not_found",
+            message: "Profile not found",
+            requestID: "missing-profile"
+        ))
+    }
+
     func testRetriesTimeoutWithinBoundary() async {
         var attempts = 0
         URLProtocolStub.requestHandler = { _ in

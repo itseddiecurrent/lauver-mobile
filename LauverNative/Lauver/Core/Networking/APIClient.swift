@@ -3,6 +3,8 @@ import Foundation
 enum HTTPMethod: String {
     case get = "GET"
     case post = "POST"
+    case patch = "PATCH"
+    case delete = "DELETE"
 }
 
 struct APIRequest<Response: Decodable> {
@@ -37,6 +39,7 @@ enum APIError: Error, Equatable {
     case invalidResponse
     case unauthorized(code: String, message: String?, requestID: String?)
     case validation(code: String, message: String, requestID: String?)
+    case notFound(code: String, message: String, requestID: String?)
     case conflict(code: String, message: String, requestID: String?)
     case rateLimited(message: String, requestID: String?)
     case server(statusCode: Int, requestID: String?)
@@ -47,6 +50,7 @@ enum APIError: Error, Equatable {
         switch self {
         case let .unauthorized(_, _, requestID),
              let .validation(_, _, requestID),
+             let .notFound(_, _, requestID),
              let .conflict(_, _, requestID),
              let .rateLimited(_, requestID),
              let .server(_, requestID):
@@ -61,6 +65,8 @@ enum APIError: Error, Equatable {
         case let .unauthorized(_, message, _):
             message ?? "Your session is no longer valid."
         case let .validation(_, message, _):
+            message
+        case let .notFound(_, message, _):
             message
         case let .conflict(_, message, _):
             message
@@ -99,7 +105,7 @@ struct RetryPolicy: Equatable {
             return (500...599).contains(statusCode)
         case let .transport(code):
             return [.timedOut, .networkConnectionLost, .notConnectedToInternet].contains(code)
-        case .invalidRequest, .invalidResponse, .unauthorized, .validation, .conflict, .rateLimited, .decoding:
+        case .invalidRequest, .invalidResponse, .unauthorized, .validation, .notFound, .conflict, .rateLimited, .decoding:
             return false
         }
     }
@@ -160,6 +166,31 @@ final class APIClient {
         }
     }
 
+    func upload(data: Data, to url: URL, contentType: String) async throws {
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.httpBody = data
+        request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        do {
+            let (_, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.invalidResponse
+            }
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.server(
+                    statusCode: httpResponse.statusCode,
+                    requestID: httpResponse.value(forHTTPHeaderField: "x-request-id")
+                )
+            }
+        } catch let error as APIError {
+            throw error
+        } catch let error as URLError {
+            throw APIError.transport(error.code)
+        } catch {
+            throw APIError.transport(.unknown)
+        }
+    }
+
     private func decode<Response: Decodable>(data: Data, response: URLResponse) throws -> Response {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -188,6 +219,13 @@ final class APIClient {
             throw APIError.validation(
                 code: payload?.code ?? "validation_failed",
                 message: payload?.message ?? "The request could not be validated.",
+                requestID: payload?.requestId ?? requestID
+            )
+        case 404:
+            let payload = try? decoder.decode(APIErrorPayload.self, from: data)
+            throw APIError.notFound(
+                code: payload?.code ?? "not_found",
+                message: payload?.message ?? "The requested item was not found.",
                 requestID: payload?.requestId ?? requestID
             )
         case 409:

@@ -29,6 +29,9 @@
 		A10000000000000000000014 /* AuthSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001B /* AuthSessionStoreTests.swift */; };
 		A10000000000000000000015 /* AppleSignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001C /* AppleSignIn.swift */; };
 		A10000000000000000000016 /* AppleSignInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001E /* AppleSignInTests.swift */; };
+		A10000000000000000000017 /* ProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000001F /* ProfileService.swift */; };
+		A10000000000000000000018 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000020 /* ProfileView.swift */; };
+		A10000000000000000000019 /* ProfileServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* ProfileServiceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -79,6 +82,9 @@
 		A2000000000000000000001C /* AppleSignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignIn.swift; sourceTree = "<group>"; };
 		A2000000000000000000001D /* Lauver.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Lauver.entitlements; sourceTree = "<group>"; };
 		A2000000000000000000001E /* AppleSignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInTests.swift; sourceTree = "<group>"; };
+		A2000000000000000000001F /* ProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileService.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 /* ProfileServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +141,7 @@
 				A20000000000000000000001 /* LauverApp.swift */,
 				A20000000000000000000002 /* ContentView.swift */,
 				A20000000000000000000012 /* AppContainer.swift */,
+				A20000000000000000000020 /* ProfileView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -143,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				A7000000000000000000000F /* Authentication */,
+				A70000000000000000000010 /* Profile */,
 				A70000000000000000000005 /* Configuration */,
 				A7000000000000000000000B /* Networking */,
 				A7000000000000000000000C /* Security */,
@@ -179,6 +187,7 @@
 				A2000000000000000000001A /* AuthServiceTests.swift */,
 				A2000000000000000000001B /* AuthSessionStoreTests.swift */,
 				A2000000000000000000001E /* AppleSignInTests.swift */,
+				A20000000000000000000021 /* ProfileServiceTests.swift */,
 			);
 			path = LauverTests;
 			sourceTree = "<group>";
@@ -252,6 +261,14 @@
 				A2000000000000000000001C /* AppleSignIn.swift */,
 			);
 			path = Authentication;
+			sourceTree = "<group>";
+		};
+		A70000000000000000000010 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000001F /* ProfileService.swift */,
+			);
+			path = Profile;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -399,6 +416,8 @@
 				A10000000000000000000011 /* AuthService.swift in Sources */,
 				A10000000000000000000012 /* AuthSessionStore.swift in Sources */,
 				A10000000000000000000015 /* AppleSignIn.swift in Sources */,
+				A10000000000000000000017 /* ProfileService.swift in Sources */,
+				A10000000000000000000018 /* ProfileView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,6 +434,7 @@
 				A10000000000000000000013 /* AuthServiceTests.swift in Sources */,
 				A10000000000000000000014 /* AuthSessionStoreTests.swift in Sources */,
 				A10000000000000000000016 /* AppleSignInTests.swift in Sources */,
+				A10000000000000000000019 /* ProfileServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

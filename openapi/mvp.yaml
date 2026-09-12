@@ -236,6 +236,124 @@ paths:
                     $ref: '#/components/schemas/AuthUser'
         '401':
           $ref: '#/components/responses/AuthError'
+  /v1/me:
+    get:
+      operationId: getOwnProfile
+      summary: Read the authenticated user's workout profile, including their selected city center
+      responses:
+        '200':
+          description: Own profile, or an empty incomplete profile when it has not yet been edited.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/AuthError'
+    patch:
+      operationId: updateOwnProfile
+      summary: Update allowlisted workout profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Updated profile with server-derived pace units, brackets, and completeness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+  /v1/users/{userId}:
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      operationId: getPublicProfile
+      summary: Read a complete active user's public profile without city-center coordinates
+      responses:
+        '200':
+          description: Public profile. City latitude, longitude, and storage object key are never returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '404':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+  /v1/me/photo/upload-url:
+    post:
+      operationId: createProfilePhotoUpload
+      summary: Create a short-lived signed profile-photo PUT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhotoUploadRequest'
+      responses:
+        '201':
+          description: User-scoped pending object key and signed upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PhotoUploadResponse'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+        '503':
+          $ref: '#/components/responses/AuthError'
+  /v1/me/photo/complete:
+    post:
+      operationId: completeProfilePhotoUpload
+      summary: Validate uploaded bytes and make the new profile photo current
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [objectKey]
+              properties:
+                objectKey:
+                  type: string
+                  maxLength: 512
+      responses:
+        '200':
+          description: Updated own profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnProfileEnvelope'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+  /v1/me/photo:
+    delete:
+      operationId: deleteProfilePhoto
+      summary: Remove the current profile photo and schedule its object for deletion
+      responses:
+        '204':
+          description: Profile photo absent and cleanup scheduled or completed.
+        '401':
+          $ref: '#/components/responses/AuthError'
 components:
   securitySchemes:
     bearerAuth:
@@ -384,5 +502,203 @@ components:
       properties:
         message:
           type: string
+    ProfileCityInput:
+      type: object
+      additionalProperties: false
+      required: [name, regionCode, countryCode, latitude, longitude]
+      properties:
+        name:
+          type: string
+          maxLength: 120
+        regionCode:
+          type: [string, 'null']
+          maxLength: 16
+        countryCode:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+    PublicProfileCity:
+      type: object
+      additionalProperties: false
+      required: [name, regionCode, countryCode]
+      properties:
+        name:
+          type: string
+        regionCode:
+          type: [string, 'null']
+        countryCode:
+          type: string
+    ProfileSportInput:
+      type: object
+      additionalProperties: false
+      required: [sport, paceValue]
+      properties:
+        sport:
+          type: string
+          enum: [running, trail_running, cycling, swimming, walking, hiking, rowing]
+        paceValue:
+          type: [number, 'null']
+          exclusiveMinimum: 0
+    ProfileSport:
+      type: object
+      additionalProperties: false
+      required: [sport, paceValue, paceUnit, paceBracket]
+      properties:
+        sport:
+          type: string
+          enum: [running, trail_running, cycling, swimming, walking, hiking, rowing]
+        paceValue:
+          type: [number, 'null']
+        paceUnit:
+          type: [string, 'null']
+        paceBracket:
+          type: [string, 'null']
+          enum: [fast, moderate, easy, null]
+    TrainingTime:
+      type: object
+      additionalProperties: false
+      required: [weekday, timeBucket]
+      properties:
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+        timeBucket:
+          type: string
+          enum: [morning, midday, evening]
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        displayName:
+          type: [string, 'null']
+          maxLength: 80
+        bio:
+          type: [string, 'null']
+          maxLength: 500
+        city:
+          oneOf:
+            - $ref: '#/components/schemas/ProfileCityInput'
+            - type: 'null'
+        sports:
+          type: array
+          maxItems: 7
+          items:
+            $ref: '#/components/schemas/ProfileSportInput'
+        trainingTimes:
+          type: array
+          maxItems: 21
+          items:
+            $ref: '#/components/schemas/TrainingTime'
+    OwnProfileEnvelope:
+      type: object
+      additionalProperties: false
+      required: [profile]
+      properties:
+        profile:
+          $ref: '#/components/schemas/OwnProfile'
+    PublicProfileEnvelope:
+      type: object
+      additionalProperties: false
+      required: [profile]
+      properties:
+        profile:
+          $ref: '#/components/schemas/PublicProfile'
+    OwnProfile:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, bio, photoURL, city, sports, trainingTimes, isComplete]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: [string, 'null']
+        bio:
+          type: [string, 'null']
+        photoURL:
+          type: [string, 'null']
+          format: uri
+        city:
+          oneOf:
+            - $ref: '#/components/schemas/ProfileCityInput'
+            - type: 'null'
+        sports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSport'
+        trainingTimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingTime'
+        isComplete:
+          type: boolean
+    PublicProfile:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, bio, photoURL, city, sports, trainingTimes, isComplete]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: [string, 'null']
+        bio:
+          type: [string, 'null']
+        photoURL:
+          type: [string, 'null']
+          format: uri
+        city:
+          oneOf:
+            - $ref: '#/components/schemas/PublicProfileCity'
+            - type: 'null'
+        sports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSport'
+        trainingTimes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrainingTime'
+        isComplete:
+          type: boolean
+    PhotoUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [fileName, contentType, byteSize]
+      properties:
+        fileName:
+          type: string
+          maxLength: 255
+        contentType:
+          type: string
+          enum: [image/jpeg, image/png, image/heic, image/heif]
+        byteSize:
+          type: integer
+          minimum: 1
+          maximum: 5242880
+    PhotoUploadResponse:
+      type: object
+      additionalProperties: false
+      required: [objectKey, uploadURL, expiresIn, requiredHeaders]
+      properties:
+        objectKey:
+          type: string
+        uploadURL:
+          type: string
+          format: uri
+        expiresIn:
+          type: integer
+        requiredHeaders:
+          type: object
+          additionalProperties:
+            type: string
 security:
   - bearerAuth: []

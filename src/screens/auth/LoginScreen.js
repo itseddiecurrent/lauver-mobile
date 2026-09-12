@@ -21,6 +21,16 @@ const ORANGE  = '#E8602C';
 const DARK    = '#1C1A18';
 const BG      = '#F7F5F2';
 const CARD_BG = '#EAE6DF';
+const GOOGLE_CLIENT_IDS = {
+  web:     process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  ios:     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  android: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+};
+
+// expo-auth-session validates the platform client ID while the hook initializes.
+// A harmless placeholder lets email auth and screenshot builds run when Google
+// OAuth has not been configured; the Google button remains disabled below.
+const GOOGLE_CLIENT_ID_PLACEHOLDER = 'google-auth-not-configured';
 
 export default function LoginScreen() {
   const [mode, setMode]         = useState('signin');
@@ -35,9 +45,9 @@ export default function LoginScreen() {
   // Needs EXPO_PUBLIC_GOOGLE_CLIENT_ID (web), IOS_CLIENT_ID, ANDROID_CLIENT_ID
   // set in .env and configured in Google Cloud Console + Firebase console
   const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId:        process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-    iosClientId:     process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    clientId:        GOOGLE_CLIENT_IDS.web || GOOGLE_CLIENT_ID_PLACEHOLDER,
+    iosClientId:     GOOGLE_CLIENT_IDS.ios || GOOGLE_CLIENT_ID_PLACEHOLDER,
+    androidClientId: GOOGLE_CLIENT_IDS.android || GOOGLE_CLIENT_ID_PLACEHOLDER,
   });
 
   // ── Email / password ──────────────────────────────────────────────────────
@@ -83,7 +93,12 @@ export default function LoginScreen() {
 
   // ── UI ────────────────────────────────────────────────────────────────────
 
-  const googleReady = !!request;
+  const googleConfigured = Platform.select({
+    ios:     !!GOOGLE_CLIENT_IDS.ios,
+    android: !!GOOGLE_CLIENT_IDS.android,
+    default: !!GOOGLE_CLIENT_IDS.web,
+  });
+  const googleReady = googleConfigured && !!request;
 
   return (
     <SafeAreaView style={styles.root}>
