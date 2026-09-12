@@ -1,6 +1,6 @@
 # Step 05 Acceptance Record
 
-> Status: in progress — baseline CI/staging, real-iPhone save/upload, and cancellation-error fix confirmed; recovery deployment and remaining acceptance pending
+> Status: in progress — real-iPhone profile/photo lifecycle and relaunch persistence confirmed; final recovery CI/staging deployment acceptance pending
 >
 > Last updated: 2026-09-12 (Asia/Shanghai)
 
@@ -42,8 +42,7 @@
 
 ## Acceptance still required
 
-- On a real iPhone, verify photo replacement/deletion and force-quit/relaunch persistence. One profile save and photo upload have now passed, with all photo stages returning successful HTTP statuses.
-- Verify a second test account's public Profile response/UI shows the city but never the city-center coordinates.
+- Verify the final recovery build in CI and on Render staging, including repeated completion after a lost response and second-account public Profile API privacy.
 
 The first real-device profile-save attempt on 2026-09-12 reported a transport
 failure. An equivalent Apple URLSession PATCH and subsequent GET from this Mac
@@ -81,17 +80,21 @@ No storage credential, signed upload URL, user identifier, or test-account data 
   triggers `-1005`, narrowing the failure to the photo-specific flow.
 - A diagnostic staging build was compiled and installed on the connected iPhone.
   Staging now enables `DEBUG`, so the existing opt-in diagnostics actually compile.
-  Logs distinguish upload-URL creation, signed PUT, and completion, including
-  attempt counts and underlying error codes without printing signed URLs or tokens.
+  Diagnostics distinguish upload-URL creation, signed PUT, and completion,
+  including attempt counts and underlying error codes. The final implementation
+  uses system Logger rather than printing from the API client; signed URLs,
+  tokens, user identifiers, and API response bodies are excluded.
 - The subsequent authenticated real-iPhone upload succeeded on the installed
   staging build: profile PATCH 200, upload-URL POST 201, signed PUT 200,
   completion POST 200. This verifies one real-device upload; it does not prove
   the network interruption's underlying cause or exercise a real retry.
-- The backend recovery change has not been deployed to Render. Photo
-  replacement/deletion and force-quit/relaunch persistence acceptance remain pending.
-  Deploy the backend before distributing the rebuilt App: completion retries
-  rely on the backend change. No database migration or storage setting changes
-  are required. Real-device upload/replace/delete acceptance remains pending.
+- The user explicitly confirmed the real-iPhone sequence: replace the existing
+  avatar, delete it, re-upload, force-quit/relaunch, and verify the avatar and all
+  workout-profile fields persist. The cancellation-error display fix was also
+  confirmed. No user identifiers, actual profile data, or screenshots are retained here.
+- The backend recovery change still requires the final CI/staging deployment.
+  Deploy it before distributing the rebuilt App: completion retries rely on
+  this change. No database migration or storage setting changes are required.
 
 ## Profile cancellation error display (2026-09-12)
 
@@ -120,6 +123,16 @@ No storage credential, signed upload URL, user identifier, or test-account data 
 - PostgreSQL integration coverage now exercises overlapping completions,
   replay after a lost success response, durable removal of pending uploads,
   and rejection of replay after deletion. External CI verification is pending.
+
+## Public Profile UI privacy regression
+
+- A debug-only launch fixture displays the existing public Profile view without
+  requiring a session or network. It deliberately includes city coordinates in
+  its input, ensuring the UI never renders them even if an own-profile model
+  is accidentally supplied.
+- XCUITest confirms that the public Profile displays the city and sport while
+  latitude/longitude are absent. This and the API client regressions passed
+  locally (16/16); all Step 00–05 structural and secret guards passed.
 
 ## Local automated evidence
 

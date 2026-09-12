@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 enum HTTPMethod: String {
     case get = "GET"
@@ -194,11 +195,12 @@ final class APIClient {
         }
     }
 
+    private static let transportLogger = Logger(subsystem: "ai.lauver.app", category: "Transport")
+
     private static func logTransport(_ message: String) {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-diagnose-network") {
-            print("LauverTransport \(message)")
-            fflush(nil)
+            transportLogger.debug("LauverTransport \(message, privacy: .public)")
         }
         #endif
     }

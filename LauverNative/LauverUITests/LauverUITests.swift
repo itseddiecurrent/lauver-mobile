@@ -65,6 +65,18 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
+    func testPublicProfileShowsTheCityWithoutCoordinates() {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-public-profile"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["Public Runner"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Shanghai, CN"].exists)
+        XCTAssertTrue(app.staticTexts["Running"].exists)
+        let labels = app.staticTexts.allElementsBoundByIndex.map(\.label).joined(separator: " ")
+        XCTAssertFalse(labels.contains("31.2304"))
+        XCTAssertFalse(labels.contains("121.4737"))
+    }
+
     func testUnreachableAPIShowsErrorAndRetry() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-offline", "-ui-testing-reset-state", "-ui-testing-reset-auth"]

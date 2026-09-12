@@ -839,7 +839,7 @@ xcodebuild test \
 
 ### Step 05：Workout Profile、Photo 与 City Location
 
-**状态：🚧 实现、基线 CI、Render migration 和 staging object storage 验证已完成（2026-09-12）；正在收尾后端恢复修复部署及剩余验收。** 新版 App 的头像上传和保存后 `-999` 误报均已获用户真机确认。头像流程支持有限连接重试，后端支持识别同一上传的已保存结果；仍需验证本次修复的 CI/staging 部署、头像更换和删除、强退重开后的资料持久化。准确证据见 `artifacts/acceptance/step-05.md`。
+**状态：🚧 实现及真机 Profile/头像验收已完成（2026-09-12）；正在验证最终 CI 和 staging 部署。** 用户已确认头像上传、更换、删除、重新上传及强退重开后的资料持久化全部正常，保存后 `-999` 误报已修复。公共 Profile 界面坐标隐私测试已通过；仍需完成本次后端连接恢复修复的最终 CI/staging 验收。准确证据见 `artifacts/acceptance/step-05.md`。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 
