@@ -31,14 +31,23 @@ services:
       - key: AUTH_RATE_LIMIT_MAX_ATTEMPTS
         value: 10
       - key: PASSWORD_RESET_DELIVERY
-        value: disabled
-      # After verifying a sender domain, add RESEND_API_KEY and
-      # PASSWORD_RESET_FROM_EMAIL in Render, then change the mode to `resend`.
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PASSWORD_RESET_FROM_EMAIL
+        sync: false
       - key: APPLE_AUTH_ENABLED
-        value: false
-      # Configure APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID,
-      # APPLE_PRIVATE_KEY, and APPLE_TOKEN_ENCRYPTION_KEY directly in Render,
-      # then enable Apple auth. Never commit the p8 key.
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
+      - key: APPLE_TOKEN_ENCRYPTION_KEY
+        sync: false
       - key: PROFILE_PHOTO_STORAGE_ENABLED
         sync: false
       - key: OBJECT_STORAGE_ENDPOINT
