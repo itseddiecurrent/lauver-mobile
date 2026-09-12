@@ -1,8 +1,8 @@
 # Step 05 Acceptance Record
 
-> Status: in progress — implementation and local automated verification complete; CI/staging/manual acceptance pending
+> Status: in progress — implementation, CI, migration, and staging object-storage acceptance complete; real-iPhone manual acceptance pending
 >
-> Last updated: 2026-09-10 (Asia/Shanghai)
+> Last updated: 2026-09-12 (Asia/Shanghai)
 
 ## Implemented
 
@@ -15,11 +15,30 @@
 - Replacement/deletion cleanup jobs for old object keys.
 - Native SwiftUI own/edit/other Profile views, `PhotosPicker` crop/compression, and user-initiated MapKit city search.
 
+## External CI and Render staging evidence
+
+- Commit `db2d615` was pushed to `main` on 2026-09-12.
+- GitHub Actions run `34669355447` completed successfully. Its `backend` job
+  deployed every migration into PostgreSQL 17 and passed the integration suite;
+  the guardrail and native iOS jobs also passed.
+- Render deployment `6405339797` completed successfully at 11:14 Asia/Shanghai.
+  After the deployment, `GET /readyz` returned HTTP 200 with `database: ok`.
+- The deployed `GET /v1/me` endpoint returned the expected authenticated-route
+  HTTP 401 contract without a session, confirming that the Step 05 API is live.
+- A private Cloudflare R2 bucket was configured with a dedicated, bucket-scoped
+  read/write credential and the custom CDN domain `photos-staging.lauver.ai`.
+  Public `r2.dev` access remains disabled. A Cloudflare WAF rule returned HTTP
+  403 for the bucket root and `profile-photo-uploads/`, while an absent object
+  under the allowed `profile-photos/` prefix returned the expected HTTP 404.
+- Render deployment `6405896392` completed successfully after the server-only
+  object-storage values were configured. A generated staging account then
+  passed profile write/reread, public coordinate omission, signed PNG upload,
+  server-side image validation and JPEG normalization, CDN retrieval, photo
+  deletion, and profile-reference cleanup. Both storage prefixes contained zero
+  test objects after cleanup.
+
 ## Acceptance still required
 
-- Run the new migration and PostgreSQL integration suite in CI.
-- Configure a staging S3-compatible bucket/CDN and server-only Render environment values.
-- Deploy the Step 05 API migration to Render and verify `/readyz`.
 - On a real iPhone, edit and save a profile, upload/replace/delete a photo, force-quit/relaunch, and verify all fields persist.
 - Verify a second test account's public Profile response/UI shows the city but never the city-center coordinates.
 

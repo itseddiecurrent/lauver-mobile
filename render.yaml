@@ -40,7 +40,19 @@ services:
       # APPLE_PRIVATE_KEY, and APPLE_TOKEN_ENCRYPTION_KEY directly in Render,
       # then enable Apple auth. Never commit the p8 key.
       - key: PROFILE_PHOTO_STORAGE_ENABLED
-        value: false
+        sync: false
+      - key: OBJECT_STORAGE_ENDPOINT
+        sync: false
+      - key: OBJECT_STORAGE_REGION
+        sync: false
+      - key: OBJECT_STORAGE_BUCKET
+        sync: false
+      - key: OBJECT_STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: OBJECT_STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: OBJECT_STORAGE_PUBLIC_BASE_URL
+        sync: false
       - key: OBJECT_STORAGE_FORCE_PATH_STYLE
         value: false
       # Configure the object-storage endpoint, region, bucket, access-key ID,
