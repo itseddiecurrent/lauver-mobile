@@ -150,7 +150,7 @@ struct OwnProfileView: View {
                                     Text(sport.sport.title).fontWeight(.semibold)
                                     Spacer()
                                     if let pace = sport.paceValue, let unit = sport.paceUnit {
-                                        Text("\(pace.formatted()) \(unit)").foregroundStyle(.secondary)
+                                        Text("\(sport.sport.formattedPace(pace)) \(unit)").foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -268,8 +268,9 @@ private struct EditProfileView: View {
                             Toggle(sport.title, isOn: binding(for: sport))
                             if draft.selectedSports.contains(sport) {
                                 HStack {
-                                    TextField("Optional pace", text: paceBinding(for: sport))
-                                        .keyboardType(.decimalPad)
+                                    TextField(sport.usesDurationPace ? "mm:ss (optional)" : "km/h (optional)", text: paceBinding(for: sport))
+                                        .keyboardType(sport.usesDurationPace ? .numbersAndPunctuation : .decimalPad)
+                                        .autocorrectionDisabled()
                                         .accessibilityIdentifier("profile-pace-\(sport.rawValue)")
                                     Text(sport.paceUnit).foregroundStyle(.secondary)
                                 }
@@ -296,7 +297,12 @@ private struct EditProfileView: View {
 
                 if let error = viewModel.errorMessage {
                     Section {
-                        ErrorStateView(message: error, requestID: viewModel.requestID)
+                        ErrorStateView(
+                            message: error,
+                            requestID: viewModel.requestID,
+                            title: "Couldn't save profile",
+                            systemImage: "exclamationmark.circle"
+                        )
                     }
                 }
             }

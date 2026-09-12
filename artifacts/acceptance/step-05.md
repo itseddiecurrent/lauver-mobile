@@ -14,6 +14,9 @@
 - S3-compatible signed PUT flow with full image decode, type/size/dimension validation, and server-side JPEG re-encoding that strips EXIF/GPS metadata.
 - Replacement/deletion cleanup jobs for old object keys.
 - Native SwiftUI own/edit/other Profile views, `PhotosPicker` crop/compression, and user-initiated MapKit city search.
+- Time-based pace input/display uses `mm:ss`, converted to decimal minutes at
+  the API boundary; cycling continues to use numeric `km/h`. Missing city
+  region codes are explicitly encoded as `null` per the API contract.
 
 ## External CI and Render staging evidence
 
@@ -41,6 +44,11 @@
 
 - On a real iPhone, edit and save a profile, upload/replace/delete a photo, force-quit/relaunch, and verify all fields persist.
 - Verify a second test account's public Profile response/UI shows the city but never the city-center coordinates.
+
+The first real-device profile-save attempt on 2026-09-12 reported a transport
+failure. An equivalent Apple URLSession PATCH and subsequent GET from this Mac
+both returned HTTP 200. Real-device acceptance remains pending; network-error
+codes are now displayed to diagnose a repeat failure without exposing tokens.
 
 No storage credential, signed upload URL, user identifier, or test-account data should be recorded here.
 

@@ -33,6 +33,28 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
         case .running, .trailRunning, .walking, .hiking: "min/km"
         }
     }
+
+    var usesDurationPace: Bool { self != .cycling }
+
+    func formattedPace(_ value: Double) -> String {
+        guard usesDurationPace else { return String(format: "%g", value) }
+        let seconds = Int((value * 60).rounded())
+        return String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    func parsedPace(_ text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !usesDurationPace {
+            guard let value = Double(trimmed), value.isFinite, value > 0 else { return nil }
+            return value
+        }
+        let parts = trimmed.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count == 2, (1...3).contains(parts[0].count), parts[1].count == 2,
+              parts.allSatisfy({ $0.allSatisfy { ("0"..."9").contains(String($0)) } }),
+              let minutes = Int(parts[0]), let seconds = Int(parts[1]), seconds < 60,
+              minutes > 0 || seconds > 0 else { return nil }
+        return Double(minutes) + Double(seconds) / 60
+    }
 }
 
 enum TrainingTimeBucket: String, Codable, CaseIterable, Identifiable {
@@ -98,7 +120,7 @@ struct ProfileDraft: Equatable {
         selectedSports = Set(profile.sports.map(\.sport))
         paceValues = Dictionary(uniqueKeysWithValues: profile.sports.compactMap { item in
             guard let value = item.paceValue else { return nil }
-            return (item.sport, value.formatted(.number.precision(.fractionLength(0...2))))
+            return (item.sport, item.sport.formattedPace(value))
         })
         trainingTimes = Set(profile.trainingTimes)
     }
@@ -175,6 +197,18 @@ private struct ProfileUpdatePayload: Encodable {
         let countryCode: String
         let latitude: Double
         let longitude: Double
+
+        enum CodingKeys: String, CodingKey { case name, regionCode, countryCode, latitude, longitude }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            if let regionCode { try container.encode(regionCode, forKey: .regionCode) }
+            else { try container.encodeNil(forKey: .regionCode) }
+            try container.encode(countryCode, forKey: .countryCode)
+            try container.encode(latitude, forKey: .latitude)
+            try container.encode(longitude, forKey: .longitude)
+        }
     }
 
     struct SportPayload: Encodable {
@@ -319,12 +353,14 @@ final class ProfileService: ProfileServicing {
             let value: Double?
             if text.isEmpty {
                 value = nil
-            } else if let parsed = Double(text), parsed.isFinite, parsed > 0 {
+            } else if let parsed = sport.parsedPace(text) {
                 value = parsed
             } else {
                 throw APIError.validation(
                     code: "invalid_pace",
-                    message: "Enter a valid positive pace for \(sport.title).",
+                    message: sport.usesDurationPace
+                        ? "Enter \(sport.title) pace as mm:ss, with seconds from 00 to 59 (for example, 5:12)."
+                        : "Enter a valid positive speed in km/h for \(sport.title).",
                     requestID: nil
                 )
             }

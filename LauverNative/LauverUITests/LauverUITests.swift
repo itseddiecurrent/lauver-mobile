@@ -43,16 +43,25 @@ final class LauverUITests: XCTestCase {
 
     func testProfileCanOpenEditorAndShowsPersistedWorkoutFields() {
         let app = launchAuthenticatedShell()
-        app.tabBars.firstMatch.buttons["Profile"].tap()
+        let tabButton = app.tabBars.firstMatch.buttons["Profile"]
+        tabButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        if !app.buttons["profile-edit"].waitForExistence(timeout: 2) {
+            tabButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
 
         XCTAssertTrue(app.staticTexts["UI Test Runner"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Shanghai, CN"].exists)
         XCTAssertTrue(app.staticTexts["Running"].exists)
+        XCTAssertTrue(app.staticTexts["5:30 min/km"].exists)
         app.buttons["profile-edit"].tap()
         XCTAssertTrue(app.textFields["profile-name-field"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.textFields["profile-name-field"].value as? String, "UI Test Runner")
+        XCTAssertEqual(app.textFields["profile-pace-running"].value as? String, "5:30")
         XCTAssertTrue(app.buttons["profile-city-picker"].exists)
         XCTAssertTrue(app.buttons["profile-save"].exists)
+        app.buttons["profile-save"].tap()
+        XCTAssertTrue(app.buttons["profile-edit"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["5:30 min/km"].exists)
     }
 
     func testUnreachableAPIShowsErrorAndRetry() {

@@ -78,8 +78,8 @@ enum APIError: Error, Equatable {
             "You appear to be offline."
         case .transport(.timedOut):
             "The request timed out."
-        case .transport:
-            "The network request failed."
+        case let .transport(code):
+            "The network request failed (error \(code.rawValue)). Please try again."
         case .invalidRequest, .invalidResponse, .decoding:
             "The service returned an unexpected response."
         }

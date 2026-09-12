@@ -107,7 +107,7 @@ private final class UITestProfileService: ProfileServicing {
             sports: draft.selectedSports.sorted { $0.rawValue < $1.rawValue }.map {
                 ProfileSport(
                     sport: $0,
-                    paceValue: Double(draft.paceValues[$0] ?? ""),
+                    paceValue: $0.parsedPace(draft.paceValues[$0] ?? ""),
                     paceUnit: $0.paceUnit,
                     paceBracket: nil
                 )

@@ -77,10 +77,58 @@ final class ProfileServiceTests: XCTestCase {
         }
         let profile = try JSONDecoder().decode(ProfileEnvelopeForTest.self, from: Data(Self.profileJSON.utf8)).profile
         var draft = ProfileDraft(profile: profile)
-        draft.paceValues[.running] = "5.25"
+        draft.paceValues[.running] = "5:15"
         draft.selectedSports.insert(.swimming)
 
         _ = try await service.updateProfile(draft)
+    }
+
+    func testDurationPaceFormattingAndParsing() throws {
+        for sport in WorkoutSport.allCases where sport.usesDurationPace {
+            XCTAssertEqual(sport.formattedPace(5.2), "5:12")
+            XCTAssertEqual(try XCTUnwrap(sport.parsedPace("5:12")), 5.2, accuracy: 0.0001)
+            XCTAssertEqual(sport.formattedPace(5.983333), "5:59")
+            for invalid in ["5.2", "5:60", "5:2", ":12", "0:00", "-1:12", "5:12:00"] {
+                XCTAssertNil(sport.parsedPace(invalid), invalid)
+            }
+        }
+        XCTAssertEqual(WorkoutSport.cycling.parsedPace("25.5"), 25.5)
+        XCTAssertNil(WorkoutSport.cycling.parsedPace("5:12"))
+    }
+
+    func testDraftBackfillsPaceAsMinutesAndSeconds() throws {
+        let profile = try JSONDecoder().decode(ProfileEnvelopeForTest.self, from: Data(Self.profileJSON.utf8)).profile
+        XCTAssertEqual(ProfileDraft(profile: profile).paceValues[.running], "5:12")
+    }
+
+    func testUpdateEncodesMissingCityRegionAsExplicitNull() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            let data = try XCTUnwrap(Self.bodyData(request))
+            let body = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let city = try XCTUnwrap(body["city"] as? [String: Any])
+            XCTAssertTrue(city["regionCode"] is NSNull)
+            return Self.response(request, status: 200, body: Self.profileJSON)
+        }
+        let profile = try JSONDecoder().decode(ProfileEnvelopeForTest.self, from: Data(Self.profileJSON.utf8)).profile
+        var draft = ProfileDraft(profile: profile)
+        draft.city = ProfileCity(name: "Shanghai", regionCode: nil, countryCode: "CN", latitude: 31.2304, longitude: 121.4737)
+        _ = try await service.updateProfile(draft)
+    }
+
+    func testInvalidDurationPaceDoesNotSendRequest() async throws {
+        ProfileURLProtocolStub.requestHandler = { _ in
+            XCTFail("Invalid pace must be rejected before making a network request")
+            throw URLError(.unknown)
+        }
+        let profile = try JSONDecoder().decode(ProfileEnvelopeForTest.self, from: Data(Self.profileJSON.utf8)).profile
+        var draft = ProfileDraft(profile: profile)
+        draft.paceValues[.running] = "5:60"
+        do {
+            _ = try await service.updateProfile(draft)
+            XCTFail("Expected pace validation error")
+        } catch let error as APIError {
+            XCTAssertTrue(error.userMessage.contains("mm:ss"))
+        }
     }
 
     func testUnauthorizedProfileRequestRefreshesAndPersistsRotatedTokens() async throws {

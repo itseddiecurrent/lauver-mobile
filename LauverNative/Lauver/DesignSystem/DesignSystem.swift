@@ -53,13 +53,15 @@ struct EmptyStateView: View {
 struct ErrorStateView: View {
     let message: String
     let requestID: String?
+    var title: String = "Unable to connect"
+    var systemImage: String = "wifi.exclamationmark"
 
     var body: some View {
         VStack(spacing: LauverDesign.Spacing.small) {
-            Image(systemName: "wifi.exclamationmark")
+            Image(systemName: systemImage)
                 .font(.title)
                 .foregroundStyle(LauverDesign.ColorToken.danger)
-            Text("Unable to connect").font(.headline)
+            Text(title).font(.headline)
             Text(message).foregroundStyle(.secondary).multilineTextAlignment(.center)
             if let requestID {
                 Text("Request ID: \(requestID)")
