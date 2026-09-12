@@ -16,12 +16,15 @@ final class ProfileViewModel: ObservableObject {
     }
 
     func load() async {
-        guard !isLoading else { return }
+        guard !Task.isCancelled, !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        requestID = nil
         defer { isLoading = false }
         do {
-            profile = try await service.getOwnProfile()
+            let loaded = try await service.getOwnProfile()
+            try Task.checkCancellation()
+            profile = loaded
         } catch {
             capture(error)
         }
@@ -31,6 +34,7 @@ final class ProfileViewModel: ObservableObject {
         guard !isSaving else { return false }
         isSaving = true
         errorMessage = nil
+        requestID = nil
         defer { isSaving = false }
         do {
             profile = try await service.updateProfile(draft)
@@ -48,6 +52,7 @@ final class ProfileViewModel: ObservableObject {
         guard !isSaving else { return }
         isSaving = true
         errorMessage = nil
+        requestID = nil
         defer { isSaving = false }
         do {
             try await service.deletePhoto()
@@ -63,7 +68,12 @@ final class ProfileViewModel: ObservableObject {
     }
 
     private func capture(_ error: Error) {
+        // SwiftUI cancels view tasks when their views disappear. This is not a
+        // connection failure and must not replace the saved profile with an error.
+        guard !Task.isCancelled, !(error is CancellationError) else { return }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return }
         if let apiError = error as? APIError {
+            guard apiError != .transport(.cancelled) else { return }
             errorMessage = apiError.userMessage
             requestID = apiError.requestID
         } else if let localized = error as? LocalizedError {
@@ -87,7 +97,8 @@ struct OwnProfileView: View {
     }
 
     var body: some View {
-        Group {
+        // Keep .task attached to a stable container while loading/content changes.
+        ZStack {
             if viewModel.isLoading, viewModel.profile == nil {
                 LoadingStateView(title: "Loading your profile")
             } else if let profile = viewModel.profile {

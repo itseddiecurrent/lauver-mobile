@@ -12,17 +12,21 @@ struct APIRequest<Response: Decodable> {
     let path: String
     let body: Data?
     let headers: [String: String]
+    // Opt in only when repeating the same body after a lost response is safe.
+    let allowsConnectionRetry: Bool
 
     init(
         method: HTTPMethod = .get,
         path: String,
         body: Data? = nil,
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        allowsConnectionRetry: Bool = false
     ) {
         self.method = method
         self.path = path
         self.body = body
         self.headers = headers
+        self.allowsConnectionRetry = allowsConnectionRetry
     }
 }
 
@@ -78,6 +82,8 @@ enum APIError: Error, Equatable {
             "You appear to be offline."
         case .transport(.timedOut):
             "The request timed out."
+        case .transport(.networkConnectionLost):
+            "The connection was interrupted (error -1005). Please try again."
         case let .transport(code):
             "The network request failed (error \(code.rawValue)). Please try again."
         case .invalidRequest, .invalidResponse, .decoding:
@@ -97,8 +103,13 @@ struct RetryPolicy: Equatable {
         self.delayNanoseconds = delayNanoseconds
     }
 
-    func permitsRetry(method: HTTPMethod, error: APIError, attempt: Int) -> Bool {
-        guard method == .get, attempt < maxAttempts else { return false }
+    func permitsRetry(method: HTTPMethod, error: APIError, attempt: Int, allowsConnectionRetry: Bool = false) -> Bool {
+        guard attempt < maxAttempts else { return false }
+        if method != .get {
+            guard [.patch, .post].contains(method), allowsConnectionRetry,
+                  case let .transport(code) = error else { return false }
+            return permitsIdempotentConnectionRetry(code: code, attempt: attempt)
+        }
 
         switch error {
         case let .server(statusCode, _):
@@ -108,6 +119,10 @@ struct RetryPolicy: Equatable {
         case .invalidRequest, .invalidResponse, .unauthorized, .validation, .notFound, .conflict, .rateLimited, .decoding:
             return false
         }
+    }
+
+    func permitsIdempotentConnectionRetry(code: URLError.Code, attempt: Int) -> Bool {
+        attempt < maxAttempts && [.networkConnectionLost, .timedOut].contains(code)
     }
 }
 
@@ -140,19 +155,32 @@ final class APIClient {
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
         request.headers.forEach { urlRequest.setValue($1, forHTTPHeaderField: $0) }
 
+        let operation: String
+        switch request.path {
+        case "/v1/me/photo/upload-url": operation = "photo-upload-url"
+        case "/v1/me/photo/complete": operation = "photo-complete"
+        case "/v1/me": operation = "profile"
+        default: operation = "api"
+        }
         var attempt = 1
         while true {
             do {
+                Self.logTransport("start operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) swiftCancelled=\(Task.isCancelled)")
                 let (data, response) = try await session.data(for: urlRequest)
+                Self.logTransport("response operation=\(operation) method=\(request.method.rawValue) status=\((response as? HTTPURLResponse)?.statusCode ?? 0)")
                 let decoded: Response = try decode(data: data, response: response)
                 return decoded
             } catch let error as APIError {
-                guard retryPolicy.permitsRetry(method: request.method, error: error, attempt: attempt) else {
+                guard !Task.isCancelled,
+                      retryPolicy.permitsRetry(method: request.method, error: error, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
                     throw error
                 }
             } catch let error as URLError {
+                let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
+                Self.logTransport("failure operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) code=\(error.code.rawValue) swiftCancelled=\(Task.isCancelled) underlyingDomain=\(underlying?.domain ?? "none") underlyingCode=\(underlying?.code ?? 0)")
                 let apiError = APIError.transport(error.code)
-                guard retryPolicy.permitsRetry(method: request.method, error: apiError, attempt: attempt) else {
+                guard !Task.isCancelled,
+                      retryPolicy.permitsRetry(method: request.method, error: apiError, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
                     throw apiError
                 }
             } catch {
@@ -166,28 +194,54 @@ final class APIClient {
         }
     }
 
-    func upload(data: Data, to url: URL, contentType: String) async throws {
+    private static func logTransport(_ message: String) {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-diagnose-network") {
+            print("LauverTransport \(message)")
+            fflush(nil)
+        }
+        #endif
+    }
+
+    func upload(data: Data, to url: URL, contentType: String, requiredHeaders: [String: String] = [:]) async throws {
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
-        request.httpBody = data
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        do {
-            let (_, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw APIError.invalidResponse
+        requiredHeaders.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+        // The signed URL includes content-length; send the exact compressed byte count.
+        request.setValue(String(data.count), forHTTPHeaderField: "Content-Length")
+        var attempt = 1
+        while true {
+            do {
+                Self.logTransport("start method=PUT attempt=\(attempt) swiftCancelled=\(Task.isCancelled)")
+                let (_, response) = try await session.upload(for: request, from: data)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw APIError.invalidResponse
+                }
+                Self.logTransport("response method=PUT status=\(httpResponse.statusCode)")
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    throw APIError.server(
+                        statusCode: httpResponse.statusCode,
+                        requestID: httpResponse.value(forHTTPHeaderField: "x-request-id")
+                    )
+                }
+                return
+            } catch let error as APIError {
+                throw error
+            } catch let error as URLError {
+                let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
+                Self.logTransport("failure method=PUT attempt=\(attempt) code=\(error.code.rawValue) swiftCancelled=\(Task.isCancelled) underlyingDomain=\(underlying?.domain ?? "none") underlyingCode=\(underlying?.code ?? 0)")
+                guard !Task.isCancelled,
+                      retryPolicy.permitsIdempotentConnectionRetry(code: error.code, attempt: attempt) else {
+                    throw APIError.transport(error.code)
+                }
+            } catch {
+                throw APIError.transport(.unknown)
             }
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw APIError.server(
-                    statusCode: httpResponse.statusCode,
-                    requestID: httpResponse.value(forHTTPHeaderField: "x-request-id")
-                )
+            attempt += 1
+            if retryPolicy.delayNanoseconds > 0 {
+                try await Task.sleep(nanoseconds: retryPolicy.delayNanoseconds)
             }
-        } catch let error as APIError {
-            throw error
-        } catch let error as URLError {
-            throw APIError.transport(error.code)
-        } catch {
-            throw APIError.transport(.unknown)
         }
     }
 

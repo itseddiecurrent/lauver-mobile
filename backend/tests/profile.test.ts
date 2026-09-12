@@ -230,6 +230,61 @@ describe('ProfileService', () => {
     expect(repository.cleanup.size).toBe(0);
   });
 
+  it('returns the committed photo when completion is retried after a lost response', async () => {
+    const repository = new MemoryProfileRepository();
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const image = await pngImage(300, 200);
+    const upload = await service.createPhotoUpload({
+      userId: 'user-1', fileName: 'avatar.png', contentType: 'image/png', byteSize: image.length,
+    });
+    storage.objects.set(upload.objectKey, { bytes: image, contentType: 'image/png' });
+    const first = await service.completePhotoUpload('user-1', upload.objectKey);
+    expect(repository.uploads.has(upload.objectKey)).toBe(false);
+    expect(storage.objects.has(upload.objectKey)).toBe(false);
+
+    expect(await service.completePhotoUpload('user-1', upload.objectKey)).toEqual(first);
+    expect(storage.objects.size).toBe(1);
+    await expect(service.completePhotoUpload('user-2', upload.objectKey))
+      .rejects.toMatchObject({ code: 'invalid_photo_upload' });
+    const replacement = await service.createPhotoUpload({
+      userId: 'user-1', fileName: 'replacement.png', contentType: 'image/png', byteSize: image.length,
+    });
+    storage.objects.set(replacement.objectKey, { bytes: image, contentType: 'image/png' });
+    await service.completePhotoUpload('user-1', replacement.objectKey);
+    await expect(service.completePhotoUpload('user-1', upload.objectKey))
+      .rejects.toMatchObject({ code: 'invalid_photo_upload' });
+    expect(storage.objects.size).toBe(1);
+    await service.deletePhoto('user-1');
+    await expect(service.completePhotoUpload('user-1', replacement.objectKey))
+      .rejects.toMatchObject({ code: 'invalid_photo_upload' });
+    expect(storage.objects.size).toBe(0);
+  });
+
+  it('concurrent completion retries preserve a single final object', async () => {
+    const repository = new MemoryProfileRepository();
+    const commit = repository.commitPhotoUpload.bind(repository);
+    repository.commitPhotoUpload = (objectKey, userId, finalKey) => {
+      // Prisma's transaction can fail when another request already deleted the row.
+      if (!repository.uploads.has(objectKey)) return Promise.reject(new Error('Upload already committed'));
+      return commit(objectKey, userId, finalKey);
+    };
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const image = await pngImage(300, 200);
+    const upload = await service.createPhotoUpload({
+      userId: 'user-1', fileName: 'avatar.png', contentType: 'image/png', byteSize: image.length,
+    });
+    storage.objects.set(upload.objectKey, { bytes: image, contentType: 'image/png' });
+    const [first, second] = await Promise.all([
+      service.completePhotoUpload('user-1', upload.objectKey),
+      service.completePhotoUpload('user-1', upload.objectKey),
+    ]);
+    expect(first.photoURL).toBe(second.photoURL);
+    expect(storage.objects.has(repository.profile?.photoKey ?? '')).toBe(true);
+    expect(storage.objects.size).toBe(1);
+  });
+
   it('rejects non-image upload content and removes the invalid object', async () => {
     const repository = new MemoryProfileRepository();
     const storage = new MemoryPhotoStorage();

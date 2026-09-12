@@ -199,8 +199,19 @@ export class ProfileService implements ProfileServicing {
   }
 
   async completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse> {
+    // Preserve the upload UUID so a repeated completion can recognize its result,
+    // even after the pending upload and temporary object have been cleaned up.
+    const prefix = `profile-photo-uploads/${userId}/`;
+    const fileName = objectKey.startsWith(prefix) ? objectKey.slice(prefix.length) : '';
+    const match = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.(jpeg|jpg|png|heic|heif)$/i.exec(fileName);
+    if (match === null) {
+      throw new ProfileError(422, 'invalid_photo_upload', 'The photo upload is invalid or expired');
+    }
+    const finalObjectKey = `profile-photos/${userId}/${match[1]}.jpg`;
     const upload = await this.#repository.findPhotoUpload(objectKey, userId);
     if (upload === null) {
+      const current = await this.#repository.findProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
       throw new ProfileError(422, 'invalid_photo_upload', 'The photo upload is invalid or expired');
     }
     if (upload.expiresAt <= this.#now()) {
@@ -212,6 +223,8 @@ export class ProfileService implements ProfileServicing {
     }
     const object = await this.#storage.readObject(objectKey);
     if (object === null) {
+      const current = await this.#repository.findProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
       throw new ProfileError(422, 'photo_upload_missing', 'The uploaded photo could not be found');
     }
     let sanitized: Uint8Array;
@@ -225,12 +238,14 @@ export class ProfileService implements ProfileServicing {
       ]);
       throw error;
     }
-    const finalObjectKey = `profile-photos/${userId}/${randomUUID()}.jpg`;
     await this.#storage.writeObject(finalObjectKey, sanitized, 'image/jpeg');
     let committed: string | null;
     try {
       committed = await this.#repository.commitPhotoUpload(objectKey, userId, finalObjectKey);
     } catch (error) {
+      // Another completion may have committed this same upload concurrently.
+      const current = await this.#repository.findProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
       await Promise.allSettled([this.#storage.deleteObject(finalObjectKey)]);
       throw error;
     }

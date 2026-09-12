@@ -4,3 +4,5 @@
 APP_ENVIRONMENT = staging
 API_BASE_URL = https:/$()/lauver-api-staging.onrender.com
 PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.staging
+
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) DEBUG

@@ -839,7 +839,7 @@ xcodebuild test \
 
 ### Step 05：Workout Profile、Photo 与 City Location
 
-**状态：🚧 实现与本地自动化验证已完成（2026-09-10）；CI/staging/人工验收待完成。** Profile migration/API、城市坐标隐私、S3-compatible 签名上传与图片内容校验、SwiftUI 编辑/展示页及 MapKit 城市搜索已实现；仍需通过 PostgreSQL CI、Render migration/object storage 配置和真机持久化验收后才能标记完成。准确证据见 `artifacts/acceptance/step-05.md`。
+**状态：🚧 实现、基线 CI、Render migration 和 staging object storage 验证已完成（2026-09-12）；正在收尾后端恢复修复部署及剩余验收。** 新版 App 的头像上传和保存后 `-999` 误报均已获用户真机确认。头像流程支持有限连接重试，后端支持识别同一上传的已保存结果；仍需验证本次修复的 CI/staging 部署、头像更换和删除、强退重开后的资料持久化。准确证据见 `artifacts/acceptance/step-05.md`。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 
@@ -867,6 +867,7 @@ xcodebuild test \
 3. 更换头像后旧 object key 被删除；
 4. `GET /v1/users/:id` 的响应 contract 明确不含 `city_lat/city_lng`；
 5. XCUITest：编辑 → 保存 → kill App → 重开 → 字段仍一致。
+6. 分别模拟申请上传地址、PUT 上传和确认保存时返回 `-1005`，验证有限重试；确认成功但响应丢失后，重复确认返回同一头像，不生成额外最终对象；取消和 HTTP 错误不触发连接重试。
 
 **通过标准：** Profile 数据可持久化、照片无孤儿对象、位置只公开城市和近似信息。
 

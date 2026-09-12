@@ -321,6 +321,7 @@ paths:
   /v1/me/photo/complete:
     post:
       operationId: completeProfilePhotoUpload
+      description: Repeating completion for the currently saved upload returns the same profile, including after temporary upload cleanup. Deleted or replaced uploads remain invalid.
       summary: Validate uploaded bytes and make the new profile photo current
       requestBody:
         required: true

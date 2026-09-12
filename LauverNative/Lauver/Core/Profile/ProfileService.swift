@@ -153,7 +153,9 @@ struct ProfilePhoto: Equatable {
         }
         let maximumSide: CGFloat = 1_600
         let outputSide = min(side, maximumSide)
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: outputSide, height: outputSide))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: outputSide, height: outputSide), format: format)
         let normalized = renderer.image { _ in
             UIImage(cgImage: croppedReference, scale: 1, orientation: source.imageOrientation)
                 .draw(in: CGRect(x: 0, y: 0, width: outputSide, height: outputSide))
@@ -293,7 +295,8 @@ final class ProfileService: ProfileServicing {
                 method: .patch,
                 path: "/v1/me",
                 body: body,
-                headers: Self.jsonAuthorization(token)
+                headers: Self.jsonAuthorization(token),
+                allowsConnectionRetry: true
             )
         }
         return envelope.profile
@@ -310,17 +313,24 @@ final class ProfileService: ProfileServicing {
                 method: .post,
                 path: "/v1/me/photo/upload-url",
                 body: body,
-                headers: Self.jsonAuthorization(token)
+                headers: Self.jsonAuthorization(token),
+                // A lost response only leaves an unused pending upload that expires.
+                allowsConnectionRetry: true
             )
         }
-        try await client.upload(data: photo.data, to: upload.uploadURL, contentType: photo.contentType)
+        try await client.upload(
+            data: photo.data, to: upload.uploadURL, contentType: photo.contentType,
+            requiredHeaders: upload.requiredHeaders
+        )
         let completeBody = try encoder.encode(PhotoCompletePayload(objectKey: upload.objectKey))
         let envelope: ProfileEnvelope = try await authenticatedRequest { token in
             APIRequest(
                 method: .post,
                 path: "/v1/me/photo/complete",
                 body: completeBody,
-                headers: Self.jsonAuthorization(token)
+                headers: Self.jsonAuthorization(token),
+                // The backend recognizes an already committed upload by its object key.
+                allowsConnectionRetry: true
             )
         }
         return envelope.profile

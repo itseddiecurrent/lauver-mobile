@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 import request from 'supertest';
+import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createDatabase } from '../../src/database.js';
@@ -12,7 +13,11 @@ import {
 } from '../../src/apple-auth.js';
 import { createTestApp } from '../helpers/test-app.js';
 import { ProfileService } from '../../src/profile.js';
-import { UnavailableProfilePhotoStorage } from '../../src/object-storage.js';
+import {
+  UnavailableProfilePhotoStorage,
+  type ProfilePhotoStorage,
+  type StoredObject,
+} from '../../src/object-storage.js';
 
 const testDatabaseURL = process.env.TEST_DATABASE_URL;
 if (testDatabaseURL === undefined) {
@@ -368,5 +373,60 @@ describe('PostgreSQL integration', () => {
     expect(JSON.stringify(publicResponse.body)).not.toContain('latitude');
     expect(JSON.stringify(publicResponse.body)).not.toContain('longitude');
     expect(JSON.stringify(publicResponse.body)).not.toContain('photoKey');
+  });
+
+  it('persists concurrent photo completion and safely replays a lost success response', async () => {
+    const objects = new Map<string, StoredObject>();
+    const storage: ProfilePhotoStorage = {
+      createUploadURL: ({ objectKey }) => Promise.resolve(`https://uploads.example.test/${objectKey}`),
+      readObject: (objectKey) => Promise.resolve(objects.get(objectKey) ?? null),
+      writeObject: (objectKey, bytes, contentType) => {
+        objects.set(objectKey, { bytes, contentType });
+        return Promise.resolve();
+      },
+      deleteObject: (objectKey) => {
+        objects.delete(objectKey);
+        return Promise.resolve();
+      },
+      publicURL: (objectKey) => `https://photos.example.test/${objectKey}`,
+    };
+    const app = createTestApp({
+      database, authService,
+      profileService: new ProfileService({ repository: database.profileRepository, storage }),
+    });
+    const registration = await request(app).post('/v1/auth/register').send({
+      email: 'integration-photo-retry@example.com', password: 'IntegrationPhotoRetry9',
+    });
+    expect(registration.status).toBe(201);
+    const accessToken = (registration.body as { accessToken: string }).accessToken;
+    const image = await sharp({ create: {
+      width: 256, height: 256, channels: 3, background: { r: 30, g: 120, b: 60 },
+    } }).png().toBuffer();
+    const upload = await request(app).post('/v1/me/photo/upload-url')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ fileName: 'avatar.png', contentType: 'image/png', byteSize: image.length });
+    expect(upload.status).toBe(201);
+    const objectKey = (upload.body as { objectKey: string }).objectKey;
+    objects.set(objectKey, { bytes: image, contentType: 'image/png' });
+    const complete = () => request(app).post('/v1/me/photo/complete')
+      .set('Authorization', `Bearer ${accessToken}`).send({ objectKey });
+
+    const [first, overlapping] = await Promise.all([complete(), complete()]);
+    expect(first.status).toBe(200);
+    expect(overlapping.status).toBe(200);
+    const photoURL = (first.body as { profile: { photoURL: string } }).profile.photoURL;
+    expect((overlapping.body as { profile: { photoURL: string } }).profile.photoURL).toBe(photoURL);
+    const replay = await complete();
+    expect(replay.status).toBe(200);
+    expect((replay.body as { profile: { photoURL: string } }).profile.photoURL).toBe(photoURL);
+    expect(objects.size).toBe(1);
+    const pending = await sqlClient.query('SELECT object_key FROM profile_photo_uploads WHERE object_key = $1', [objectKey]);
+    expect(pending.rows).toHaveLength(0);
+
+    const deleted = await request(app).delete('/v1/me/photo')
+      .set('Authorization', `Bearer ${accessToken}`);
+    expect(deleted.status).toBe(204);
+    expect((await complete()).status).toBe(422);
+    expect(objects.size).toBe(0);
   });
 });

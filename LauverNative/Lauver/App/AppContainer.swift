@@ -45,6 +45,29 @@ struct AppContainer {
                 : .standard
         )
 
+        #if DEBUG
+        if arguments.contains("-diagnose-network") {
+            Task {
+                for method in [HTTPMethod.get, .patch, .post] {
+                    let endpoint = method == .get ? "/readyz"
+                        : method == .patch ? "/v1/me" : "/v1/me/photo/upload-url"
+                    do {
+                        let _: EmptyResponse = try await client.send(APIRequest(
+                            method: method,
+                            path: endpoint,
+                            body: method == .get ? nil : Data("{}".utf8),
+                            headers: ["Content-Type": "application/json"]
+                        ))
+                    } catch let error as APIError {
+                        if case .unauthorized = error {
+                            print("LauverTransport probe method=\(method.rawValue) authenticated-route=401")
+                        }
+                    } catch {}
+                }
+            }
+        }
+        #endif
+
         let healthService: any HealthServicing = arguments.contains("-ui-testing-health-success")
             ? UITestHealthService()
             : HealthService(client: client)

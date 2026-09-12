@@ -174,6 +174,123 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(attempts, 1)
     }
 
+    func testExplicitlyIdempotentPatchRecoversFromLostConnection() async throws {
+        var attempts = 0
+        URLProtocolStub.requestHandler = { request in
+            attempts += 1
+            XCTAssertEqual(request.httpMethod, "PATCH")
+            if attempts == 1 { throw URLError(.networkConnectionLost) }
+            return Self.response(request: request, statusCode: 200, body: "{}")
+        }
+        let _: EmptyResponse = try await client.send(APIRequest(
+            method: .patch, path: "/v1/me", body: Data("{}".utf8), allowsConnectionRetry: true
+        ))
+        XCTAssertEqual(attempts, 2)
+    }
+
+    func testPatchWithoutExplicitOptInDoesNotRetry() async {
+        var attempts = 0
+        URLProtocolStub.requestHandler = { _ in
+            attempts += 1
+            throw URLError(.networkConnectionLost)
+        }
+        do {
+            let _: EmptyResponse = try await client.send(APIRequest(method: .patch, path: "/v1/me"))
+            XCTFail("Expected connection error")
+        } catch { XCTAssertEqual(error as? APIError, .transport(.networkConnectionLost)) }
+        XCTAssertEqual(attempts, 1)
+    }
+
+    func testCancelledIdempotentPatchIsNotRetried() async {
+        var attempts = 0
+        URLProtocolStub.requestHandler = { _ in
+            attempts += 1
+            throw URLError(.cancelled)
+        }
+        do {
+            let _: EmptyResponse = try await client.send(APIRequest(method: .patch, path: "/v1/me", allowsConnectionRetry: true))
+            XCTFail("Expected cancellation")
+        } catch { XCTAssertEqual(error as? APIError, .transport(.cancelled)) }
+        XCTAssertEqual(attempts, 1)
+    }
+
+    func testPostConnectionRetriesRequireOptInAndRespectFailureBoundaries() async {
+        let scenarios: [(URLError.Code, Bool, Int)] = [
+            (.networkConnectionLost, false, 1),
+            (.networkConnectionLost, true, 2),
+            (.timedOut, true, 2),
+            (.cancelled, true, 1),
+            (.notConnectedToInternet, true, 1),
+        ]
+        for (code, optIn, expectedAttempts) in scenarios {
+            var attempts = 0
+            URLProtocolStub.requestHandler = { _ in
+                attempts += 1
+                throw URLError(code)
+            }
+            do {
+                let _: EmptyResponse = try await client.send(APIRequest(
+                    method: .post, path: "/v1/me/photo/upload-url", allowsConnectionRetry: optIn
+                ))
+                XCTFail("Expected connection error")
+            } catch { XCTAssertEqual(error as? APIError, .transport(code)) }
+            XCTAssertEqual(attempts, expectedAttempts)
+        }
+        var attempts = 0
+        URLProtocolStub.requestHandler = { request in
+            attempts += 1
+            return Self.response(request: request, statusCode: 500, body: "{}")
+        }
+        do {
+            let _: EmptyResponse = try await client.send(APIRequest(
+                method: .post, path: "/v1/me/photo/complete", allowsConnectionRetry: true
+            ))
+            XCTFail("Expected server error")
+        } catch { XCTAssertEqual(error as? APIError, .server(statusCode: 500, requestID: nil)) }
+        XCTAssertEqual(attempts, 1)
+    }
+
+    func testSignedPutRetriesTheSameURLOnConnectionLoss() async throws {
+        let uploadURL = URL(string: "https://storage.example.test/same-object")!
+        var attempts = 0
+        URLProtocolStub.requestHandler = { request in
+            attempts += 1
+            XCTAssertEqual(request.url, uploadURL)
+            XCTAssertEqual(request.httpMethod, "PUT")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "image/jpeg")
+            if attempts == 1 { throw URLError(.networkConnectionLost) }
+            return Self.response(request: request, statusCode: 200, body: "")
+        }
+        try await client.upload(data: Data([1, 2, 3]), to: uploadURL, contentType: "image/jpeg")
+        XCTAssertEqual(attempts, 2)
+    }
+
+    func testSignedPutRetryIsBoundedAndDoesNotRetryCancellationOrHTTPFailures() async {
+        let uploadURL = URL(string: "https://storage.example.test/same-object")!
+        for (failure, expectedAttempts) in [(URLError.Code.networkConnectionLost, 2), (.cancelled, 1)] {
+            var attempts = 0
+            URLProtocolStub.requestHandler = { _ in
+                attempts += 1
+                throw URLError(failure)
+            }
+            do {
+                try await client.upload(data: Data([1]), to: uploadURL, contentType: "image/jpeg")
+                XCTFail("Expected upload error")
+            } catch { XCTAssertEqual(error as? APIError, .transport(failure)) }
+            XCTAssertEqual(attempts, expectedAttempts)
+        }
+        var attempts = 0
+        URLProtocolStub.requestHandler = { request in
+            attempts += 1
+            return Self.response(request: request, statusCode: 403, body: "")
+        }
+        do {
+            try await client.upload(data: Data([1]), to: uploadURL, contentType: "image/jpeg")
+            XCTFail("Expected forbidden upload")
+        } catch { XCTAssertEqual(error as? APIError, .server(statusCode: 403, requestID: nil)) }
+        XCTAssertEqual(attempts, 1)
+    }
+
     private func assertError(_ expectedError: APIError) async {
         let request: APIRequest<HealthResponse> = APIRequest(path: "/healthz")
         do {

@@ -62,6 +62,7 @@ final class LauverUITests: XCTestCase {
         app.buttons["profile-save"].tap()
         XCTAssertTrue(app.buttons["profile-edit"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["5:30 min/km"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
     func testUnreachableAPIShowsErrorAndRetry() {

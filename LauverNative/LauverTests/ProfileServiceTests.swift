@@ -170,6 +170,84 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertLessThanOrEqual(photo.data.count, 5 * 1_024 * 1_024)
     }
 
+    func testLargePhotoOutputIsBoundedInPixelsRegardlessOfScreenScale() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 4096, height: 2048), format: format)
+        let image = renderer.image { context in
+            UIColor.orange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4096, height: 2048))
+        }
+        let photo = try ProfilePhoto.processedJPEG(from: XCTUnwrap(image.pngData()))
+        let result = try XCTUnwrap(UIImage(data: photo.data)?.cgImage)
+        XCTAssertEqual(result.width, 1600)
+        XCTAssertEqual(result.height, 1600)
+    }
+
+    func testPhotoUploadRecoversFromConnectionLossAtEveryStage() async throws {
+        let uploadPath = "/v1/me/photo/upload-url"
+        let putPath = "/signed-avatar"
+        let completePath = "/v1/me/photo/complete"
+        let photo = ProfilePhoto(data: Data([1, 2, 3]), fileName: "profile.jpg", contentType: "image/jpeg")
+        let recoveringService = ProfileService(
+            client: APIClient(baseURL: URL(string: "https://api.example.test")!, session: session,
+                              retryPolicy: RetryPolicy(maxAttempts: 2)),
+            authService: authService, sessionStore: tokenStore
+        )
+        for failedPath in [uploadPath, putPath, completePath] {
+            var attempts: [String: Int] = [:]
+            ProfileURLProtocolStub.requestHandler = { request in
+                let path = try XCTUnwrap(request.url?.path)
+                attempts[path, default: 0] += 1
+                if path == putPath {
+                    XCTAssertEqual(request.httpMethod, "PUT")
+                    XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+                    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), photo.contentType)
+                    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Length"), "3")
+                    XCTAssertEqual(request.value(forHTTPHeaderField: "x-amz-meta-upload"), "avatar")
+                } else {
+                    XCTAssertEqual(request.httpMethod, "POST")
+                    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+                    let body = try XCTUnwrap(Self.bodyData(request))
+                    let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+                    if path == uploadPath {
+                        XCTAssertEqual(json["byteSize"] as? Int, 3)
+                    } else {
+                        XCTAssertEqual(json["objectKey"] as? String, "pending-avatar")
+                    }
+                }
+                if path == failedPath, attempts[path] == 1 { throw URLError(.networkConnectionLost) }
+                if path == uploadPath {
+                    return Self.response(request, status: 201, body: #"{"objectKey":"pending-avatar","uploadURL":"https://storage.example.test/signed-avatar","expiresIn":600,"requiredHeaders":{"Content-Type":"image/jpeg","x-amz-meta-upload":"avatar"}}"#)
+                }
+                if path == putPath { return Self.response(request, status: 200, body: "") }
+                XCTAssertEqual(path, completePath)
+                return Self.response(request, status: 200, body: Self.profileJSON)
+            }
+            _ = try await recoveringService.uploadPhoto(photo)
+            for path in [uploadPath, putPath, completePath] {
+                XCTAssertEqual(attempts[path], path == failedPath ? 2 : 1, failedPath)
+            }
+        }
+    }
+
+    func testFailedPhotoPutDoesNotCompleteUpload() async throws {
+        var paths: [String] = []
+        ProfileURLProtocolStub.requestHandler = { request in
+            let path = try XCTUnwrap(request.url?.path)
+            paths.append(path)
+            if request.httpMethod == "PUT" { throw URLError(.networkConnectionLost) }
+            return Self.response(request, status: 201, body: #"{"objectKey":"pending-avatar","uploadURL":"https://storage.example.test/signed-avatar","expiresIn":600,"requiredHeaders":{"Content-Type":"image/jpeg"}}"#)
+        }
+        do {
+            _ = try await service.uploadPhoto(ProfilePhoto(data: Data([1]), fileName: "profile.jpg", contentType: "image/jpeg"))
+            XCTFail("Expected upload failure")
+        } catch {
+            XCTAssertEqual(error as? APIError, .transport(.networkConnectionLost))
+        }
+        XCTAssertEqual(paths, ["/v1/me/photo/upload-url", "/signed-avatar"])
+    }
+
     func testPublicProfileContractDecodesWithoutCoordinates() throws {
         let json = #"{"profile":{"id":"other-user","displayName":"Taylor","bio":null,"photoURL":null,"city":{"name":"Shanghai","regionCode":"SH","countryCode":"CN"},"sports":[],"trainingTimes":[],"isComplete":true}}"#
         let envelope = try JSONDecoder().decode(ProfileEnvelopeForTest.self, from: Data(json.utf8))
@@ -255,4 +333,121 @@ private final class ProfileURLProtocolStub: URLProtocol {
         }
     }
     override func stopLoading() {}
+}
+
+@MainActor
+final class ProfileViewModelCancellationTests: XCTestCase {
+    func testCancelledReloadKeepsTheUploadedPhotoWithoutAnError() async throws {
+        let service = ProfileViewModelTestService()
+        let model = ProfileViewModel(service: service)
+        await model.load()
+        let draft = ProfileDraft(profile: try XCTUnwrap(model.profile))
+        let saved = await model.save(draft: draft, photo: ProfilePhoto(
+            data: Data([1]), fileName: "profile.jpg", contentType: "image/jpeg"
+        ))
+        XCTAssertTrue(saved)
+        service.loadError = APIError.transport(.cancelled)
+
+        await model.load()
+
+        XCTAssertEqual(model.profile?.photoURL, service.uploadedProfile.photoURL)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertNil(model.requestID)
+        XCTAssertFalse(model.isLoading)
+        service.loadError = nil
+        service.currentProfile = service.uploadedProfile
+        await model.load()
+        XCTAssertEqual(model.profile, service.uploadedProfile)
+    }
+
+    func testAllCancellationRepresentationsAreSilentAndAllowAnotherLoad() async {
+        for error in [CancellationError(), URLError(.cancelled), APIError.transport(.cancelled)] as [Error] {
+            let service = ProfileViewModelTestService()
+            service.loadError = error
+            let model = ProfileViewModel(service: service)
+            await model.load()
+            XCTAssertNil(model.errorMessage)
+            XCTAssertFalse(model.isLoading)
+            service.loadError = nil
+            await model.load()
+            XCTAssertEqual(model.profile, service.currentProfile)
+        }
+    }
+
+    func testAlreadyCancelledLoadDoesNotSendARequest() async {
+        let service = ProfileViewModelTestService()
+        let model = ProfileViewModel(service: service)
+        let loading = Task { await model.load() }
+        loading.cancel()
+        await loading.value
+        XCTAssertEqual(service.loadCount, 0)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertFalse(model.isLoading)
+    }
+
+    func testCancelledLoadCannotOverwriteANewerSavedPhoto() async throws {
+        let service = ProfileViewModelTestService()
+        let model = ProfileViewModel(service: service)
+        await model.load()
+        let draft = ProfileDraft(profile: try XCTUnwrap(model.profile))
+        var response: CheckedContinuation<WorkoutProfile, Error>?
+        let started = expectation(description: "Profile load started")
+        service.loadHandler = {
+            try await withCheckedThrowingContinuation {
+                response = $0
+                started.fulfill()
+            }
+        }
+        let loading = Task { await model.load() }
+        await fulfillment(of: [started], timeout: 2)
+        let pendingResponse = try XCTUnwrap(response)
+        let saved = await model.save(draft: draft, photo: ProfilePhoto(
+            data: Data([1]), fileName: "profile.jpg", contentType: "image/jpeg"
+        ))
+        XCTAssertTrue(saved)
+        loading.cancel()
+        pendingResponse.resume(returning: service.currentProfile)
+        await loading.value
+        XCTAssertEqual(model.profile, service.uploadedProfile)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertFalse(model.isLoading)
+    }
+
+    func testActualNetworkFailureIsStillShownWithTheExistingProfile() async {
+        let service = ProfileViewModelTestService()
+        let model = ProfileViewModel(service: service)
+        await model.load()
+        service.loadError = APIError.transport(.notConnectedToInternet)
+        await model.load()
+        XCTAssertEqual(model.profile, service.currentProfile)
+        XCTAssertEqual(model.errorMessage, APIError.transport(.notConnectedToInternet).userMessage)
+        XCTAssertFalse(model.isLoading)
+    }
+}
+
+@MainActor
+private final class ProfileViewModelTestService: ProfileServicing {
+    var currentProfile = WorkoutProfile(
+        id: "test-profile", displayName: "Runner", bio: nil, photoURL: nil,
+        city: nil, sports: [], trainingTimes: [], isComplete: false
+    )
+    let uploadedProfile = WorkoutProfile(
+        id: "test-profile", displayName: "Runner", bio: nil,
+        photoURL: URL(string: "https://photos.example.test/profile.jpg"),
+        city: nil, sports: [], trainingTimes: [], isComplete: false
+    )
+    var loadError: Error?
+    var loadHandler: (() async throws -> WorkoutProfile)?
+    var loadCount = 0
+
+    func getOwnProfile() async throws -> WorkoutProfile {
+        loadCount += 1
+        if let loadHandler { return try await loadHandler() }
+        if let loadError { throw loadError }
+        return currentProfile
+    }
+    func getProfile(userID: String) async throws -> WorkoutProfile { currentProfile }
+    func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile { currentProfile }
+    func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile { uploadedProfile }
+    func deletePhoto() async throws {}
 }
