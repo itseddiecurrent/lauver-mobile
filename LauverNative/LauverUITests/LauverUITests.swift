@@ -108,7 +108,7 @@ final class LauverUITests: XCTestCase {
         let receipt = XCTAttachment(screenshot: app.screenshot()); receipt.name = "step07-report-reference"; receipt.lifetime = .keepAlways; add(receipt)
         app.buttons["report-done"].tap()
         XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Profile"].tap()
+        selectTab("Profile", in: app)
         let settings = app.buttons["profile-settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 5)); settings.tap()
         app.buttons["settings-blocked-users"].tap()
@@ -118,7 +118,7 @@ final class LauverUITests: XCTestCase {
         unblock.tap()
         app.buttons["Unblock"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["No blocked users"].waitForExistence(timeout: 5))
-        app.tabBars.buttons["Discover"].tap()
+        selectTab("Discover", in: app)
         XCTAssertTrue(row.waitForExistence(timeout: 5))
     }
 
@@ -214,12 +214,13 @@ final class LauverUITests: XCTestCase {
 
     func testRegisterSignOutAndLoginFlow() {
         let app = launchAuthFlow(resetAuth: true)
-        app.buttons["auth-show-register"].tap()
+        tapWhenHittable(app.buttons["auth-show-register"])
+        XCTAssertTrue(app.buttons["auth-register"].waitForExistence(timeout: 5))
         enterCredentials(in: app)
         app.buttons["auth-register"].tap()
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 5))
 
-        app.tabBars.firstMatch.buttons["Profile"].tap()
+        selectTab("Profile", in: app)
         let signOut = app.buttons["auth-sign-out"]
         XCTAssertTrue(signOut.waitForExistence(timeout: 5))
         signOut.tap()
@@ -232,7 +233,8 @@ final class LauverUITests: XCTestCase {
 
     func testDeletedKeychainSessionReturnsToLogin() {
         let app = launchAuthFlow(resetAuth: true)
-        app.buttons["auth-show-register"].tap()
+        tapWhenHittable(app.buttons["auth-show-register"])
+        XCTAssertTrue(app.buttons["auth-register"].waitForExistence(timeout: 5))
         enterCredentials(in: app)
         app.buttons["auth-register"].tap()
         XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 5))
@@ -246,7 +248,8 @@ final class LauverUITests: XCTestCase {
 
     func testForgotPasswordToResetResultFlow() {
         let app = launchAuthFlow(resetAuth: true)
-        app.buttons["auth-forgot-link"].tap()
+        tapWhenHittable(app.buttons["auth-forgot-link"])
+        XCTAssertTrue(app.buttons["auth-forgot-submit"].waitForExistence(timeout: 5))
         let emailField = app.textFields["auth-email"]
         XCTAssertTrue(emailField.waitForExistence(timeout: 5))
         typeText("runner@example.com", into: emailField, app: app)
@@ -351,6 +354,15 @@ final class LauverUITests: XCTestCase {
             object: element
         )
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
-        element.tap()
+        // SwiftUI controls can report an invalid accessibility activation point
+        // even when their visible frame is hittable. Tap the actual frame centre.
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    }
+
+    private func selectTab(_ title: String, in app: XCUIApplication) {
+        let button = app.tabBars.firstMatch.buttons[title]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        XCTAssertFalse(button.frame.isEmpty)
+        button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     }
 }
