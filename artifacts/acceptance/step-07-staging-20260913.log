@@ -1,0 +1,41 @@
+
+> lauver-api@0.1.0 verify:step-07:staging
+> tsx scripts/verify-step-07-staging.ts
+
+PASS staging-ready
+PASS safety-deployed-and-authenticated
+Recovery journal: /var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/lauver-step07-8daa977524739ab2bdfc139292a54062/cleanup.json
+PASS register-fixture-0
+PASS api-database-target-match-0
+PASS complete-profile-0
+PASS register-fixture-1
+PASS api-database-target-match-1
+PASS complete-profile-1
+PASS register-fixture-2
+PASS api-database-target-match-2
+PASS complete-profile-2
+PASS public-profile-before-block
+PASS block-user
+PASS repeat-block-idempotent
+PASS outgoing-block-profile-hidden
+PASS incoming-block-profile-hidden
+PASS outgoing-block-discover-hidden
+PASS incoming-block-discover-hidden
+PASS blocked-list-owned-entry
+PASS blocked-list-caller-isolation
+PASS unblock-cannot-remove-reverse-block
+PASS unblock-restores-profile
+PASS self-block-rejected
+PASS report-reference-without-auto-block
+PASS report-alone-keeps-profile-access
+PASS edit-target-after-report
+PASS immutable-snapshot-open-queue-and-audit
+PASS snapshot-coordinate-and-secret-privacy
+PASS repeat-target-preserves-new-evidence
+PASS atomic-report-and-block
+PASS unsupported-target-type-rejected
+PASS forged-reporter-rejected
+PASS self-report-rejected
+PASS deleted-fixture-session-invalid
+PASS cleanup: 3 fixtures, reports, safety audit and dependent data deleted
+{"result":"passed","checks":34,"deletedAccounts":3}

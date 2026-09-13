@@ -275,6 +275,8 @@ The deployed staging API passed all **62 checks** for the expanded radius option
 
 ## Block and Profile reports (Step 07)
 
+Step 07 functional acceptance is complete on staging and iPhone, including bidirectional blocking, reports, offline recovery and session refresh after expiry. All automated and manual fixtures were removed; see `artifacts/acceptance/step-07.md`. The native refresh-race fix passed 88 XCTest cases and four affected UI regressions and was installed and verified on iPhone; the fix is included in this acceptance commit, separate from the successful cloud CI for `20fd09f`; no new cloud CI result is claimed.
+
 Open another user's Profile and select **Safety** to Block User, Report User, or Report and Block. Blocking requires confirmation and hides both profiles from Discover and direct public Profile API reads. **Profile > Settings > Blocked Users** lists your outgoing blocks and allows unblocking; the other user's block still applies, and old conversations are not restored. Stream messaging enforcement is added in Step 10.
 
 `POST /v1/blocks/:userId` and `DELETE /v1/blocks/:userId` are idempotent and derive the actor from the bearer session. `GET /v1/blocks?cursor=` returns UUID-ordered private pages of 50 entries, without coordinates. Unavailable accounts have no name or city. Self-block is rejected. Blocked-user pages and public Profile responses use `Cache-Control: no-store`.

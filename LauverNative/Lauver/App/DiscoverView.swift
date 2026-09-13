@@ -105,6 +105,10 @@ final class DiscoverViewModel: ObservableObject {
             guard requestGeneration == generation, !Task.isCancelled, !(error is CancellationError) else { return }
             if let apiError = error as? APIError {
                 guard apiError != .transport(.cancelled) else { return }
+                if case .unauthorized = apiError {
+                    users = []
+                    nextCursor = nil
+                }
                 if case .validation(let code, _, _) = apiError, code == "invalid_discover_cursor" { nextCursor = nil }
                 errorMessage = apiError.userMessage
                 requestID = apiError.requestID

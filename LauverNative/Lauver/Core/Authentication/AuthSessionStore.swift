@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let authenticationSessionExpired = Notification.Name("Lauver.authenticationSessionExpired")
+}
+
 struct SessionTokens: Equatable {
     let accessToken: String
     let refreshToken: String

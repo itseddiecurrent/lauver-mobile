@@ -1,0 +1,57 @@
+Date: 2026-09-13
+Issue: actual iPhone session revoked after repeated refresh token use; stale Discover rows remained.
+Observed request ID: 6da83306-c7c3-499f-866b-14b907707ca0
+Read-only fixture session observation: refreshed 2026-09-13T13:37:33.899Z; revoked/compromised 13:37:35.945Z; no blocks created.
+Fix: shared live ProfileService for Profile/Discover/Safety; MainActor serialized/coalesced refresh; late 401 reuses completed rotation; pending refresh cannot overwrite signed-out/new-account credentials; rejected sessions notify root login flow; Discover unauthorized removes cached rows.
+XCTest: 88 passed, 0 failed; TEST SUCCEEDED.
+New regressions: concurrent Profile/Safety refresh once, sign-out during refresh, account switch during refresh, rejected refresh clears session and notifies, offline refresh keeps tokens, Discover expiry clears rows, runtime root expiry returns to login.
+Unit bundle: /tmp/lauver-step07-session-fix-unit-retry.xcresult
+Unit log: /tmp/lauver-step07-session-fix-unit-retry.log
+Initial unit build failed due missing try in test fixture; corrected before final 88/88 result.
+Device: iPhone 14 Plus / ai.lauver.app.staging
+Device build: BUILD SUCCEEDED
+Device installation: succeeded
+Device build/install logs: /tmp/lauver-step07-session-fix-device-build.log, /tmp/lauver-step07-session-fix-device-install.log
+Step 07 structure, MVP scope, secret scan: passed.
+Targeted Simulator UI regressions: 4 passed, 0 failed; TEST EXECUTE SUCCEEDED.
+Cases: Discover Profile/filters, Block confirmation, Report/Report and Block/Settings unblock, registration/sign-out/login.
+UI bundle: /tmp/lauver-step07-session-fix-ui.xcresult
+UI log: /tmp/lauver-step07-session-fix-ui.log
+Services: fixed Simulator test services, not actual iPhone API.
+Device launch: succeeded; /tmp/lauver-step07-session-fix-device-launch.log
+User clarified error trigger: returning to Discover / pull-to-refresh, not confirming Block User.
+Actual iPhone after reinstall/relogin: B Profile closes, Discover hides B, Blocked Users shows B; all user confirmed.
+Read-only DB: A -> B block exists; new A device session active, not revoked/compromised.
+Actual iPhone refresh after access-token expiry: still pending; relogin does not prove refresh recovery.
+Cloud CI/deploy evidence for 20fd09f predates this native-only local fix; no new cloud run claimed.
+
+After user confirmed A blocked B: authenticated staging API reverse block checks (not manual iPhone B UI):
+PASS fixture-B-authenticated
+PASS blocked-B-cannot-read-A-profile
+PASS blocked-B-discover-excludes-A
+PASS B-does-not-own-A-block
+
+Actual iPhone Report and Block receipt verified against staging database:
+{"report":{"reference_id":"23507a9c-9315-437c-8b00-21329059dd5c","target_type":"user","source":"profile","reason":"harassment","status":"open","has_request_id":true,"snapshot_name":"Step 07 Target C","has_bio":true,"has_sports":true},"reporterName":"Step 07 Tester A","targetName":"Step 07 Target C","audit":[{"action":"report_and_block","actor_target_match":true,"request_match":true}],"blocksBetweenReporterAndTarget":1}
+
+After offline unblock attempt: user saw network error -1200; read-only DB confirms C block still exists. Phone row preservation and online retry pending.
+{"report":{"reference_id":"23507a9c-9315-437c-8b00-21329059dd5c","target_type":"user","source":"profile","reason":"harassment","status":"open","has_request_id":true,"snapshot_name":"Step 07 Target C","has_bio":true,"has_sports":true},"reporterName":"Step 07 Tester A","targetName":"Step 07 Target C","audit":[{"action":"report_and_block","actor_target_match":true,"request_match":true}],"blocksBetweenReporterAndTarget":1}
+
+Final online unblock user confirmed: C removed from blocked list and restored in Discover.
+Read-only DB check after online retry: fixture blocks=0; newest A phone session active, last_used_at null.
+UTC timestamp correction: raw pg timestamp-without-time-zone parsing used Mac timezone; final query uses AT TIME ZONE UTC. Earlier printed 05:37 corresponds to actual 13:37 UTC.
+Current A phone session created 2026-09-13T13:52:07.525Z; actual expiry refresh still pending.
+Deployed TTL verified by exact fixture B login response (no tokens printed):
+{"deployedAccessTokenTTLSeconds":900}
+
+Expired access token device check: A session created 2026-09-13T13:52:07.525Z; rotation 2026-09-13T14:20:12.417Z, not revoked/compromised.
+User reports Discover only loading; duration/background/screen-lock and recovery pending.
+readyz: HTTP 200 / 2.247658s
+Independent B fixture authenticated Discover health (not A phone UI):
+{"discoverStatus": 200, "durationMs": 830, "fixtureAVisible": true, "users": 2}
+
+Final superseding result: user confirmed Discover recovered after expiry; session rotation active and not compromised, actual device expiry-refresh acceptance passed.
+All Step 07 manual operations accepted.
+Final cleanup: 3 users, 3 reports, 6 safety audit events and dependent data removed; independent residue zero; old access/refresh both rejected with 401; private login/IDs/journal removed.
+Cleanup evidence: artifacts/acceptance/step-07-device-cleanup-20260913.log
+Functional acceptance complete; native source fix and documentation included in this acceptance commit; no new cloud CI result claimed.

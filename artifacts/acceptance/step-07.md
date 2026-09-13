@@ -1,6 +1,6 @@
 # Step 07 — Block 与 Profile Report 安全基础
 
-日期：2026-09-13。状态：🟡 实现与 Backend 本地测试通过，本地完整 UI 14/14 与新版安装通过，部署和真机实际 API 验收进行中。
+日期：2026-09-13。状态：✅ 验收通过。本地 Backend、既有完整云端 CI 与 staging 实际 API 34/34 通过；真机完成举报、双向拉黑/解除、Report and Block、断网恢复及过期刷新。session 竞态修复后 XCTest 88/88、相关 UI 4/4 通过并已安装真机。独立手机 run 的 3 个账号、3 条举报、6 条审计及关联数据已清理，残留为 0。
 
 ## 实现与范围
 
@@ -19,8 +19,8 @@
 - Backend unit **129/129**；Safety routes 6 项覆盖认证、actor 防伪、全部 reason、重复证据、非法参数、Report and Block 和 rate limit。
 - 隔离 PostgreSQL 从零 migration；Safety integration 5 项覆盖双向 Discover 与直接 Profile 隔离、重复操作、自身/不存在/暂停 target、快照不可修改、更新 Profile 后证据保留、audit 失败事务回滚、50+4 blocked 分页、账户隔离及坐标隐私。
 - 本地 verifier HTTP/SQL lifecycle 4 项：成功后删 3 个 fixture 及 reports/audit/session、API 失败清理、中断清理、非法 journal 拒绝并保留无关 owner 账户、空恢复。最终 migration-from-zero / integration **37/37** 通过，日志 `/tmp/lauver-step07-integration-stable.log`。
-- iOS 最新源码 XCTest **81/81**，新增 safety request/receipt/cursor、report 丢失响应不自动重报、report 重试与成功去重、unblock 失败保留条目与恢复，以及 Blocked Users 分页失败保留游标/刷新失败从第一页重试。
-- 完整 XCUITest **14/14 通过**，零失败/跳过，`TEST SUCCEEDED`；bundle `/tmp/lauver-step07-ui-complete.xcresult`、日志 `/tmp/lauver-step07-ui-complete.log`，持久化摘要 [step-07-ui-20260913.log](step-07-ui-20260913.log)。新增两项覆盖普通举报 → reference → Report and Block → Settings 解除，以及 Block 取消/确认。上一轮 13/14，唯一失败发生在刚点击 Discover 行后尚未找到 Safety；相同源码的完整安全流程单独重跑通过。三个 Discover 导航用例现统一等待行可点击后再点击，保留原有结果断言，完整回归现已通过。
+- session 竞态修复前 iOS XCTest **81/81**，新增 safety request/receipt/cursor、report 丢失响应不自动重报、report 重试与成功去重、unblock 失败保留条目与恢复，以及 Blocked Users 分页失败保留游标/刷新失败从第一页重试。
+- session 竞态修复前完整 XCUITest **14/14 通过**，零失败/跳过，`TEST SUCCEEDED`；bundle `/tmp/lauver-step07-ui-complete.xcresult`、日志 `/tmp/lauver-step07-ui-complete.log`，持久化摘要 [step-07-ui-20260913.log](step-07-ui-20260913.log)。新增两项覆盖普通举报 → reference → Report and Block → Settings 解除，以及 Block 取消/确认。上一轮 13/14，唯一失败发生在刚点击 Discover 行后尚未找到 Safety；相同源码的完整安全流程单独重跑通过。三个 Discover 导航用例现统一等待行可点击后再点击，保留原有结果断言，完整回归现已通过。
 - 本地 PostgreSQL：`/tmp/lauver-step07-pg`，仅 `127.0.0.1:55437/lauver_step07_test`；验证结束后已停止实例，保留日志。没有重置或迁移远端数据库。
 - 日志：`/tmp/lauver-step07-backend-verified.log`、`/tmp/lauver-step07-integration-stable.log`、`/tmp/lauver-step07-ios-verified.log`；最终 iOS bundle `/tmp/lauver-step07-verified.xcresult`。
 - 首次完整 UI 12/14；两项失败分别为确认弹层无 Cancel、Report and Block 提前移除导航来源导致 reference 页消失。改为明确 Cancel/确认的原生 Alert，并将客户端列表更新推迟到 receipt Done 后；后端事务中的 Block 仍在提交时生效。随后完整 UI 13/14 与单独 Safety 重跑的结果分别记录，未把单项通过当作全套通过。
@@ -38,16 +38,28 @@
 
 ## 远端与真机验收
 
-- Step 07 实现提交 `52fd7a8` 已推送 main；[MVP CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34756749550) 的 Backend / guardrails 通过，XCTest **81/81**、UI **13/14**；两项安全用例通过，唯一失败为注册测试点击密码框后未获得键盘焦点。Render 未部署该提交。输入 helper 现等待实际键盘焦点，首次点击未聚焦时按重新查询的位置再点击一次；CI 关闭测试并行执行，采用本地复验的同一 simulator 方式。最终三项输入回归执行中，随后提交修复并由既有 checksPass 流程部署。
-- 用户已明确表示现在可进行真机实际 API 手动验收；准备使用三个可精确清理的临时账号，部署和自动 API 验收完成前不创建这些远端 fixture。
+- Step 07 实现提交 `52fd7a8` 的首次 [MVP CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34756749550)：Backend / guardrails 与 XCTest **81/81** 通过，UI **13/14**，失败为注册密码框未获得键盘焦点；两项安全用例通过。输入 helper 修复后等待实际键盘焦点，必要时重新查询位置再点击一次，CI 关闭测试并行执行；没有跳过用例或降低完成断言。本地受影响输入回归 **3/3** 通过。
+- 安全功能与输入 helper 修复提交 `20fd09f42d98be579eb945817ca9060bba1fb527` 的 [完整云端 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34757582061) 已 **success**：Backend、guardrails、iOS 三个 job 全部通过，XCTest **81/81**、完整 XCUITest **14/14**，`TEST SUCCEEDED`。云端摘要已持久化至 [UI 日志](step-07-ui-20260913.log)。后续真机发现的 session 竞态修复随本次验收记录提交，另经 XCTest 88/88、相关 UI 4/4 与真机过期刷新验证；不将 `20fd09f` 的 CI 结果作为后续本地修复的云端 CI。
+- 用户已确认手动部署成功。随后完整 CI 触发同一提交的自动部署；只读 GitHub deployments 核对 `6421729682` 与 `6421747423` 均 **success**，源码均为 `20fd09f`。staging 已应用 `20260913020000_profile_safety` migration；此前 `594030b` 的 `/v1/blocks` 404 是部署前记录，现已被新版结果取代。
+- 实际 staging 执行 `npm run verify:step-07:staging --prefix backend`，**34/34 通过**，包含认证、三账号资料、双向 Discover 与直接 Profile 隔离、重复/自身拉黑、caller 隔离、普通举报不自动拉黑、资料更新后快照保留、隐私边界、重复目标新证据、原子 Report and Block、非法 target/伪造 reporter 拒绝及旧 session 失效。该自动验收的 **3 个账号及 reports、audit、依赖数据已清理**；完整证据 [实际 API 日志](step-07-staging-20260913.log)。
+- 新版 staging App 已在 iPhone 14 Plus（iOS 18.7.8）构建、安装并正常启动 `ai.lauver.app.staging`；`BUILD SUCCEEDED`，日志 `/tmp/lauver-step07-device-build.log`。此前固定服务真机 runner 在 iOS 认证初始化阶段取消，未执行用例；不计为真机实际 API 通过。
+- 用户已授权真机手动验收。独立 run `89ec2b75662ce2b3c4bbcddba5c8ea74` 的 **3 个手机测试账号已创建成功**：Step 07 Tester A、Step 07 Target B、Step 07 Target C。只读核对均 ACTIVE、资料完整、没有头像，测试开始前 reports=0、blocks=0；城市 Step 07 Test City、running 5:30 min/km。私人登录资料、IDs 与 cleanup journal 仅保存在本机权限受限临时目录，凭据不写入仓库。
+- 真机完整操作结果见 [手机验收清单](step-07-device-checklist.md)。用户逐项确认：普通 Report 不自动拉黑、Cancel 无副作用、确认 Block 关闭资料/隐藏 Discover/加入 Blocked Users、B 也看不到 A、解除恢复 Discover、Report and Block reference 保留至 Done 后隐藏 C、断网解除失败后联网重试成功。
+- 普通举报 reference `e17a2317-f339-4c28-a7e5-c4854073a7c9`：只读核对 A → B、harassment、user/profile、open、目标资料快照与 report audit/request ID 一致，无自动 block。
+- Report and Block reference `23507a9c-9315-437c-8b00-21329059dd5c`：只读核对 A → C、open、C 的快照、report_and_block audit/request ID 与 block 一致。断网解除返回网络错误 -1200，云端 block 保留；联网重试后用户确认列表移除 C、Discover 恢复 C，云端 blocks=0。
+- 实际 API 补充核对 **4/4** 通过：B 登录身份一致、读取 A Profile 返回 404、Discover 排除 A、B 没有自己的方向 block；用户也在 B 手机登录后确认找不到 A。
+- A 手机 session 在 `2026-09-13T14:20:12.417Z` 成功 rotation 且未 revoked/compromised。用户一度反馈 Discover loading，随后明确确认页面恢复；readyz 200、独立 B fixture Discover API 200 / 830ms。过期后刷新验收通过；未提供 loading 持续时间与后台/锁屏情况，不认定其具体原因。
+- 独立手机 run `89ec2b75662ce2b3c4bbcddba5c8ea74` **精确清理完成**：删除 **3 个账号、3 条举报、6 条 safety audit** 及 profiles、sports、training times、identities、credentials、sessions 等依赖数据；独立 SQL 核对 users/identities/sessions/reports/audit/blocks 均为 **0**。清理前属于 A 的探针 access/refresh token，清理后均返回 **401**；所有手机 session 随账号级联移除。私人登录文件、IDs 与 cleanup journal 已删除；没有重置 staging schema。证据 [手机清理日志](step-07-device-cleanup-20260913.log)。
 
-- 本轮只读核对：staging `/v1/blocks` 返回 **404**，最新成功部署仍为 `594030b`，已应用的最后 migration 为 `20260913010000_explicit_pace_ranges`；Step 07 后端与 schema 尚未部署。未创建远端 Step 07 fixture。
-- 新版 staging App 使用既有开发签名对 iPhone 14 Plus（iOS 18.7.8）构建，**BUILD SUCCEEDED**，已安装并正常启动 `ai.lauver.app.staging`；日志 `/tmp/lauver-step07-device-build.log`。真机安全流程固定服务 UI 的 runner 在初始化阶段因 iOS “认证已取消 / Canceled by user” 停止，尚未执行任何用例；随后已恢复正常 staging App。此结果不标为 UI 或实际 API 通过。
-- 新版后端与 migration 需一起部署，随后执行 `npm run verify:step-07:staging --prefix backend`。只读取忽略的 `.env.staging`；部署前不向旧 API 创建测试数据。
-- Verifier journal 在注册前保存随机 run 精确 email；HTTP/数据库异常和中断均尝试清理。清理拒绝外部身份、照片/upload、无关举报或审核数据；需恢复时运行 `--cleanup-state` 指定该 run 的 journal。
-- 真机待测：A 普通举报 B，看到 reference；A 拉黑 B 后双方 Discover 和直接 Profile API 隔离；Settings 列表显示并可解除；Report and Block 同时成功；取消确认无副作用、断网失败可恢复。测试资料须在结束后精确清理。
+## 真机问题修复进度
+
+用户补充错误发生在返回 Discover／下拉刷新时，而非确认拉黑时。手机出现 invalid/expired session 错误且保留 B/C 旧列表，request ID `6da83306-c7c3-499f-866b-14b907707ca0`。只读核对 A 手机 session 刷新约 2 秒后被置为 revoked/compromised，当时没有 block。独立 feature service 的并发刷新存在复用旧 refresh token 的竞态；已修复共享刷新状态、迟到 401、退出/账号切换保护与运行中失效返回登录。截图与进度见 [手机清单](step-07-device-checklist.md)。修复后本地 XCTest **88/88** 通过，已在同一 iPhone 构建并安装新版，相关 Simulator UI **4/4** 通过且新版真机正常启动；证据 [修复日志](step-07-session-fix-20260913.log)。用户已确认修复版重新登录后拉黑三项行为通过；过期后 A 手机 session 已在 `2026-09-13T14:20:12.417Z` 完成 rotation 且未撤销，但用户反馈 Discover 纯 loading；同期 readyz 200、独立 B fixture Discover 200 / 830ms，用户随后确认页面恢复，过期后刷新路径通过。原生修复随本次验收记录提交；尚无这个新提交的云端 CI 结果。
 
 ## 配置与数据政策
 
 - 无新增第三方账号或 secret。README、OpenAPI、staging env 示例、Step 07 自动检查与 CI 已同步。
 - reports/safety audit 的 user 外键删除时置空；MVP 全链路账户删除仍在 Step 14 实施，届时按公开保留政策处理快照与审计。本 Step 未宣称账户删除已完成。
+
+## 最终结论
+
+Step 07 功能验收通过：Block 是后端双向强制策略，直接 Profile API 不能绕过；Profile 举报形成不可变、带 reference 与审计的 open queue，普通举报和 Report and Block 行为明确。手机操作、staging 数据核对、session 竞态修复与精确清理形成完整证据。Stream 聊天和 Admin Dashboard 分别按 Step 10、13 实现，逐页视觉签收仍按 Step 14A 执行。

@@ -76,9 +76,11 @@ struct AppContainer {
         let authService: any AuthServicing = arguments.contains("-ui-testing-auth-flow")
             ? UITestAuthService()
             : AuthService(client: client)
+        // All authenticated features must share refresh-token rotation state.
+        let liveProfileService = ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
         let profileService: any ProfileServicing = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
             ? UITestProfileService()
-            : ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
+            : liveProfileService
         let testSafetyService = UITestSafetyService()
 
         return AppContainer(
@@ -87,11 +89,11 @@ struct AppContainer {
             authService: authService,
             discoverService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? UITestDiscoverService(safetyService: testSafetyService)
-                : ProfileService(client: client, authService: authService, sessionStore: authSessionStore),
+                : liveProfileService,
             profileService: profileService,
             safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? testSafetyService
-                : ProfileService(client: client, authService: authService, sessionStore: authSessionStore),
+                : liveProfileService,
             authSessionStore: authSessionStore,
             appleUserIdentifierStore: appleUserIdentifierStore,
             appleCredentialStateChecker: AppleCredentialStateChecker(),

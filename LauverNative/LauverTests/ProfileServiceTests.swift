@@ -220,6 +220,102 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(requests, 2)
     }
 
+    @MainActor
+    func testConcurrentProfileAndSafetyRequestsRotateRefreshTokenOnlyOnce() async throws {
+        let expiredRequests = expectation(description: "Both features used the expired access token")
+        expiredRequests.expectedFulfillmentCount = 2
+        ProfileURLProtocolStub.requestHandler = { request in
+            if request.value(forHTTPHeaderField: "Authorization") == "Bearer profile-access-token" {
+                expiredRequests.fulfill()
+                return Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+            }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer rotated-access-token")
+            return Self.response(request, status: 200,
+                                 body: request.url?.path == "/v1/blocks" ? #"{"users":[],"nextCursor":null}"# : Self.profileJSON)
+        }
+        authService.refreshHandler = { _ in
+            await self.fulfillment(of: [expiredRequests], timeout: 5)
+            return ProfileTestAuthService.rotatedSession
+        }
+        async let profile = service.getOwnProfile()
+        async let blocked = service.blockedUsers(cursor: nil)
+        _ = try await (profile, blocked)
+        XCTAssertEqual(authService.refreshCalls, 1)
+        XCTAssertEqual(tokenStore.tokens?.refreshToken, "rotated-refresh-token")
+    }
+
+    @MainActor
+    func testRefreshCannotRestoreTokensAfterSignOut() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+        }
+        authService.refreshHandler = { _ in
+            try self.tokenStore.clear()
+            return ProfileTestAuthService.rotatedSession
+        }
+        do {
+            _ = try await service.getOwnProfile()
+            XCTFail("A signed-out session must not be restored by a pending refresh")
+        } catch let error as APIError {
+            guard case .unauthorized = error else { return XCTFail("Expected unauthorized") }
+        }
+        XCTAssertNil(tokenStore.tokens)
+        XCTAssertNil(tokenStore.savedSession)
+    }
+
+    @MainActor
+    func testRefreshCannotOverwriteANewlySignedInAccount() async throws {
+        let newTokens = SessionTokens(accessToken: "new-account-access", refreshToken: "new-account-refresh")
+        ProfileURLProtocolStub.requestHandler = { request in
+            Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+        }
+        authService.refreshHandler = { _ in
+            self.tokenStore.tokens = newTokens
+            return ProfileTestAuthService.rotatedSession
+        }
+        do {
+            _ = try await service.getOwnProfile()
+            XCTFail("An old request must not overwrite the new account")
+        } catch let error as APIError {
+            guard case .unauthorized = error else { return XCTFail("Expected unauthorized") }
+        }
+        XCTAssertEqual(tokenStore.tokens, newTokens)
+        XCTAssertNil(tokenStore.savedSession)
+    }
+
+    func testRejectedRefreshClearsTokensAndNotifiesSessionExpiry() async throws {
+        let expired = expectation(forNotification: .authenticationSessionExpired, object: nil)
+        ProfileURLProtocolStub.requestHandler = { request in
+            Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+        }
+        authService.refreshHandler = { _ in
+            throw APIError.unauthorized(code: "invalid_session", message: "Refresh revoked", requestID: "refresh-rejected")
+        }
+        do {
+            _ = try await service.getOwnProfile()
+            XCTFail("Expected rejected refresh")
+        } catch let error as APIError {
+            XCTAssertEqual(error.requestID, "refresh-rejected")
+        }
+        await fulfillment(of: [expired], timeout: 5)
+        XCTAssertNil(tokenStore.tokens)
+    }
+
+    func testOfflineRefreshPreservesTokensForRecovery() async throws {
+        let original = tokenStore.tokens
+        ProfileURLProtocolStub.requestHandler = { request in
+            Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+        }
+        authService.refreshHandler = { _ in throw APIError.transport(.notConnectedToInternet) }
+        do {
+            _ = try await service.getOwnProfile()
+            XCTFail("Expected offline error")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .transport(.notConnectedToInternet))
+        }
+        XCTAssertEqual(tokenStore.tokens, original)
+    }
+
     func testPhotoProcessingCenterCropsAndCompressesToJPEG() throws {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 800, height: 400))
         let source = renderer.image { context in
@@ -366,12 +462,19 @@ private final class ProfileTestSessionStore: AuthSessionStoring {
 
 private final class ProfileTestAuthService: AuthServicing {
     var refreshToken: String?
+    var refreshCalls = 0
+    var refreshHandler: ((String) async throws -> AuthSession)?
     func register(email: String, password: String) async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func login(email: String, password: String) async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func refresh(refreshToken: String) async throws -> AuthSession {
         self.refreshToken = refreshToken
-        return AuthSession(
+        refreshCalls += 1
+        if let refreshHandler { return try await refreshHandler(refreshToken) }
+        return Self.rotatedSession
+    }
+    static var rotatedSession: AuthSession {
+        AuthSession(
             user: AuthUser(id: "profile-user", email: "runner@example.com"),
             accessToken: "rotated-access-token",
             refreshToken: "rotated-refresh-token",

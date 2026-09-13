@@ -114,6 +114,18 @@ final class DiscoverTests: XCTestCase {
         XCTAssertFalse(model.isLoading)
     }
 
+    func testExpiredSessionClearsPreviouslyVisibleProfilesAndCursor() async {
+        let service = DiscoverFakeService()
+        let model = DiscoverViewModel(service: service)
+        await model.load()
+        XCTAssertFalse(model.users.isEmpty)
+        service.sessionExpired = true
+        await model.load(refresh: false)
+        XCTAssertTrue(model.users.isEmpty)
+        XCTAssertNil(model.nextCursor)
+        XCTAssertNotNil(model.errorMessage)
+    }
+
     static func user(_ id: String) -> DiscoverUser {
         DiscoverUser(id: id, displayName: id, photoURL: nil,
                      city: ProfileCity(name: "City", regionCode: nil, countryCode: "CN", latitude: nil, longitude: nil),
@@ -128,9 +140,11 @@ private final class DiscoverFakeService: DiscoverServicing {
     var failPage = false
     var holdPage = false
     var cancel = false
+    var sessionExpired = false
     var pendingPage: CheckedContinuation<DiscoverPage, Never>?
 
     func discover(filters: DiscoverFilters, cursor: String?) async throws -> DiscoverPage {
+        if sessionExpired { throw APIError.unauthorized(code: "invalid_session", message: "Please sign in again.", requestID: nil) }
         if cancel { throw CancellationError() }
         if filters.sport == .cycling {
             if failFilter { throw APIError.transport(.notConnectedToInternet) }

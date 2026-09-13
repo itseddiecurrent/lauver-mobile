@@ -26,3 +26,15 @@ Report form, Report and Block reference and Blocked Users screenshots saved in a
 Main text, action buttons and layout visually inspected; Simulator restored to light mode.
 Bundle: /tmp/lauver-step07-safety-dark.xcresult
 Full log: /tmp/lauver-step07-safety-dark.log
+
+Cloud run 34756749550 / 52fd7a8: XCTest 81 passed; XCUITest 13 passed, 1 failed (register password field lacked keyboard focus). Both Safety cases passed.
+Focus helper now waits for keyboard focus and makes one second tap if needed; final affected UI regression: 3 passed, 0 failed; TEST SUCCEEDED.
+Bundle: /tmp/lauver-step07-auth-focus.xcresult
+Full log: /tmp/lauver-step07-auth-focus.log
+Fix: 20fd09f; complete cloud CI run 34757582061 completed successfully.
+Final cloud source: 20fd09f42d98be579eb945817ca9060bba1fb527
+Cloud jobs: backend, guardrails, ios all success.
+Cloud XCTest: 81 passed, 0 failed.
+Cloud XCUITest: 14 passed, 0 failed; TEST SUCCEEDED.
+Cloud log archive inspected: /tmp/lauver-step07-final-ci-logs.zip
+Cloud UI tests use fixed services; actual iPhone API acceptance remains pending.

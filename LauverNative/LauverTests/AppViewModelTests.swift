@@ -57,6 +57,21 @@ final class AppViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.authenticatedEmail, "runner@example.com")
     }
 
+    func testRuntimeSessionExpiryReturnsToLoginAndClearsAccountState() async {
+        let sessionStore = TestAuthSessionStore()
+        let appleStore = TestAppleUserIdentifierStore(userIdentifier: "old-apple-user")
+        let model = makeViewModel(authSessionStore: sessionStore, appleUserIdentifierStore: appleStore)
+        await model.login(email: "runner@example.com", password: "CorrectHorse9")
+        model.selectedTab = .profile
+        model.handleSessionExpired()
+        XCTAssertEqual(model.authenticationState, .signedOut)
+        XCTAssertNil(model.authenticatedEmail)
+        XCTAssertNil(sessionStore.tokens)
+        XCTAssertNil(appleStore.userIdentifier)
+        XCTAssertEqual(model.selectedTab, .discover)
+        XCTAssertTrue(model.authMessage?.contains("sign in again") == true)
+    }
+
     func testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken() async {
         let authService = TestAuthService()
         authService.restoreResult = .failure(.unauthorized(

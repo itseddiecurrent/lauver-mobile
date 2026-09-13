@@ -283,6 +283,8 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
     private let encoder = JSONEncoder()
+    @MainActor private var refreshTask: (id: UUID, tokens: SessionTokens, task: Task<String, Error>)?
+    @MainActor private var completedRefresh: (previous: SessionTokens, current: SessionTokens)?
 
     init(client: APIClient, authService: any AuthServicing, sessionStore: any AuthSessionStoring) {
         self.client = client
@@ -404,6 +406,7 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         }
     }
 
+    @MainActor
     private func authenticatedRequest<Response: Decodable>(
         _ request: (String) -> APIRequest<Response>
     ) async throws -> Response {
@@ -413,10 +416,62 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         do {
             return try await client.send(request(tokens.accessToken))
         } catch APIError.unauthorized {
-            let session = try await authService.refresh(refreshToken: tokens.refreshToken)
-            try sessionStore.save(session)
-            return try await client.send(request(session.accessToken))
+            let accessToken = try await refreshedAccessToken(for: tokens)
+            do {
+                return try await client.send(request(accessToken))
+            } catch let error as APIError {
+                if case .unauthorized = error {
+                    invalidateSession(accessToken: accessToken)
+                }
+                throw error
+            }
         }
+    }
+
+    @MainActor
+    private func refreshedAccessToken(for tokens: SessionTokens) async throws -> String {
+        guard let current = try sessionStore.read() else { throw Self.invalidSession }
+        if current != tokens {
+            // A late 401 can arrive after another request already rotated this session.
+            // Never retry an old user's request with a newly signed-in user's token.
+            guard completedRefresh?.previous == tokens, completedRefresh?.current == current else {
+                throw Self.invalidSession
+            }
+            return current.accessToken
+        }
+        if let refreshTask, refreshTask.tokens == tokens {
+            return try await refreshTask.task.value
+        }
+        let id = UUID()
+        let task = Task { @MainActor in
+            do {
+                let session = try await self.authService.refresh(refreshToken: tokens.refreshToken)
+                guard try self.sessionStore.read() == tokens else { throw Self.invalidSession }
+                try self.sessionStore.save(session)
+                self.completedRefresh = (tokens, SessionTokens(accessToken: session.accessToken, refreshToken: session.refreshToken))
+                return session.accessToken
+            } catch let error as APIError {
+                if case .unauthorized = error {
+                    self.invalidateSession(accessToken: tokens.accessToken)
+                }
+                throw error
+            }
+        }
+        refreshTask = (id, tokens, task)
+        defer { if refreshTask?.id == id { refreshTask = nil } }
+        return try await task.value
+    }
+
+    @MainActor
+    private func invalidateSession(accessToken: String) {
+        guard let current = try? sessionStore.read(), current.accessToken == accessToken else { return }
+        try? sessionStore.clear()
+        completedRefresh = nil
+        NotificationCenter.default.post(name: .authenticationSessionExpired, object: nil)
+    }
+
+    private static var invalidSession: APIError {
+        .unauthorized(code: "invalid_session", message: "Please sign in again.", requestID: nil)
     }
 
     private func makeUpdatePayload(_ draft: ProfileDraft) throws -> ProfileUpdatePayload {

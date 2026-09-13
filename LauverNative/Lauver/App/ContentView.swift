@@ -135,6 +135,12 @@ final class AppViewModel: ObservableObject {
         authMessage = "Your Apple authorization was revoked. Please sign in again."
     }
 
+    func handleSessionExpired() {
+        clearLocalAuthentication()
+        selectedTab = .discover
+        authMessage = "Your session expired. Please sign in again."
+    }
+
     func forgotPassword(email: String) async {
         await performAuthAction {
             try await authService.forgotPassword(email: email)
@@ -272,6 +278,9 @@ struct ContentView: View {
             for: ASAuthorizationAppleIDProvider.credentialRevokedNotification
         )) { _ in
             Task { await viewModel.handleAppleCredentialRevoked() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .authenticationSessionExpired)) { _ in
+            viewModel.handleSessionExpired()
         }
     }
 }

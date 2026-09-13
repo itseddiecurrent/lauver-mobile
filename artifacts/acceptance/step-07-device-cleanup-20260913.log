@@ -1,0 +1,12 @@
+PASS exact-fixture-run-matches-database
+{"beforeCleanup":{"reports":3,"audit":6,"blocks":0}}
+PASS cleanup-probe-session-belongs-to-A
+PASS cleanup: 3 fixtures, reports, safety audit and dependent data deleted
+PASS three-device-fixtures-deleted
+PASS deleted-account-access-token-rejected
+PASS deleted-account-refresh-token-rejected
+PASS independent-fixture-residue-zero
+{"afterCleanup":{"users":0,"identities":0,"sessions":0,"reports":0,"audit":0,"blocks":0}}
+PASS cleanup-journal-removed
+PASS private-login-and-ids-removed
+{"result":"passed","deletedAccounts":3,"deletedReports":3,"deletedAuditEvents":6}
