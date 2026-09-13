@@ -115,3 +115,11 @@
 - 修改后的同一 Discover UI 测试在 iOS 26.5 Simulator **1/1** 回归通过，`TEST SUCCEEDED`；日志 `/tmp/lauver-step06-continue-simulator.log`，bundle `/tmp/lauver-step06-continue-simulator.xcresult`。测试后已在真机重新启动正常 staging App，未带固定数据 service 参数。
 - 持久化验证摘要：[step-06-continue-20260913.log](step-06-continue-20260913.log)。新版部署需要提交并推送本轮 Step 06 改动至 GitHub main，由既有 CI / Render 流程完成；部署后执行 `npm run verify:step-06:staging --prefix backend` 并补充真机实际 API 复验。
 - 用户已明确授权由代理提交、推送 main、触发 Render staging 部署并继续新版 API 验收。
+
+## 部署跟进：修复 CI 焦点失败（2026-09-13）
+
+- 实现与验收工具已提交并推送 `922cb8f`；[首次 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34749025929) 的 guardrails、Backend 全部通过，包括 Docker build 与 production dependency audit。
+- 首次云端 iOS XCTest **75/75**、Discover UI **1/1** 通过；完整 UI suite **11/12** 通过，唯一失败为既有 `testForgotPasswordToResetResultFlow`：新密码输入框未获得键盘焦点，`typeText` 无法合成事件。
+- 将共用输入 helper 的固定中心坐标点击改为等待输入框存在且可点击，再使用 XCTest 元素 `tap()` 自动选择可见点击位置。保留软件键盘可见性为可选等待，兼容硬件键盘；没有跳过或放宽密码重置完成的断言。
+- 修复后本地密码重置目标用例 **1/1** 通过；日志 `/tmp/lauver-step06-ci-focus.log`，bundle `/tmp/lauver-step06-ci-focus.xcresult`。受影响的注册/登录、会话删除和密码重置三项 UI 回归 **3/3** 通过，`TEST SUCCEEDED`；日志 `/tmp/lauver-step06-ci-auth-regression.log`，bundle `/tmp/lauver-step06-ci-auth-regression.xcresult`。
+- 本次 CI 失败时 staging 尚未开始新版 API 验收，没有新增远端 fixture。

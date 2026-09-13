@@ -264,7 +264,13 @@ final class LauverUITests: XCTestCase {
     }
 
     private func typeText(_ text: String, into element: XCUIElement, app: XCUIApplication) {
-        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND hittable == true"),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+        // Let XCTest scroll and choose a visible hit point as the keyboard changes the layout.
+        element.tap()
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 1)
         element.typeText(text)
     }
