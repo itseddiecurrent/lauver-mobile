@@ -1,0 +1,69 @@
+Scope: deployed Step 06 numeric pace/radius API acceptance.
+Render deployment: 594030b; GitHub deployment 6420142782; success 2026-09-13 09:43:08 UTC.
+Verified API source: 10bd58d; full CI run 34749444720 passed (75 XCTest / 12 XCUITest).
+594030b adds backend deployment documentation; its separate CI is tracked independently.
+PASS staging-ready
+PASS discover-deployed-and-authenticated
+PASS viewer-login-and-api-database-target-match
+PASS api-and-database-target-match
+PASS viewer-complete-profile
+PASS distance-timestamp-uuid-order-and-exclusions
+PASS public-coordinate-privacy
+PASS whole-kilometre-approximation
+PASS common-sports-not-fabricated
+PASS stable-order-1
+PASS stable-order-2
+PASS stable-order-3
+PASS stable-order-4
+PASS stable-order-5
+PASS stable-order-6
+PASS stable-order-7
+PASS stable-order-8
+PASS stable-order-9
+PASS stable-order-10
+PASS five-kilometre-inside-outside-boundary
+PASS sport-filter
+PASS numeric-pace-range-4-to-4.5
+PASS numeric-pace-range-7-to-9
+PASS missing-pace-excluded-only-with-range
+PASS cycling-range-20-to-30
+PASS cycling-range-excludes-25
+PASS cycling-exact-value-25
+PASS running-exact-value-4
+PASS running-open-lower-end
+PASS running-open-upper-end
+PASS default-page-has-load-more
+PASS expanded-radius-20
+PASS expanded-radius-30
+PASS expanded-radius-40
+PASS expanded-radius-50
+PASS expanded-radius-60
+PASS expanded-radius-70
+PASS expanded-radius-80
+PASS expanded-radius-90
+PASS expanded-radius-100
+PASS unlimited-includes-beyond-100-km-with-exclusions
+PASS pagination-no-duplicates-or-omissions-limit-1
+PASS pagination-no-duplicates-or-omissions-limit-7
+PASS pagination-no-duplicates-or-omissions-limit-20
+PASS invalid-query-radius=7
+PASS invalid-query-sport=invalid
+PASS invalid-query-paceBracket=fast
+PASS invalid-query-sport=running&paceMin=6&paceMax=5
+PASS invalid-query-limit=0
+PASS invalid-query-limit=51
+PASS invalid-query-userId=forged
+PASS invalid-query-radius=5&radius=10
+PASS changed-filter
+PASS finite-cursor-rejected-for-unlimited
+PASS cursor-rejected-for-changed-pace-range
+PASS tampered-cursor
+PASS second-user-login
+PASS foreign-user-cursor-rejected
+PASS blocked-user-login
+PASS reverse-block-discovery-isolation
+PASS fresh-session-persistent-discovery
+PASS deleted-viewer-session-invalid
+PASS cleanup: 34 test accounts and all dependent database rows deleted
+{"result":"passed","checks":62,"deletedAccounts":34}
+Independent database check: 0 accounts from this run remain; cleanup journal removed; pace_value Decimal(9,6); pace_bracket absent.

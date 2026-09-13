@@ -1,10 +1,10 @@
 # Step 06 — Discover 手动筛选列表
 
-日期：2026-09-13。状态：原版本 Render staging API 验收完成；新增半径与实际数值配速范围的本地验证、新版 iPhone 14 Plus 固定数据 UI 验收完成，待新版后端同步部署与真机实际 API 复验。
+日期：2026-09-13。状态：新版 Render staging API **62/62**、iPhone 14 Plus 固定数据 UI 与完整 CI 验收通过，全部 34 个新版 API 测试账户已清理；待用户确认新版真机实际 API 交互。
 
 ## 实现
 
-- 认证 `GET /v1/discover`，严格校验运动、半径、配速分档、页大小和游标；配速筛选必须指定运动。
+- 认证 `GET /v1/discover`，严格校验运动、半径、数值配速上下限、页大小和游标；配速筛选必须指定运动。
 - 城市中心点 Haversine SQL；固定距离升序、资料更新时间降序、UUID 升序；使用未舍入距离做 keyset pagination。
 - 排除自己、未完成、暂停、删除、任一方向已拉黑用户。最小 blocks migration 为 Step 06 前置基础；Step 07 继续提供管理与举报功能。
 - 游标 HMAC 签名并绑定用户、城市、筛选参数；只返回整公里近似距离与公开资料，不返回坐标、object key 或排序时间。
@@ -126,3 +126,13 @@
 - 修复已提交并推送 `10bd58d`；[修复后 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34749444720) 全部通过：Backend、guardrails、iOS XCTest **75/75**、完整 XCUITest **12/12** 与 staging / production 构建配置。云端日志 `/tmp/lauver-step06-ci-ios-final.log`。
 - CI 通过后只读核对 staging 仍为旧 schema，GitHub 部署记录仍只包含此前 `d28b088`。服务 `rootDir: backend` 会过滤目录外提交；修复提交只含 iOS 测试与验收记录，未触发新的自动部署。规则见 [Render monorepo 文档](https://render.com/docs/monorepo-support)。
 - 当前没有可用 Render API key、deploy hook 或直连工具；在 `backend/README.md` 补充上述部署规则和 Step 06 验收入口，通过目录内文档变更重新触发既有 CI / Render 流程。API 实现和 migration 与已通过 CI 的版本一致。
+
+## 新版 Render API 验收完成（2026-09-13）
+
+- 目录内文档提交 `594030b` 已推送；GitHub deployment `6420142782` 记录实际 `lauver-api-staging` 部署成功，时间 **2026-09-13 09:43:08 UTC / 17:43:08 Asia/Shanghai**。记录证明部署结果，未通过直连 Render 工具核实手动或自动触发方式。
+- API 实现与 migration 为已通过完整 CI 的 `10bd58d`；`594030b` 仅新增部署文档，其独立 CI 仍在执行，不将已通过的实现 CI 冒称为该文档提交的新 CI 结果。
+- 实际 staging 已应用 `20260913010000_explicit_pace_ranges`；独立只读核对确认 `pace_value` 为 **Decimal(9,6)**，`pace_bracket` 已删除；`/readyz` 返回 200。
+- 运行 `npm run verify:step-06:staging --prefix backend`，新版实际 API **62/62 通过**。包括数值配速区间与单值、单端范围、缺 pace 排除、所有新增半径和 Unlimited、10 次稳定排序、页大小 1/7/20 无重复遗漏、参数与游标隔离、双向 Block、暂停/删除/未完成排除和新 session。
+- 结果 `{"result":"passed","checks":62,"deletedAccounts":34}`。确认 34 个账户及其关联资料、运动、训练时间、凭据、session、email token 与 Block 全部删除；旧 viewer session 返回 401。额外只读查询确认本 run 的账户残留 **0**，恢复 journal 不存在。
+- 远端证据：[step-06-new-staging-20260913.log](step-06-new-staging-20260913.log)；完整安全 CLI 日志 `/tmp/lauver-step06-new-staging-20260913.log`。
+- 已向用户请求新版真机实际 API 的列表 → Profile、100 km / Unlimited、Running 数值范围和刷新反馈；尚未收到明确测试结果，不将固定数据 UI 或 API verifier 结果当作这项手动反馈。真机实际分页、断网与重试仍需逐项确认。

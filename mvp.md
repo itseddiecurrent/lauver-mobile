@@ -873,7 +873,7 @@ xcodebuild test \
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：🟡 原范围的 Render staging API、新版半径与实际数值 pace range 的真机固定数据 UI 验收通过，待新版后端同步部署与实际 API 复验（2026-09-13）。** 原版本 staging 44/44；自动 API 验收 34 个及手动验收 44 个临时账户全部清理。新版 Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI 1/1、Profile editor UI 1/1、双环境构建及范围/secret 检查通过。本轮只读核对确认 staging 尚未应用实际配速 migration；已修复空输入框断言在 iOS 18/26 的差异。准确证据见 `artifacts/acceptance/step-06.md`。
+**状态：🟡 新版 Render staging API 62/62、半径与实际数值 pace range 的真机固定数据 UI 验收通过，待新版真机实际 API 交互确认（2026-09-13）。** 新版实现已提交、推送并部署，实际配速 migration 已应用，34 个新版 API 测试账户全部清理且旧 session 返回 401。Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI、Profile editor UI、双环境构建及范围/secret 检查通过。实现提交 `10bd58d` 的完整云端 CI 也通过（XCTest 75/75、XCUITest 12/12）；已修复空输入框断言在 iOS 18/26 的差异及既有密码重置测试的点击焦点问题。实际 Render 部署 `594030b` 仅额外新增部署文档。准确证据见 `artifacts/acceptance/step-06.md`。
 
 **依赖：** Step 05。
 
