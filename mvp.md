@@ -909,7 +909,7 @@ xcodebuild test \
 
 ### Step 07：Block 与 Report 安全基础
 
-**状态：🟡 实现与本地 Backend / XCTest 验证通过，完整 UI、部署与真机实际 API 验收进行中（2026-09-13）。** 已实现双向 Profile / Discover block policy、block/unblock/分页 blocked users、Profile Report 与原子 Report and Block、不可变快照、reference ID、rate limit 和 audit metadata；原生 Profile > Safety 与 Settings > Blocked Users 已接入，暖色浅深主题参照 Expo 版本。Backend unit 129/129、隔离 PostgreSQL migration-from-zero / integration 37/37、iOS XCTest 81/81 通过。完整证据见 `artifacts/acceptance/step-07.md`；未以本地测试冒称远端或真机实际 API 已验收。
+**状态：🟡 实现与本地 Backend / XCTest / 完整 UI 验证通过，新版已安装，部署与真机实际 API 验收进行中（2026-09-13）。** 已实现双向 Profile / Discover block policy、block/unblock/分页 blocked users、Profile Report 与原子 Report and Block、不可变快照、reference ID、rate limit 和 audit metadata；原生 Profile > Safety 与 Settings > Blocked Users 已接入，暖色浅深主题参照 Expo 版本。Backend unit 129/129、隔离 PostgreSQL migration-from-zero / integration 37/37、iOS XCTest 81/81、完整 Simulator XCUITest 14/14、最终输入 helper 三项 UI 3/3 通过；新版 iPhone App 已安装并正常启动。完整证据见 `artifacts/acceptance/step-07.md`；未以本地测试冒称远端或真机实际 API 已验收。
 
 **依赖：** Step 05、Step 06。
 

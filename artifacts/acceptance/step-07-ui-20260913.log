@@ -1,0 +1,28 @@
+Date: 2026-09-13
+Simulator: iPhone 17 Pro - Lauver / iOS 26.5
+Source: Discover readiness helper included; auth scroll helper changed after this build; its dedicated regression is tracked separately.
+Services: fixed Discover/Profile/Safety and auth-flow services; live API authentication entry health check.
+XCUITest: 14 passed, 0 failed, 0 skipped.
+Result: TEST SUCCEEDED
+Bundle: /tmp/lauver-step07-ui-complete.xcresult
+Full log: /tmp/lauver-step07-ui-complete.log
+
+Safety flow: ordinary Report -> reference -> Done keeps Profile accessible.
+Report and Block: reference visible until Done -> target hidden from Discover.
+Settings -> Blocked Users -> Unblock -> empty list -> Discover restores target.
+Block: Cancel preserves Profile; confirmation removes target from Discover.
+Approved tabs, Profile editing, Discover distance/pace filters, registration/login, session deletion, password reset and offline Retry regressions passed.
+
+iPhone 14 Plus / iOS 18.7.8: new staging App BUILD SUCCEEDED, installed and normal launch succeeded.
+Device XCUITest runner initialization canceled by iOS authentication before any test executed; not counted as UI or live API acceptance.
+
+Final auth input helper regression: 3 passed, 0 failed; TEST SUCCEEDED.
+Cases: register/sign-out/login, deleted keychain session, forgot/reset password.
+Bundle: /tmp/lauver-step07-auth-scroll.xcresult
+Full log: /tmp/lauver-step07-auth-scroll.log
+
+Final-source dark-mode Safety flow: 1 passed, 0 failed; TEST SUCCEEDED.
+Report form, Report and Block reference and Blocked Users screenshots saved in artifacts/acceptance/ui/step-07/*-dark.png.
+Main text, action buttons and layout visually inspected; Simulator restored to light mode.
+Bundle: /tmp/lauver-step07-safety-dark.xcresult
+Full log: /tmp/lauver-step07-safety-dark.log

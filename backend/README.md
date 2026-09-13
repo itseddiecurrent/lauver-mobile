@@ -33,4 +33,9 @@ using the same ignored `.env.staging` configuration. The verifier checks Profile
 isolation, Profile evidence and Report and Block, then removes its three disposable accounts,
 reports and safety audit data. Recover interrupted cleanup with `--cleanup-state` and the exact
 private journal printed by the script. No new provider account or secret is required.
+The verifier requires a healthy API, an authenticated `/v1/blocks` route and the reports
+schema before creating any test accounts. Its automatic run deletes every fixture;
+iPhone acceptance uses a separate disposable run and retains its exact cleanup journal
+until manual testing ends. Local UI tests and successful installation do not establish
+that the deployed API passed acceptance.
 See [Step 07 evidence](../artifacts/acceptance/step-07.md) and the repository README for the contract.

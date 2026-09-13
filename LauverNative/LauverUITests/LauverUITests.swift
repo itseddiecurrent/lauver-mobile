@@ -325,7 +325,15 @@ final class LauverUITests: XCTestCase {
         // tap() scrolls an existing field into view. Requiring it to be hittable
         // first prevents that scroll when the keyboard has moved it offscreen.
         element.tap()
-        _ = app.keyboards.firstMatch.waitForExistence(timeout: 1)
+        let focusedField = app.descendants(matching: element.elementType)
+            .matching(identifier: element.identifier)
+            .matching(NSPredicate(format: "hasKeyboardFocus == true"))
+            .firstMatch
+        if !focusedField.waitForExistence(timeout: 3) {
+            // Re-query its position after scrolling or keyboard layout changes.
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.5)).tap()
+            XCTAssertTrue(focusedField.waitForExistence(timeout: 10))
+        }
         element.typeText(text)
     }
 
