@@ -49,8 +49,8 @@ final class LauverUITests: XCTestCase {
         app.buttons["discover-apply-filters"].tap()
         assertDiscoverSummary("Unlimited distance", in: app)
         app.buttons["discover-filters"].tap()
-        app.buttons["discover-sport"].tap()
-        app.buttons["Running"].tap()
+        tapWhenHittable(app.buttons["discover-sport"])
+        tapWhenHittable(app.buttons["Running"])
         XCTAssertFalse(app.buttons["discover-pace"].exists)
         let from = app.textFields["discover-pace-min"]
         let to = app.textFields["discover-pace-max"]
@@ -67,8 +67,12 @@ final class LauverUITests: XCTestCase {
         app.buttons["discover-filters"].tap()
         XCTAssertEqual(from.value as? String, "5:01")
         XCTAssertEqual(to.value as? String, "5:30")
-        app.buttons["discover-sport"].tap()
-        app.buttons["Cycling"].tap()
+        tapWhenHittable(app.buttons["discover-sport"])
+        tapWhenHittable(app.buttons["Cycling"])
+        let speedHeading = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS[c] %@", "Self-reported speed (km/h)"
+        )).firstMatch
+        XCTAssertTrue(speedHeading.waitForExistence(timeout: 5))
         assertEmptyPaceField(from, placeholder: "From")
         assertEmptyPaceField(to, placeholder: "To")
         from.tap()
@@ -174,7 +178,10 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Shanghai, CN"].exists)
         XCTAssertTrue(app.staticTexts["Running"].exists)
         XCTAssertTrue(app.staticTexts["5:30 min/km"].exists)
-        app.buttons["profile-edit"].tap()
+        // The floating tab bar can cover the centre of this bottom button.
+        // Scroll it above the bar before tapping its visible frame.
+        app.scrollViews.firstMatch.swipeUp()
+        tapWhenHittable(app.buttons["profile-edit"])
         XCTAssertTrue(app.textFields["profile-name-field"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.textFields["profile-name-field"].value as? String, "UI Test Runner")
         XCTAssertEqual(app.textFields["profile-pace-running"].value as? String, "5:30")
