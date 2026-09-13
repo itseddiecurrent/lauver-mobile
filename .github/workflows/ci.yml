@@ -92,7 +92,10 @@ jobs:
 
   ios:
     runs-on: macos-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      # Includes a cold build and Simulator startup before the serial test suites.
+      IOS_TEST_TIMEOUT_SECONDS: "1200"
     steps:
       - uses: actions/checkout@v4
       - name: Build and test native iOS app

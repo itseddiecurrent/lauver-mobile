@@ -1,0 +1,13 @@
+Date: 2026-09-13
+Source: 05ee27280650cd22f5ee9d09dac2b90d9077d136
+Run: https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34762944211
+Conclusion: failed because the overall iOS watchdog stopped xcodebuild after 900 seconds.
+Backend: success; 129 unit tests, 37 integration tests; production dependency audit 0.
+Guardrails: success.
+XCTest: 88 passed, 0 failed.
+XCUITest: 12 passed, 0 failed among completed cases; 13th registration/login case interrupted; final offline case not started. Not a complete UI pass.
+Build/Simulator startup consumed about five minutes before XCTest; serial UI tests continued progressing.
+Interruption: iOS tests exceeded 900s; terminating xcodebuild; exit 143 / BUILD INTERRUPTED.
+Fix: CI watchdog 1200 seconds; iOS job budget 25 minutes including final configuration checks. Per-case 180/300-second limits, serial execution, all test cases and assertions retained.
+Next complete cloud run: pending.
+Logs: /tmp/lauver-step07-ci-34762944211-backend.log, /tmp/lauver-step07-ci-34762944211-ios.log

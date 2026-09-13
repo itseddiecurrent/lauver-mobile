@@ -909,7 +909,7 @@ xcodebuild test \
 
 ### Step 07：Block 与 Report 安全基础
 
-**状态：✅ 验收通过（2026-09-13）。** 后端双向 Block / Profile 隔离、blocked users 分页、普通举报与原子 Report and Block、不可变快照/reference/audit 全部交付。Backend unit 129/129、隔离 PostgreSQL integration 37/37、staging 实际 API 34/34 与手机操作通过；额外实际 API 双向隔离 4/4 通过。用户逐项确认普通举报不自动拉黑、取消/确认拉黑、B 也看不到 A、Settings 解除恢复 Discover、Report and Block、断网失败后的联网恢复及过期后刷新。真机发现的 session 刷新竞态已修复，XCTest 88/88、相关 UI 4/4 通过并重新安装；云端确认手机 session rotation 成功且未撤销。独立手机 run 的 3 个账号、3 条举报、6 条安全审计与依赖数据全部清理，独立残留核对为 0，旧 access/refresh 返回 401，私人凭据与 journal 已删除。提交 `20fd09f` 的完整云端 CI（XCTest 81/81、UI 14/14）和同提交手动/自动部署均通过；后续原生 session 修复随本次验收记录提交，未将 `20fd09f` 的 CI 结果作为新提交的云端 CI。完整证据见 `artifacts/acceptance/step-07.md`；全部页面视觉签收仍按 Step 14A 执行。
+**状态：✅ 验收通过（2026-09-13）。** 后端双向 Block / Profile 隔离、blocked users 分页、普通举报与原子 Report and Block、不可变快照/reference/audit 全部交付。Backend unit 129/129、隔离 PostgreSQL integration 37/37、staging 实际 API 34/34 与手机操作通过；额外实际 API 双向隔离 4/4 通过。用户逐项确认普通举报不自动拉黑、取消/确认拉黑、B 也看不到 A、Settings 解除恢复 Discover、Report and Block、断网失败后的联网恢复及过期后刷新。真机发现的 session 刷新竞态已修复，XCTest 88/88、相关 UI 4/4 通过并重新安装；云端确认手机 session rotation 成功且未撤销。独立手机 run 的 3 个账号、3 条举报、6 条安全审计与依赖数据全部清理，独立残留核对为 0，旧 access/refresh 返回 401，私人凭据与 journal 已删除。提交 `20fd09f` 的完整云端 CI（XCTest 81/81、UI 14/14）和同提交手动/自动部署均通过；原生 session 修复提交 `05ee272` 已推送；其 CI XCTest 88/88、已完成 UI 12/12 通过，但总计时 900 秒中断未完成的套件；CI 总预算调整后完整重跑待完成，不以部分通过代替全套。完整证据见 `artifacts/acceptance/step-07.md`；全部页面视觉签收仍按 Step 14A 执行。
 
 **依赖：** Step 05、Step 06。
 

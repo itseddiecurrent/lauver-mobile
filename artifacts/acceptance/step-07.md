@@ -53,7 +53,7 @@
 
 ## 真机问题修复进度
 
-用户补充错误发生在返回 Discover／下拉刷新时，而非确认拉黑时。手机出现 invalid/expired session 错误且保留 B/C 旧列表，request ID `6da83306-c7c3-499f-866b-14b907707ca0`。只读核对 A 手机 session 刷新约 2 秒后被置为 revoked/compromised，当时没有 block。独立 feature service 的并发刷新存在复用旧 refresh token 的竞态；已修复共享刷新状态、迟到 401、退出/账号切换保护与运行中失效返回登录。截图与进度见 [手机清单](step-07-device-checklist.md)。修复后本地 XCTest **88/88** 通过，已在同一 iPhone 构建并安装新版，相关 Simulator UI **4/4** 通过且新版真机正常启动；证据 [修复日志](step-07-session-fix-20260913.log)。用户已确认修复版重新登录后拉黑三项行为通过；过期后 A 手机 session 已在 `2026-09-13T14:20:12.417Z` 完成 rotation 且未撤销，但用户反馈 Discover 纯 loading；同期 readyz 200、独立 B fixture Discover 200 / 830ms，用户随后确认页面恢复，过期后刷新路径通过。原生修复随本次验收记录提交；尚无这个新提交的云端 CI 结果。
+用户补充错误发生在返回 Discover／下拉刷新时，而非确认拉黑时。手机出现 invalid/expired session 错误且保留 B/C 旧列表，request ID `6da83306-c7c3-499f-866b-14b907707ca0`。只读核对 A 手机 session 刷新约 2 秒后被置为 revoked/compromised，当时没有 block。独立 feature service 的并发刷新存在复用旧 refresh token 的竞态；已修复共享刷新状态、迟到 401、退出/账号切换保护与运行中失效返回登录。截图与进度见 [手机清单](step-07-device-checklist.md)。修复后本地 XCTest **88/88** 通过，已在同一 iPhone 构建并安装新版，相关 Simulator UI **4/4** 通过且新版真机正常启动；证据 [修复日志](step-07-session-fix-20260913.log)。用户已确认修复版重新登录后拉黑三项行为通过；过期后 A 手机 session 已在 `2026-09-13T14:20:12.417Z` 完成 rotation 且未撤销，但用户反馈 Discover 纯 loading；同期 readyz 200、独立 B fixture Discover 200 / 830ms，用户随后确认页面恢复，过期后刷新路径通过。原生修复已提交并推送为 `05ee272`；其云端 CI XCTest **88/88**、已完成 UI **12/12** 通过，但总 watchdog 在 900 秒中断第 13 项，未完成全套，未见断言失败。构建/Simulator 启动约占 5 分钟；CI 总测试预算改为 1200 秒、job 25 分钟，单项超时/全部用例/断言保持，完整重跑待完成。证据 [最新 CI 日志](step-07-ci-20260913.log)。
 
 ## 配置与数据政策
 
