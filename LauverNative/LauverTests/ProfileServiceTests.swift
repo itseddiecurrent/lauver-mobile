@@ -41,6 +41,25 @@ final class ProfileServiceTests: XCTestCase {
         super.tearDown()
     }
 
+    func testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/discover")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
+            XCTAssertTrue(query.contains(URLQueryItem(name: "paceBracket", value: "moderate")))
+            return Self.response(request, status: 200, body: """
+            {"users":[{"id":"partner","displayName":"Runner","photoURL":null,
+            "city":{"name":"Shanghai","regionCode":"SH","countryCode":"CN"},
+            "approximateDistanceKm":0,"sports":[],"commonSports":["running"]}],"nextCursor":"signed-cursor"}
+            """)
+        }
+        let page = try await service.discover(filters: DiscoverFilters(sport: .running, radius: 10, paceBracket: "moderate"), cursor: nil)
+        XCTAssertNil(page.users.first?.city.latitude)
+        XCTAssertNil(page.users.first?.city.longitude)
+        XCTAssertEqual(page.users.first?.commonSports, [.running])
+        XCTAssertEqual(page.nextCursor, "signed-cursor")
+    }
+
     func testReadsOwnProfileWithBearerToken() async throws {
         ProfileURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/me")

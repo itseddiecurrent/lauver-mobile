@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
+import { PrismaDiscoverRepository } from './discover.js';
 import { PrismaAuthRepository, type AuthRepository } from './auth-repository.js';
 import { PrismaProfileRepository, type ProfileRepository } from './profile-repository.js';
 
@@ -13,6 +14,7 @@ export class PrismaDatabase implements Database {
   readonly #client: PrismaClient;
   readonly authRepository: AuthRepository;
   readonly profileRepository: ProfileRepository;
+  readonly discoverRepository: PrismaDiscoverRepository;
 
   constructor(databaseURL: string) {
     const adapter = new PrismaPg({
@@ -24,6 +26,7 @@ export class PrismaDatabase implements Database {
     this.#client = new PrismaClient({ adapter });
     this.authRepository = new PrismaAuthRepository(this.#client);
     this.profileRepository = new PrismaProfileRepository(this.#client);
+    this.discoverRepository = new PrismaDiscoverRepository(this.#client);
   }
 
   async checkHealth(): Promise<void> {

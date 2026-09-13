@@ -469,15 +469,20 @@ private final class OtherProfileViewModel: ObservableObject {
     }
 
     func load() async {
-        guard !isLoading else { return }
+        guard !Task.isCancelled, !isLoading else { return }
         isLoading = true
+        error = nil
         defer { isLoading = false }
         do {
-            profile = try await service.getProfile(userID: userID)
+            let loaded = try await service.getProfile(userID: userID)
+            try Task.checkCancellation()
+            profile = loaded
             error = nil
         } catch let apiError as APIError {
+            guard !Task.isCancelled, apiError != .transport(.cancelled) else { return }
             error = apiError
         } catch {
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
             self.error = .transport(.unknown)
         }
     }
@@ -491,7 +496,7 @@ struct OtherProfileScreen: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
             if let profile = viewModel.profile {
                 OtherProfileView(profile: profile)
             } else if viewModel.isLoading {
@@ -502,13 +507,16 @@ struct OtherProfileScreen: View {
                     RetryButton { Task { await viewModel.load() } }
                 }
                 .padding()
+            } else {
+                LoadingStateView(title: "Loading profile")
             }
         }
+        .navigationTitle("Profile")
         .task { await viewModel.load() }
     }
 }
 
-private struct ProfileAvatar: View {
+struct ProfileAvatar: View {
     let photoURL: URL?
     let size: CGFloat
 

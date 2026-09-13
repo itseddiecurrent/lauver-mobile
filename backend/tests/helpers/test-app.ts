@@ -1,3 +1,4 @@
+import type { DiscoverServicing } from '../../src/discover.js';
 import pino from 'pino';
 import { vi } from 'vitest';
 
@@ -21,6 +22,7 @@ export function createTestApp(options: {
   authService?: AuthServicing;
   authRateLimiter?: InMemoryRateLimiter;
   profileService?: ProfileServicing;
+  discoverService?: DiscoverServicing;
   profileRateLimiter?: InMemoryRateLimiter;
 } = {}) {
   return createApp({
@@ -29,6 +31,7 @@ export function createTestApp(options: {
     logger: pino({ level: 'silent' }),
     authService: options.authService ?? createAuthServiceStub(),
     authRateLimiter: options.authRateLimiter ?? new InMemoryRateLimiter(60_000, 10),
+    discoverService: options.discoverService ?? { discover: vi.fn().mockResolvedValue({ users: [], nextCursor: null }) },
     profileService: options.profileService ?? createProfileServiceStub(),
     profileRateLimiter: options.profileRateLimiter ?? new InMemoryRateLimiter(60_000, 10),
   });

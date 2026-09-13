@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
 
+import { installDiscoverRoutes, type DiscoverServicing } from './discover.js';
 import { AuthError } from './auth.js';
 import type { AuthServicing } from './auth.js';
 import { installAuthRoutes } from './auth-routes.js';
@@ -39,6 +40,7 @@ export type AppDependencies = {
   authService: AuthServicing;
   authRateLimiter: InMemoryRateLimiter;
   profileService: ProfileServicing;
+  discoverService: DiscoverServicing;
   profileRateLimiter: InMemoryRateLimiter;
 };
 
@@ -122,6 +124,7 @@ export function createApp(dependencies: AppDependencies): Express {
     authService: dependencies.authService,
     rateLimiter: dependencies.authRateLimiter,
   });
+  installDiscoverRoutes(app, dependencies);
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,

@@ -260,7 +260,7 @@ protocol ProfileServicing {
     func deletePhoto() async throws
 }
 
-final class ProfileService: ProfileServicing {
+final class ProfileService: ProfileServicing, DiscoverServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -270,6 +270,12 @@ final class ProfileService: ProfileServicing {
         self.client = client
         self.authService = authService
         self.sessionStore = sessionStore
+    }
+
+    func discover(filters: DiscoverFilters, cursor: String?) async throws -> DiscoverPage {
+        try await authenticatedRequest { token in
+            APIRequest(path: filters.path(cursor: cursor), headers: Self.authorization(token))
+        }
     }
 
     func getOwnProfile() async throws -> WorkoutProfile {

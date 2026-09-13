@@ -12,6 +12,7 @@ import { ResendPasswordResetDelivery } from './password-reset-delivery.js';
 import { InMemoryRateLimiter } from './rate-limiter.js';
 import { shutdownServer } from './server-lifecycle.js';
 import { S3ProfilePhotoStorage, UnavailableProfilePhotoStorage } from './object-storage.js';
+import { DiscoverService } from './discover.js';
 import { ProfileService } from './profile.js';
 
 const config = loadConfig();
@@ -78,6 +79,7 @@ const server = createServer(
       config.authRateLimitWindowMilliseconds,
       config.authRateLimitMaxAttempts,
     ),
+    discoverService: new DiscoverService(database.discoverRepository, photoStorage, config.authAccessTokenSecret),
     profileService,
     profileRateLimiter: new InMemoryRateLimiter(
       config.authRateLimitWindowMilliseconds,

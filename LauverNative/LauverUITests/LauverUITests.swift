@@ -29,6 +29,23 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["screen-discover"].waitForExistence(timeout: 5))
     }
 
+    func testDiscoverListOpensProfileAndAppliesFilters() {
+        let app = launchAuthenticatedShell()
+        let row = app.buttons["discover-user-ui-test-partner"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Like"].exists)
+        row.tap()
+        XCTAssertTrue(app.staticTexts["UI Test Runner"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["discover-filters"].tap()
+        XCTAssertTrue(app.buttons["discover-apply-filters"].waitForExistence(timeout: 5))
+        app.buttons["discover-sport"].tap()
+        app.buttons["Cycling"].tap()
+        app.buttons["discover-apply-filters"].tap()
+        XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["discover-filter-summary"].label.contains("Cycling"))
+    }
+
     func testEventsTabNavigation() {
         assertNavigation(tab: "Events", screen: "screen-events")
     }

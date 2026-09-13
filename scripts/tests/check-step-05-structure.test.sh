@@ -5,6 +5,7 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
 required_paths=(
   "$repo_root/artifacts/acceptance/step-05.md"
+  "$repo_root/scripts/verify-step-05-staging.py"
   "$repo_root/backend/prisma/migrations/20260910000000_step_05_workout_profiles/migration.sql"
   "$repo_root/backend/src/profile.ts"
   "$repo_root/backend/src/profile-routes.ts"

@@ -4,6 +4,7 @@ struct AppContainer {
     let configuration: AppConfiguration
     let healthService: any HealthServicing
     let authService: any AuthServicing
+    let discoverService: any DiscoverServicing
     let profileService: any ProfileServicing
     let authSessionStore: any AuthSessionStoring
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
@@ -82,6 +83,9 @@ struct AppContainer {
             configuration: configuration,
             healthService: healthService,
             authService: authService,
+            discoverService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? UITestDiscoverService()
+                : ProfileService(client: client, authService: authService, sessionStore: authSessionStore),
             profileService: profileService,
             authSessionStore: authSessionStore,
             appleUserIdentifierStore: appleUserIdentifierStore,
@@ -187,5 +191,18 @@ private struct UITestAuthService: AuthServicing {
 private struct UITestHealthService: HealthServicing {
     func fetchHealth() async throws -> HealthResponse {
         HealthResponse(status: "ok", service: "lauver-api")
+    }
+}
+
+private struct UITestDiscoverService: DiscoverServicing {
+    func discover(filters: DiscoverFilters, cursor: String?) async throws -> DiscoverPage {
+        if filters.sport != nil && filters.sport != .running { return DiscoverPage(users: [], nextCursor: nil) }
+        return DiscoverPage(users: [DiscoverUser(
+            id: "ui-test-partner", displayName: "Nearby Runner", photoURL: nil,
+            city: ProfileCity(name: "Shanghai", regionCode: "SH", countryCode: "CN", latitude: nil, longitude: nil),
+            approximateDistanceKm: 0,
+            sports: [ProfileSport(sport: .running, paceValue: 5.5, paceUnit: "min/km", paceBracket: "moderate")],
+            commonSports: [.running]
+        )], nextCursor: nil)
     }
 }

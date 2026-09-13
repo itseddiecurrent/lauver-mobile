@@ -1,8 +1,8 @@
 # Step 05 Acceptance Record
 
-> Status: in progress — real-iPhone profile/photo lifecycle and relaunch persistence confirmed; final recovery CI/staging deployment acceptance pending
+> Status: complete — implementation, real-iPhone acceptance, final recovery CI, and all 33 deployed staging assertions passed
 >
-> Last updated: 2026-09-12 (Asia/Shanghai)
+> Last updated: 2026-09-13 (Asia/Shanghai)
 
 ## Implemented
 
@@ -40,14 +40,13 @@
   deletion, and profile-reference cleanup. Both storage prefixes contained zero
   test objects after cleanup.
 
-## Acceptance still required
+## Acceptance completion
 
-- Verify the final recovery build in CI and on Render staging, including repeated completion after a lost response and second-account public Profile API privacy.
+- No Step 05 acceptance remains pending. Commit `10c8168` was deployed to Render staging and `python3 scripts/verify-step-05-staging.py` passed all 33 assertions, including completion replay and the full deployed photo lifecycle. Final deployment evidence is recorded below.
 
 The first real-device profile-save attempt on 2026-09-12 reported a transport
 failure. An equivalent Apple URLSession PATCH and subsequent GET from this Mac
-both returned HTTP 200. Real-device acceptance remains pending; network-error
-codes are now displayed to diagnose a repeat failure without exposing tokens.
+both returned HTTP 200. Subsequent real-device acceptance passed as recorded below.
 
 No storage credential, signed upload URL, user identifier, or test-account data should be recorded here.
 
@@ -92,9 +91,9 @@ No storage credential, signed upload URL, user identifier, or test-account data 
   avatar, delete it, re-upload, force-quit/relaunch, and verify the avatar and all
   workout-profile fields persist. The cancellation-error display fix was also
   confirmed. No user identifiers, actual profile data, or screenshots are retained here.
-- The backend recovery change still requires the final CI/staging deployment.
-  Deploy it before distributing the rebuilt App: completion retries rely on
-  this change. No database migration or storage setting changes are required.
+- Completion retries require the backend recovery change. Its final CI and
+  staging deployment are now verified below. No database migration or storage
+  setting changes were required.
 
 ## Profile cancellation error display (2026-09-12)
 
@@ -122,7 +121,8 @@ No storage credential, signed upload URL, user identifier, or test-account data 
   client-side fix does not depend on deployment of the backend enhancement.
 - PostgreSQL integration coverage now exercises overlapping completions,
   replay after a lost success response, durable removal of pending uploads,
-  and rejection of replay after deletion. External CI verification is pending.
+  and rejection of replay after deletion. Final external CI verification passed
+  in run `34681468605`.
 
 ## Public Profile UI privacy regression
 
@@ -133,6 +133,18 @@ No storage credential, signed upload URL, user identifier, or test-account data 
 - XCUITest confirms that the public Profile displays the city and sport while
   latitude/longitude are absent. This and the API client regressions passed
   locally (16/16); all Step 00–05 structural and secret guards passed.
+
+## Final CI and staging verification (2026-09-13)
+
+- GitHub Actions [run `34681468605`](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34681468605) for commit `10c8168cc3bd169d7f69a7328c01b1ef08f9bb51` completed successfully. The `guardrails`, `backend`, and `ios` jobs all passed, including PostgreSQL migrations and the concurrent/lost-response completion integration regression.
+- Before the final deployment, GitHub's latest Render deployment record was `6406391643` for older commit `98967a1`; the initial live verification passed 11 assertions but failed `recovery-revision-deployed` because the photo filename did not preserve the pending upload UUID.
+- The user deployed the latest commit. GitHub's deployment record `6418567072` confirms commit `10c8168cc3bd169d7f69a7328c01b1ef08f9bb51`, with successful Render status at 14:43:46 Asia/Shanghai on 2026-09-13. [Render deployment](https://dashboard.render.com/web/srv-dabaeeojo6nc739kpspg/deploys/dep-daj4bplg1s2s739cg71g).
+- The post-deployment attempt passed the recovery filename and repeated-completion assertions, but Cloudflare returned HTTP 403 with `error code: 1010` for urllib's default CDN request. An equivalent image request with standard headers reached the CDN. The staging script now sends an explicit User-Agent identifying the acceptance client and `Accept: image/jpeg` for CDN reads; no application or Cloudflare configuration was changed.
+- The final complete staging run exited successfully with **33/33 assertions passed**: database readiness; two account registrations; complete profile save/reread; second-account public Profile privacy; signed PUT and server-normalized JPEG CDN retrieval; completion replay after temporary-upload cleanup; foreign upload rejection; avatar replacement with the old object absent from the CDN origin; rejection of replay after replacement; new-session profile/photo persistence; avatar deletion with the object absent and profile reference cleared; rejection of replay after deletion; disguised extensions, oversized uploads, and non-image content rejected.
+- Cleanup succeeded: generated test profiles were emptied, their photos deleted, and all generated sessions revoked. Empty test accounts remain because permanent account deletion is implemented in a later MVP step.
+- Added `scripts/verify-step-05-staging.py` to repeat the deployed acceptance path without third-party credentials. It checks repeated completion after cleanup, cross-account rejection, JPEG CDN retrieval, replacement/deletion cleanup, fresh-session persistence, and invalid file rejection. It prints assertion labels only; failed cleanup preserves generated credentials in a private recovery file.
+- Local backend lint/typecheck/build, all 80 tests, production dependency audit (zero vulnerabilities), Step 05 structure, MVP scope, secret guards, and staging/production built iOS configuration passed again.
+- The local full native run passed all 66 unit tests and 10 of 11 UI tests, including Profile edit/save and public coordinate privacy. `testForgotPasswordToResetResultFlow` failed when its initial navigation tap did not open the reset form; an unchanged, isolated rerun passed (1/1). All 77 unique native tests have passed, with this one initial UI failure recorded rather than treating the first run as clean.
 
 ## Local automated evidence
 
@@ -146,7 +158,8 @@ No storage credential, signed upload URL, user identifier, or test-account data 
 | Backend production dependency audit | Pass — 0 vulnerabilities |
 | OpenAPI 3.1 contract validation | Pass |
 | Staging and production built iOS configuration | Pass |
-| Native XCTest and XCUITest | Pass — 71/71 |
+| Native XCTest and XCUITest | 77 unique tests passed; one initial auth UI failure passed on isolated rerun |
+| Final Render staging deployment and live acceptance | Pass — commit `10c8168`, 33/33 assertions, cleanup successful |
 
 The local PostgreSQL integration command cannot run because this workstation has
 no `TEST_DATABASE_URL` and no Docker/PostgreSQL executable. The migration and

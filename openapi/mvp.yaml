@@ -355,6 +355,61 @@ paths:
           description: Profile photo absent and cleanup scheduled or completed.
         '401':
           $ref: '#/components/responses/AuthError'
+  /v1/discover:
+    get:
+      operationId: discoverUsers
+      summary: Filter nearby workout profiles by city distance, sport and self-reported pace
+      description: >-
+        Requires a city in the caller's profile. Excludes the caller, incomplete,
+        suspended, deleted and bidirectionally blocked users. Sorts by unrounded
+        city-centre Haversine distance ascending, profile update time descending,
+        then UUID ascending. Pace requires a selected sport. With unchanged data,
+        cursor pages have no duplicates or omissions. Changed profiles may move
+        between pages; refresh starts a new traversal. Cursors are signed and bound
+        to the caller, city and filters. Responses expose no coordinates.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: sport
+          schema:
+            type: string
+            enum: [running, trail_running, cycling, swimming, walking, hiking, rowing]
+        - in: query
+          name: radius
+          schema:
+            type: integer
+            enum: [5, 10, 25, 50]
+            default: 25
+        - in: query
+          name: paceBracket
+          description: Fixed sport-specific bracket; profiles without pace are excluded.
+          schema:
+            type: string
+            enum: [easy, moderate, fast]
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            maxLength: 2048
+      responses:
+        '200':
+          description: Deterministically ordered public profiles; Cache-Control is no-store.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoverPage'
+        '401':
+          description: Session is invalid or expired.
+        '422':
+          description: Invalid query, missing caller city, or invalid/changed cursor context.
 components:
   securitySchemes:
     bearerAuth:
@@ -701,5 +756,45 @@ components:
           type: object
           additionalProperties:
             type: string
+    DiscoverUser:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, photoURL, city, approximateDistanceKm, sports, commonSports]
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        photoURL:
+          type: [string, 'null']
+          format: uri
+        city:
+          $ref: '#/components/schemas/PublicProfileCity'
+        approximateDistanceKm:
+          type: integer
+          minimum: 0
+          description: Distance between city centres rounded to whole kilometres.
+        sports:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProfileSport'
+        commonSports:
+          type: array
+          items:
+            type: string
+            enum: [running, trail_running, cycling, swimming, walking, hiking, rowing]
+    DiscoverPage:
+      type: object
+      additionalProperties: false
+      required: [users, nextCursor]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiscoverUser'
+        nextCursor:
+          type: [string, 'null']
+          description: Signed continuation cursor; null marks the last page.
 security:
   - bearerAuth: []

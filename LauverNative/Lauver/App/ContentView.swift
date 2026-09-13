@@ -235,9 +235,11 @@ final class AppViewModel: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var viewModel: AppViewModel
+    private let discoverService: any DiscoverServicing
     private let profileService: any ProfileServicing
 
     init(container: AppContainer) {
+        discoverService = container.discoverService
         profileService = container.profileService
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
@@ -256,7 +258,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService)
             }
         }
         .task {
@@ -474,16 +476,12 @@ private struct LoginPlaceholderView: View {
 private struct AuthenticatedShellView: View {
     @ObservedObject var viewModel: AppViewModel
     let profileService: any ProfileServicing
+    let discoverService: any DiscoverServicing
 
     var body: some View {
         TabView {
             NavigationStack {
-                PlaceholderScreen(
-                    tab: .discover,
-                    message: "Discover local runners and communities.",
-                    serviceStatus: viewModel.serviceStatus,
-                    retry: { Task { await viewModel.checkHealth() } }
-                )
+                DiscoverView(service: discoverService, profileService: profileService)
             }
             .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
 

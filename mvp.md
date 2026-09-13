@@ -839,7 +839,7 @@ xcodebuild test \
 
 ### Step 05：Workout Profile、Photo 与 City Location
 
-**状态：🚧 实现及真机 Profile/头像验收已完成（2026-09-12）；正在验证最终 CI 和 staging 部署。** 用户已确认头像上传、更换、删除、重新上传及强退重开后的资料持久化全部正常，保存后 `-999` 误报已修复。公共 Profile 界面坐标隐私测试已通过；仍需完成本次后端连接恢复修复的最终 CI/staging 验收。准确证据见 `artifacts/acceptance/step-05.md`。
+**状态：✅ 已完成（2026-09-13）。** 实现、真机 Profile/头像生命周期及重开持久化验收、最终提交 `10c8168` 的全部 CI jobs 均已通过。Render staging 已部署该提交，`python3 scripts/verify-step-05-staging.py` 的 33 项验收全部通过，覆盖两账户坐标隐私、头像重复确认、替换/删除清理、新会话持久化和非法文件拒绝；测试资料、头像和会话已清理。准确证据见 `artifacts/acceptance/step-05.md`。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 
@@ -872,6 +872,8 @@ xcodebuild test \
 **通过标准：** Profile 数据可持久化、照片无孤儿对象、位置只公开城市和近似信息。
 
 ### Step 06：Discover 手动筛选列表
+
+**状态：🟡 实现和本地验证已完成，待 staging/真机验收（2026-09-13）。** 后端 96 项单元测试、18 项 PostgreSQL 集成测试、iOS 73 项单元测试、11 项既有 UI 回归及修复后的 Discover 导航/筛选 UI 复验、双环境构建和范围/secret 检查均通过；准确证据与外部验收项见 `artifacts/acceptance/step-06.md`。
 
 **依赖：** Step 05。
 

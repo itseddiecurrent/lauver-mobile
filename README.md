@@ -124,6 +124,20 @@ Run Step 05 workout-profile, location privacy, image validation, and native Prof
 ./scripts/test-step-05.sh
 ```
 
+After deploying Step 05 to Render staging, verify the running profile/photo flow:
+
+```bash
+python3 scripts/verify-step-05-staging.py
+```
+
+This creates two generated staging accounts, checks profile persistence and public
+location privacy, then tests the photo lifecycle and completion replay. It clears
+their profiles/photos and revokes sessions on success or failure. Empty test
+accounts remain until the later account-deletion step. If cleanup fails, the
+script saves a private recovery file; retry with
+`python3 scripts/verify-step-05-staging.py --cleanup-state /path/from/output.json`.
+No storage credentials are needed, and tokens and signed URLs are never printed.
+
 `npm run test:integration` resets the `public` schema of `TEST_DATABASE_URL` before applying every migration. As a safety boundary, the database name must end in `_test`; remote resets also require `ALLOW_REMOTE_TEST_DATABASE_RESET=true`.
 
 Run checks separately:
@@ -138,6 +152,7 @@ Run checks separately:
 ./scripts/tests/check-step-03-structure.test.sh
 ./scripts/tests/check-step-04-structure.test.sh
 ./scripts/tests/check-step-05-structure.test.sh
+./scripts/tests/check-step-06-structure.test.sh
 ./scripts/check-mvp-scope.sh
 ./scripts/check-secrets.sh
 
@@ -171,7 +186,7 @@ Apple auth is disabled by default on a new backend. For each environment, config
 
 ## Workout profiles, city privacy, and photos
 
-Step 05 adds authenticated `GET/PATCH /v1/me`, public-profile reads, deterministic pace units/brackets, preferred training times, and profile completeness. The iOS app uses MapKit only after the user opens the city picker. The API stores the selected city center for later approximate-distance filtering, while `GET /v1/users/:userId` deliberately omits latitude and longitude.
+Step 05 adds authenticated `GET/PATCH /v1/me`, public-profile reads, deterministic pace units/brackets, preferred training times, and profile completeness. The iOS app uses MapKit only after the user opens the city picker. The API stores the selected city center for approximate-distance filtering, while `GET /v1/users/:userId` deliberately omits latitude and longitude.
 
 Profile photos use a short-lived signed PUT followed by `POST /v1/me/photo/complete`. Completion fully decodes the object, checks its declared content type, byte count, and pixel dimensions, then re-encodes it as a bounded JPEG without EXIF/GPS metadata before exposing it. Pending, replaced, and deleted keys enter a durable cleanup queue so transient storage failures do not create permanent orphan objects. Configure a private upload-capable S3-compatible bucket and a public read/CDN base URL per environment, then set:
 
@@ -218,3 +233,13 @@ Step 01 Render staging acceptance is complete. Before later steps, the project o
 - accessible Privacy Policy and Terms URLs.
 
 Never send secrets in chat or commit them to this repository. Add them directly to the appropriate provider dashboard or local ignored environment file.
+
+## Discover manual filters (Step 06)
+
+The native Discover tab is a normal list with a filter sheet, pull-to-refresh, Load more, and navigation to public profiles. `GET /v1/discover` accepts optional `sport`, `radius` (5/10/25/50 km, default 25), `paceBracket` (easy/moderate/fast), `limit` (1–50, default 20), and a signed `cursor`. Pace filtering requires a sport because units and static thresholds differ. Users without a self-reported pace remain visible only when no pace bracket is selected.
+
+Distances use city-centre Haversine calculations with Earth radius 6371.0088 km. SQL orders by unrounded distance ascending, profile update time descending, and user UUID ascending. The public response rounds distance to whole kilometres and omits coordinates. Each request excludes both directions of `blocks`, plus the caller and incomplete/suspended/deleted profiles. Step 06 establishes the minimal blocks schema; Step 07 adds its management and report APIs.
+
+A saved caller city is required (otherwise `discover_city_required`, HTTP 422). Cursors use a domain-separated HMAC with the existing backend access-token secret and bind the caller, city and filters. A changed context or invalid cursor returns `invalid_discover_cursor`, HTTP 422; refresh starts over. Pagination guarantees apply to unchanged data; profiles edited during traversal can change their ordering.
+
+Run `./scripts/test-step-06.sh` with an isolated `TEST_DATABASE_URL` to run migrations, backend tests, both iOS configurations, and Simulator tests. Evidence and remaining staging/device checks are recorded in `artifacts/acceptance/step-06.md`.
