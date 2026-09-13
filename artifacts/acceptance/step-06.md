@@ -123,3 +123,6 @@
 - 将共用输入 helper 的固定中心坐标点击改为等待输入框存在且可点击，再使用 XCTest 元素 `tap()` 自动选择可见点击位置。保留软件键盘可见性为可选等待，兼容硬件键盘；没有跳过或放宽密码重置完成的断言。
 - 修复后本地密码重置目标用例 **1/1** 通过；日志 `/tmp/lauver-step06-ci-focus.log`，bundle `/tmp/lauver-step06-ci-focus.xcresult`。受影响的注册/登录、会话删除和密码重置三项 UI 回归 **3/3** 通过，`TEST SUCCEEDED`；日志 `/tmp/lauver-step06-ci-auth-regression.log`，bundle `/tmp/lauver-step06-ci-auth-regression.xcresult`。
 - 本次 CI 失败时 staging 尚未开始新版 API 验收，没有新增远端 fixture。
+- 修复已提交并推送 `10bd58d`；[修复后 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34749444720) 全部通过：Backend、guardrails、iOS XCTest **75/75**、完整 XCUITest **12/12** 与 staging / production 构建配置。云端日志 `/tmp/lauver-step06-ci-ios-final.log`。
+- CI 通过后只读核对 staging 仍为旧 schema，GitHub 部署记录仍只包含此前 `d28b088`。服务 `rootDir: backend` 会过滤目录外提交；修复提交只含 iOS 测试与验收记录，未触发新的自动部署。规则见 [Render monorepo 文档](https://render.com/docs/monorepo-support)。
+- 当前没有可用 Render API key、deploy hook 或直连工具；在 `backend/README.md` 补充上述部署规则和 Step 06 验收入口，通过目录内文档变更重新触发既有 CI / Render 流程。API 实现和 migration 与已通过 CI 的版本一致。
