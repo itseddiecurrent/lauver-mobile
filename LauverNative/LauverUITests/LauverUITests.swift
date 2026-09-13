@@ -34,7 +34,7 @@ final class LauverUITests: XCTestCase {
         let row = app.buttons["discover-user-ui-test-partner"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Like"].exists)
-        row.tap()
+        tapWhenHittable(row)
         XCTAssertTrue(app.staticTexts["UI Test Runner"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.firstMatch.tap()
         app.buttons["discover-filters"].tap()
@@ -79,6 +79,63 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
         assertDiscoverSummary("Cycling", in: app)
         assertDiscoverSummary("20.5–30 km/h", in: app)
+    }
+
+    func testProfileReportAndBlockCanBeUnblockedFromSettings() {
+        let app = launchAuthenticatedShell()
+        let row = app.buttons["discover-user-ui-test-partner"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        tapWhenHittable(row)
+        let safety = app.buttons["profile-safety-menu"]
+        XCTAssertTrue(safety.waitForExistence(timeout: 5))
+        safety.tap()
+        app.buttons["profile-report"].tap()
+        XCTAssertTrue(app.buttons["report-submit"].waitForExistence(timeout: 5))
+        let form = XCTAttachment(screenshot: app.screenshot()); form.name = "step07-report-form"; form.lifetime = .keepAlways; add(form)
+        app.buttons["report-reason"].tap()
+        app.buttons["Spam"].tap()
+        app.buttons["report-submit"].tap()
+        XCTAssertTrue(app.staticTexts["report-success"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["report-reference"].label.contains("ui-test-report-reference"))
+        app.buttons["report-done"].tap()
+        XCTAssertTrue(safety.waitForExistence(timeout: 5))
+        safety.tap()
+        app.buttons["profile-report-block"].tap()
+        XCTAssertTrue(app.buttons["report-submit"].waitForExistence(timeout: 5))
+        app.buttons["report-submit"].tap()
+        XCTAssertTrue(app.staticTexts["report-success"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["This user is also blocked."].exists)
+        let receipt = XCTAttachment(screenshot: app.screenshot()); receipt.name = "step07-report-reference"; receipt.lifetime = .keepAlways; add(receipt)
+        app.buttons["report-done"].tap()
+        XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Profile"].tap()
+        let settings = app.buttons["profile-settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5)); settings.tap()
+        app.buttons["settings-blocked-users"].tap()
+        let unblock = app.buttons["unblock-ui-test-partner"]
+        XCTAssertTrue(unblock.waitForExistence(timeout: 5))
+        let blocked = XCTAttachment(screenshot: app.screenshot()); blocked.name = "step07-blocked-users"; blocked.lifetime = .keepAlways; add(blocked)
+        unblock.tap()
+        app.buttons["Unblock"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["No blocked users"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["Discover"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+    }
+
+    func testProfileBlockRequiresConfirmation() {
+        let app = launchAuthenticatedShell()
+        let row = app.buttons["discover-user-ui-test-partner"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5)); tapWhenHittable(row)
+        let safety = app.buttons["profile-safety-menu"]
+        XCTAssertTrue(safety.waitForExistence(timeout: 5)); safety.tap()
+        app.buttons["profile-block"].tap()
+        XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 5))
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(safety.exists)
+        safety.tap(); app.buttons["profile-block"].tap()
+        app.buttons["Block User"].firstMatch.tap()
+        XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
+        XCTAssertFalse(row.exists)
     }
 
     private func assertEmptyPaceField(_ field: XCUIElement, placeholder: String,
@@ -264,12 +321,9 @@ final class LauverUITests: XCTestCase {
     }
 
     private func typeText(_ text: String, into element: XCUIElement, app: XCUIApplication) {
-        let ready = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == true AND hittable == true"),
-            object: element
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
-        // Let XCTest scroll and choose a visible hit point as the keyboard changes the layout.
+        XCTAssertTrue(element.waitForExistence(timeout: 10))
+        // tap() scrolls an existing field into view. Requiring it to be hittable
+        // first prevents that scroll when the keyboard has moved it offscreen.
         element.tap()
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 1)
         element.typeText(text)
@@ -281,5 +335,14 @@ final class LauverUITests: XCTestCase {
             object: element
         )
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 5), .completed)
+    }
+
+    private func tapWhenHittable(_ element: XCUIElement) {
+        let ready = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND hittable == true"),
+            object: element
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 5), .completed)
+        element.tap()
     }
 }

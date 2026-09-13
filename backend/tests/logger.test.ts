@@ -33,6 +33,8 @@ describe('structured request logging', () => {
       authRateLimiter: new InMemoryRateLimiter(60_000, 10),
       discoverService: { discover: () => Promise.resolve({ users: [], nextCursor: null }) },
       profileService: createProfileServiceStub(),
+      safetyService: { block: () => Promise.resolve(), unblock: () => Promise.resolve(), blockedUsers: () => Promise.resolve({ users: [], nextCursor: null }), report: () => Promise.resolve({ referenceId: 'test', blockedUser: false }) },
+      safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
       profileRateLimiter: new InMemoryRateLimiter(60_000, 10),
     });
 

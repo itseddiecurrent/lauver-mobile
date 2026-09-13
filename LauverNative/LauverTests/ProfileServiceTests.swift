@@ -60,6 +60,54 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(page.nextCursor, "signed-cursor")
     }
 
+    func testSafetyWritesDeriveIdentityFromTokensAndDecodeReportReference() async throws {
+        let targetID = "e1700000-0000-4000-8000-000000000002"
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            if request.url?.path == "/v1/reports" {
+                XCTAssertEqual(request.httpMethod, "POST")
+                let body = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(Self.bodyData(request))) as? [String: Any])
+                XCTAssertEqual(body["targetId"] as? String, targetID)
+                XCTAssertEqual(body["targetType"] as? String, "user")
+                XCTAssertEqual(body["reason"] as? String, "hate_abuse")
+                XCTAssertEqual(body["blockUser"] as? Bool, true)
+                XCTAssertNil(body["reporterId"])
+                XCTAssertNil(body["snapshot"])
+                return Self.response(request, status: 201, body: "{\"referenceId\":\"reference\",\"blockedUser\":true}")
+            }
+            XCTAssertEqual(request.url?.path, "/v1/blocks/\(targetID)")
+            return Self.response(request, status: 204, body: "")
+        }
+        try await service.block(userID: targetID)
+        try await service.unblock(userID: targetID)
+        let receipt = try await service.report(userID: targetID, reason: .hateAbuse, details: "Evidence", blockUser: true)
+        XCTAssertEqual(receipt.referenceId, "reference")
+        XCTAssertTrue(receipt.blockedUser)
+    }
+
+    func testBlockedUsersCursorAndPrivateCityContract() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/blocks")
+            XCTAssertEqual(URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first?.value, "cursor")
+            return Self.response(request, status: 200, body: "{\"users\":[{\"id\":\"blocked\",\"displayName\":\"Runner\",\"cityName\":\"Shanghai\"}],\"nextCursor\":null}")
+        }
+        let page = try await service.blockedUsers(cursor: "cursor")
+        XCTAssertEqual(page.users.first?.displayName, "Runner")
+        XCTAssertEqual(page.users.first?.cityName, "Shanghai")
+        XCTAssertNil(page.nextCursor)
+    }
+
+    func testReportsDoNotAutomaticallyRetryLostResponses() async {
+        var calls = 0
+        ProfileURLProtocolStub.requestHandler = { _ in calls += 1; throw URLError(.networkConnectionLost) }
+        let client = APIClient(baseURL: URL(string: "https://api.example.test")!, session: session, retryPolicy: RetryPolicy(maxAttempts: 2))
+        let service = ProfileService(client: client, authService: authService, sessionStore: tokenStore)
+        do {
+            _ = try await service.report(userID: "e1700000-0000-4000-8000-000000000002", reason: .other, details: "", blockUser: false)
+            XCTFail("Expected transport failure")
+        } catch { XCTAssertEqual(calls, 1) }
+    }
+
     func testReadsOwnProfileWithBearerToken() async throws {
         ProfileURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/me")
@@ -352,6 +400,76 @@ private final class ProfileURLProtocolStub: URLProtocol {
         }
     }
     override func stopLoading() {}
+}
+
+@MainActor
+final class SafetyViewModelTests: XCTestCase {
+    func testReportFailureCanRetryButSuccessCannotBeSubmittedTwice() async {
+        let service = SafetyViewModelTestService()
+        let model = ReportViewModel(service: service)
+        service.fail = true
+        await model.submit(userID: "target", reason: .harassment, details: "Note", blockUser: false)
+        XCTAssertNotNil(model.errorMessage)
+        XCTAssertNil(model.receipt)
+        XCTAssertFalse(model.isSubmitting)
+        service.fail = false
+        await model.submit(userID: "target", reason: .harassment, details: "Note", blockUser: false)
+        XCTAssertNotNil(model.receipt)
+        XCTAssertNil(model.errorMessage)
+        await model.submit(userID: "target", reason: .harassment, details: "Note", blockUser: false)
+        XCTAssertEqual(service.reportCount, 2)
+    }
+    func testFailedUnblockKeepsEntryAndSuccessfulRetryRemovesIt() async throws {
+        let service = SafetyViewModelTestService()
+        let model = BlockedUsersViewModel(service: service)
+        await model.load()
+        let user = try XCTUnwrap(model.users.first)
+        service.fail = true
+        await model.unblock(user)
+        XCTAssertEqual(model.users.count, 1)
+        XCTAssertNotNil(model.errorMessage)
+        service.fail = false
+        await model.unblock(user)
+        XCTAssertTrue(model.users.isEmpty)
+        XCTAssertNil(model.errorMessage)
+    }
+    func testBlockedPageFailureKeepsCursorButFailedRefreshRetriesFirstPage() async {
+        let service = SafetyViewModelTestService()
+        service.pageCursor = "next-page"
+        let model = BlockedUsersViewModel(service: service)
+        await model.load()
+        service.failLoad = true
+        await model.load(refresh: false)
+        XCTAssertEqual(model.nextCursor, "next-page")
+        XCTAssertEqual(model.users.count, 1)
+        await model.load()
+        XCTAssertNil(model.nextCursor)
+        XCTAssertEqual(model.users.count, 1)
+        service.failLoad = false
+        await model.load(refresh: model.nextCursor == nil)
+        XCTAssertNil(service.requestedCursor)
+        XCTAssertNil(model.errorMessage)
+    }
+}
+
+private final class SafetyViewModelTestService: SafetyServicing {
+    var fail = false
+    var reportCount = 0
+    var failLoad = false
+    var pageCursor: String?
+    var requestedCursor: String?
+    func block(userID: String) async throws {}
+    func unblock(userID: String) async throws { if fail { throw APIError.transport(.notConnectedToInternet) } }
+    func blockedUsers(cursor: String?) async throws -> BlockedUsersPage {
+        requestedCursor = cursor
+        if failLoad { throw APIError.transport(.notConnectedToInternet) }
+        return BlockedUsersPage(users: [BlockedUser(id: "target", displayName: "Runner", cityName: "City")], nextCursor: pageCursor)
+    }
+    func report(userID: String, reason: ReportReason, details: String, blockUser: Bool) async throws -> ReportReceipt {
+        reportCount += 1
+        if fail { throw APIError.transport(.notConnectedToInternet) }
+        return ReportReceipt(referenceId: "reference", blockedUser: blockUser)
+    }
 }
 
 @MainActor

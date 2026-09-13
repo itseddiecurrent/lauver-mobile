@@ -237,10 +237,12 @@ struct ContentView: View {
     @StateObject private var viewModel: AppViewModel
     private let discoverService: any DiscoverServicing
     private let profileService: any ProfileServicing
+    private let safetyService: any SafetyServicing
 
     init(container: AppContainer) {
         discoverService = container.discoverService
         profileService = container.profileService
+        safetyService = container.safetyService
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
             healthService: container.healthService,
@@ -258,7 +260,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService)
             }
         }
         .task {
@@ -477,11 +479,12 @@ private struct AuthenticatedShellView: View {
     @ObservedObject var viewModel: AppViewModel
     let profileService: any ProfileServicing
     let discoverService: any DiscoverServicing
+    let safetyService: any SafetyServicing
 
     var body: some View {
         TabView {
             NavigationStack {
-                DiscoverView(service: discoverService, profileService: profileService)
+                DiscoverView(service: discoverService, profileService: profileService, safetyService: safetyService)
             }
             .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
 
@@ -496,7 +499,7 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
 
             NavigationStack {
-                OwnProfileView(service: profileService) {
+                OwnProfileView(service: profileService, safetyService: safetyService) {
                     Task { await viewModel.signOut() }
                 }
             }

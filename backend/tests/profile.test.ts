@@ -193,7 +193,7 @@ describe('ProfileService', () => {
     };
     const service = new ProfileService({ repository, storage: new MemoryPhotoStorage() });
 
-    const publicProfile = await service.getPublicProfile('user-2');
+    const publicProfile = await service.getPublicProfile('user-2', 'user-1');
 
     expect(publicProfile.city).toEqual({ name: 'Shanghai', regionCode: null, countryCode: 'CN' });
     expect(JSON.stringify(publicProfile)).not.toContain('latitude');

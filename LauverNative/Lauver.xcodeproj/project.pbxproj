@@ -34,6 +34,7 @@
 		A10000000000000000000019 /* ProfileServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000021 /* ProfileServiceTests.swift */; };
 		A1000000000000000000001A /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* DiscoverView.swift */; };
 		A1000000000000000000001B /* DiscoverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* DiscoverTests.swift */; };
+		A1000000000000000000001C /* SafetyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* SafetyView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +90,7 @@
 		A20000000000000000000021 /* ProfileServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileServiceTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000022 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
 		A20000000000000000000023 /* DiscoverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000024 /* SafetyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -147,6 +149,7 @@
 				A20000000000000000000012 /* AppContainer.swift */,
 				A20000000000000000000020 /* ProfileView.swift */,
 				A20000000000000000000022 /* DiscoverView.swift */,
+				A20000000000000000000024 /* SafetyView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -425,6 +428,7 @@
 				A10000000000000000000017 /* ProfileService.swift in Sources */,
 				A10000000000000000000018 /* ProfileView.swift in Sources */,
 				A1000000000000000000001A /* DiscoverView.swift in Sources */,
+				A1000000000000000000001C /* SafetyView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

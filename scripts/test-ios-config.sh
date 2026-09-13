@@ -14,14 +14,17 @@ assert_app_configuration() {
   local expected_bundle_id=$5
   local app_plist="$derived_data/Build/Products/${configuration}-iphonesimulator/Lauver.app/Info.plist"
 
-  xcodebuild build \
+  if ! xcodebuild build \
     -project "$project" \
     -scheme "$scheme" \
     -destination 'generic/platform=iOS Simulator' \
     -derivedDataPath "$derived_data" \
     CODE_SIGNING_ALLOWED=NO \
     ONLY_ACTIVE_ARCH=YES \
-    >/dev/null
+    >"$derived_data/$scheme-build.log" 2>&1; then
+    cat "$derived_data/$scheme-build.log" >&2
+    return 1
+  fi
 
   if [ ! -f "$app_plist" ]; then
     echo "Missing built Info.plist for $scheme." >&2

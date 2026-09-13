@@ -23,6 +23,8 @@ MVP 的核心用户价值是：
 
 推荐实现选择：**Swift + SwiftUI 原生 iOS App**。SwiftUI 属于 Apple 原生 UI 技术，满足 “Swift native” 要求；不使用 React Native、Expo 或 WebView 承载产品页面。
 
+**UI 是 MVP 的核心交付要求。** 以当前仓库通过 `npx expo start` 运行的现有版本为视觉与交互参考，在 SwiftUI 中对齐品牌、配色、字体层级、布局、间距、图标、按钮和页面细节。原生功能验收通过不代表视觉验收通过；所有面向用户的页面必须完成 Step 14A 的 UI 对齐与真机验收，才能进入最终交付。参考版本中超出 MVP 范围的功能和入口不迁移；与原生平台或 MVP 流程不同的部分需记录具体差异及原因。
+
 ## 2. 不可违反的范围限制
 
 以下内容不得出现在 MVP 的代码、界面、营销文案、占位入口或假按钮中：
@@ -659,6 +661,8 @@ xcodebuild test \
 
 涉及 Sign in with Apple、Strava、HealthKit、Stream Realtime 或 TestFlight 的 Step，不能只用 Mock 标记完成；自动化测试通过后还必须在 staging 第三方项目或真实 iPhone 上完成对应人工验收。
 
+**UI 执行规则：** 从 Step 06 验收后开始整理 Expo 参考截图与设计 token；后续每个包含用户页面的 Step 同步落实视觉对齐，并将页面截图和差异记录写入对应验收文档。Step 00–06 已通过的功能验收保持有效，已有页面的视觉对齐纳入 Step 14A。Step 14A 在 Step 15 前统一收口，不能将全部 UI 优化推迟到发布阶段。
+
 ### 10.2 Step 与需求追踪
 
 | Step | 可验收增量 | 对应需求 |
@@ -678,6 +682,7 @@ xcodebuild test \
 | 12 | Event Attendee Group Chat | F7 |
 | 13 | Admin Report Dashboard | F8 |
 | 14 | 账户删除全链路 | F1、Apple compliance |
+| 14A | 按 Expo 参考版本对齐原生 UI 与真机体验 | F1–F8 用户页面、UI quality |
 | 15 | Release hardening 与交付 | Definition of Done |
 
 ### Step 00：范围护栏与仓库骨架
@@ -873,7 +878,7 @@ xcodebuild test \
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：🟡 新版 Render staging API 62/62、半径与实际数值 pace range 的真机固定数据 UI 验收通过，待新版真机实际 API 交互确认（2026-09-13）。** 新版实现已提交、推送并部署，实际配速 migration 已应用，34 个新版 API 测试账户全部清理且旧 session 返回 401。Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI、Profile editor UI、双环境构建及范围/secret 检查通过。实现提交 `10bd58d` 的完整云端 CI 也通过（XCTest 75/75、XCUITest 12/12）；已修复空输入框断言在 iOS 18/26 的差异及既有密码重置测试的点击焦点问题。实际 Render 部署 `594030b` 仅额外新增部署文档。准确证据见 `artifacts/acceptance/step-06.md`。
+**状态：✅ 验收通过（2026-09-13）。** 新版 Render staging API **62/62** 通过；用户明确确认真机实际 API 的 Discover 列表 → Profile、100 km / Unlimited、Running 数值配速范围、下拉刷新、分页加载及最终 Load more 消失、断网提示与恢复网络后的 Retry 均正常。新版实现已提交、推送并部署，实际配速 migration 已应用，34 个新版 API 自动测试账户和后补 44 个临时分页账户全部清理；独立核对本批残留为 0，清理 journal 已删除，完整 ACTIVE Profile 恢复为原有 3 个。Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI、Profile editor UI、双环境构建及范围/secret 检查通过。实现提交 `10bd58d` 的完整云端 CI 也通过（XCTest 75/75、XCUITest 12/12）；已修复空输入框断言在 iOS 18/26 的差异及既有密码重置测试的点击焦点问题。实际 Render 部署 `594030b` 仅额外新增部署文档。最后一轮实际 API 默认 20 条分页遍历 3 页无重复遗漏，Discover XCTest 8/8 复验通过。准确证据见 `artifacts/acceptance/step-06.md`。
 
 **依赖：** Step 05。
 
@@ -903,6 +908,8 @@ xcodebuild test \
 **通过标准：** Discover 是完全可解释、稳定、零 AI 的过滤列表，返回数据不泄露精确位置。
 
 ### Step 07：Block 与 Report 安全基础
+
+**状态：🟡 实现与本地 Backend / XCTest 验证通过，完整 UI、部署与真机实际 API 验收进行中（2026-09-13）。** 已实现双向 Profile / Discover block policy、block/unblock/分页 blocked users、Profile Report 与原子 Report and Block、不可变快照、reference ID、rate limit 和 audit metadata；原生 Profile > Safety 与 Settings > Blocked Users 已接入，暖色浅深主题参照 Expo 版本。Backend unit 129/129、隔离 PostgreSQL migration-from-zero / integration 37/37、iOS XCTest 81/81 通过。完整证据见 `artifacts/acceptance/step-07.md`；未以本地测试冒称远端或真机实际 API 已验收。
 
 **依赖：** Step 05、Step 06。
 
@@ -1155,15 +1162,48 @@ xcodebuild test \
 
 **通过标准：** 删除不是 Deactivate；不要求联系客服；内部数据、第三方授权和本地凭据全部进入可证明的清理闭环。
 
+### Step 14A：UI 视觉对齐与体验优化（参照 Expo 版本）
+
+**状态：🟡 已随 Step 07 启动设计基础，逐页视觉与真机验收待完成；必须在 Step 15 前通过。** 已参照 Expo 主题源码统一原生橙色强调与暖色浅深背景/卡片，并应用于安全流程；完整截图对比及 Product Owner UI 签收尚未完成。使用 14A 编号保留现有 Step 编号和验收记录。
+
+**依赖：** Step 02；设计基础与已完成页面可立即开展，其余页面随 Step 07–14 实现同步推进，最终验收依赖 Step 00–14 全部通过。
+
+**实现任务：**
+
+1. 运行当前仓库的 `npx expo start` 版本，记录参考 commit、运行方式、设备尺寸和主题，逐页保存参考截图；结合 `App.js`、`src/screens/`、`src/context/ThemeContext.js` 与实际使用的资源梳理页面和样式，不以记忆或临时猜测作为设计依据；
+2. 建立 Expo → SwiftUI 页面对应表，覆盖 Welcome、登录/注册/重置密码、Discover/筛选/其他用户资料、自己的 Profile/编辑资料、Events/活动详情/创建编辑、Messages/私聊/活动群聊、Settings/Connected Apps/Blocked Users/举报/删除账户；Expo 没有的 MVP 页面沿用统一设计语言；
+3. 扩展原生 Design System，统一品牌色、浅深色背景与文字、字体层级、间距、圆角、边框、图标、头像、按钮、输入框、列表行、Tab Bar、导航栏和 Sheet。优先复用已有品牌资源，避免各页面分别硬编码样式；
+4. 用 SwiftUI 逐页对齐参考版本的视觉层级与交互细节，包括按钮位置、表单反馈、筛选摘要、键盘避让、返回导航和滚动体验。保留原生认证、地图、照片与权限流程；Discover 继续使用普通列表和手动筛选；
+5. 为真实数据、长姓名/城市/文案、无头像、加载、空状态、错误、断网重试、按钮禁用和提交中状态提供完整样式；页面中不暴露无助于用户决策的实现细节或调试信息；
+6. 对比相同设备尺寸、主题和等价内容的 Expo / 原生截图，逐项修复明显差异；有意调整的页面记录原因。原生平台适配或 MVP 范围要求优先，不能为了视觉一致引入禁用入口或改变已验收业务规则；
+7. 完成小屏和大屏 iPhone、浅色/深色、Dynamic Type 和 VoiceOver 检查；真机验证点击区域、键盘、滚动、导航与错误恢复，并复验受到 UI 改动影响的关键业务路径。
+
+**可测试 Deliverable：**
+
+- 统一且实际用于产品页面的 SwiftUI Design System；
+- `artifacts/acceptance/step-14a.md`：逐页对应表、参考 commit、Expo / 原生对比截图、差异及原因、真机操作结果、问题修复记录和 Product Owner 验收结论；
+- 对比截图保存在 `artifacts/acceptance/ui/`，使用不含个人隐私或凭据的测试内容；截图明确区分 Expo 参考与原生实现；
+- 已完成的全部 MVP 用户页面，以及受影响路径的 XCTest / XCUITest 和 staging 真机回归证据。
+
+**测试方法：**
+
+1. 按页面对应表逐项对比品牌、配色、字体、间距、图标、布局和交互；每个页面都有结果，遗漏页面不能视为通过；
+2. 检查小屏/大屏、浅色/深色和大字体下没有截断关键信息、布局重叠、键盘遮挡主要操作或不可点击的按钮；VoiceOver 能识别主要操作；
+3. 验证加载/空/错误/成功和提交状态均有清晰反馈，断网恢复可重试，连续点击不会造成重复提交；
+4. 对 UI 改动影响的登录、Profile 保存、Discover 筛选/分页、聊天、活动、举报/拉黑和账户删除执行回归；涉及真实 API 的路径使用 staging 验证；
+5. Product Owner 在真机逐页验收，确认整体视觉符合 Expo 参考版本，已记录的原生适配与 MVP 差异可接受。
+
+**通过标准：** 全部 MVP 用户页面视觉与体验验收完成，没有未修复的明显视觉差异或阻断操作的问题；差异有明确理由和验收结论，业务回归通过，并取得 Product Owner 的真机 UI 确认。仅功能通过或仅有静态截图不能签收本 Step。
+
 ### Step 15：Release Hardening、TestFlight 与最终交付
 
-**依赖：** Step 00–14 全部通过。
+**依赖：** Step 00–14 和 Step 14A 全部通过。
 
 **实现任务：**
 
 1. 运行完整 Backend unit/integration/authorization/migration-from-zero suite；
 2. 运行 iOS XCTest/XCUITest，真实设备验证 Apple、Strava、HealthKit 和 Stream；
-3. 完成 Dynamic Type、VoiceOver、Dark Mode、无网络、慢网络和错误恢复；
+3. 复验 Step 14A 已完成的 UI 对齐，以及 Dynamic Type、VoiceOver、Dark Mode、无网络、慢网络和错误恢复；
 4. 完成 Privacy Policy、Terms、App Privacy、purpose strings 和 Review Notes；
 5. 从全新 Render project 按 README 部署 staging，验证所有 secret 和 migration；
 6. Archive App，扫描 IPA strings、entitlements、network endpoints 和 secrets；
@@ -1175,7 +1215,7 @@ xcodebuild test \
 - 可安装的 TestFlight build；
 - 可从零部署的 Render backend、Postgres migrations 和 Admin dashboard；
 - 完整 Xcode project、backend source、README、OpenAPI、`.env.example`；
-- `artifacts/acceptance/final-test-report.md`，逐项链接 Step 00–14 的测试证据；
+- `artifacts/acceptance/final-test-report.md`，逐项链接 Step 00–14 和 Step 14A 的测试证据及真机 UI 验收结论；
 - App Store Review demo account 与审核说明。
 
 **测试方法：**
@@ -1204,6 +1244,7 @@ xcodebuild test \
 | Events | CRUD、过去时间、capacity 并发、join/leave、取消、群成员同步 |
 | Reports | Profile/Chat/Event 来源、快照、状态流转、admin audit |
 | Account deletion | Apple/Strava/Stream/照片/DB/session 全链路清理 |
+| UI 视觉对齐 | Expo / SwiftUI 逐页截图对比、统一设计 token、页面与状态覆盖、小屏/大屏、真机 Product Owner 验收 |
 | iOS UI | Dynamic Type、VoiceOver、Dark Mode、网络断开、空状态、错误重试 |
 | Deployment | 空数据库 migration、seed admin、Render health check、env validation |
 
@@ -1284,6 +1325,7 @@ Version 2 项目不得在 MVP App 中放灰色按钮或预告文案。
 MVP 只有同时满足以下条件才可签收：
 
 - 8 个 Must-have Feature 全部达到各自验收条件；
+- Step 14A 通过：全部 MVP 用户页面参照 Expo 版本完成视觉与体验对齐，有逐页对比证据、差异说明及 Product Owner 真机 UI 验收结论；
 - 所有硬限制在源码、UI、依赖和文案层均满足；
 - 全新数据库可通过 migration 从零创建；
 - staging 环境完成两用户私聊、活动群聊、举报后台和账户删除 E2E；

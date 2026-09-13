@@ -278,7 +278,7 @@ protocol ProfileServicing {
     func deletePhoto() async throws
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing {
+final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -363,6 +363,44 @@ final class ProfileService: ProfileServicing, DiscoverServicing {
     func deletePhoto() async throws {
         let _: EmptyResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/me/photo", headers: Self.authorization(token))
+        }
+    }
+
+    func block(userID: String) async throws {
+        guard UUID(uuidString: userID) != nil else { throw APIError.invalidRequest }
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/blocks/\(userID)", headers: Self.authorization(token), allowsConnectionRetry: true)
+        }
+    }
+
+    func unblock(userID: String) async throws {
+        guard UUID(uuidString: userID) != nil else { throw APIError.invalidRequest }
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .delete, path: "/v1/blocks/\(userID)", headers: Self.authorization(token))
+        }
+    }
+
+    func blockedUsers(cursor: String?) async throws -> BlockedUsersPage {
+        var components = URLComponents()
+        components.path = "/v1/blocks"
+        if let cursor { components.queryItems = [URLQueryItem(name: "cursor", value: cursor)] }
+        let path = components.string!
+        return try await authenticatedRequest { token in APIRequest(path: path, headers: Self.authorization(token)) }
+    }
+
+    func report(userID: String, reason: ReportReason, details: String, blockUser: Bool) async throws -> ReportReceipt {
+        guard UUID(uuidString: userID) != nil else { throw APIError.invalidRequest }
+        struct Payload: Encodable {
+            let targetType = "user"
+            let targetId: String
+            let reason: ReportReason
+            let details: String
+            let blockUser: Bool
+        }
+        let body = try encoder.encode(Payload(targetId: userID, reason: reason, details: details, blockUser: blockUser))
+        return try await authenticatedRequest { token in
+            // Repeated evidence is intentionally a new report; do not automatically retry.
+            APIRequest(method: .post, path: "/v1/reports", body: body, headers: Self.jsonAuthorization(token))
         }
     }
 

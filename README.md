@@ -236,6 +236,8 @@ Never send secrets in chat or commit them to this repository. Add them directly 
 
 ## Discover manual filters (Step 06)
 
+Step 06 is fully accepted, including actual iPhone pagination and offline Retry recovery. All temporary acceptance profiles have been removed; see `artifacts/acceptance/step-06.md`.
+
 The native Discover tab is a normal list with a filter sheet, pull-to-refresh, Load more, and navigation to public profiles. `GET /v1/discover` accepts optional `sport`, `radius` (5/10/20/25/30/40/50/60/70/80/90/100 km or `unlimited`, default 25), `paceMin` / `paceMax` (inclusive numeric bounds), `limit` (1–50, default 20), and a signed `cursor`. Unlimited removes the distance cap and keeps city-centre distance sorting, location privacy, all exclusions and cursor pagination. Pace filtering requires a sport because units differ. The filter sheet accepts mm:ss for running/trail running/walking/hiking (per km), swimming (per 100 m) and rowing (per 500 m); cycling uses km/h. Duration bounds are sent as decimal minutes in the sport’s unit. Either end may be blank; both bounds must be in ascending numeric order. It does not label users by subjective pace categories. Users without a self-reported pace remain visible only when neither pace bound is set.
 
 Distances use city-centre Haversine calculations with Earth radius 6371.0088 km. SQL orders by unrounded distance ascending, profile update time descending, and user UUID ascending. The public response rounds distance to whole kilometres and omits coordinates. Each request excludes both directions of `blocks`, plus the caller and incomplete/suspended/deleted profiles. Step 06 establishes the minimal blocks schema; Step 07 adds its management and report APIs.
@@ -270,3 +272,19 @@ Cleanup selects exact emails belonging to that random run, verifies they have no
 The verifier closes its fixture database connection before the longer HTTP pagination checks and opens a fresh connection for cleanup, so database idle-connection limits do not interrupt pagination. Unexpected PostgreSQL connection errors stop acceptance and trigger cleanup without an unhandled process error.
 
 The deployed staging API passed all **62 checks** for the expanded radius options and explicit numeric pace ranges on 2026-09-13, and all 34 generated accounts were deleted. The numeric pace migration is applied. See `artifacts/acceptance/step-06-new-staging-20260913.log`; the earlier 44-check evidence covers the original version. Actual API interaction on iPhone is tracked separately in `artifacts/acceptance/step-06.md`.
+
+## Block and Profile reports (Step 07)
+
+Open another user's Profile and select **Safety** to Block User, Report User, or Report and Block. Blocking requires confirmation and hides both profiles from Discover and direct public Profile API reads. **Profile > Settings > Blocked Users** lists your outgoing blocks and allows unblocking; the other user's block still applies, and old conversations are not restored. Stream messaging enforcement is added in Step 10.
+
+`POST /v1/blocks/:userId` and `DELETE /v1/blocks/:userId` are idempotent and derive the actor from the bearer session. `GET /v1/blocks?cursor=` returns UUID-ordered private pages of 50 entries, without coordinates. Unavailable accounts have no name or city. Self-block is rejected. Blocked-user pages and public Profile responses use `Cache-Control: no-store`.
+
+`POST /v1/reports` accepts `targetType: "user"`, UUID `targetId`, `reason` (`spam`, `harassment`, `hate_abuse`, `unsafe_event`, `impersonation`, `other`), optional `details` of at most 2000 characters, and optional `blockUser` (default false). Report and Block commits report, block and audit together. Ordinary reports do not block. Repeat targets preserve new evidence as new reports. The App displays the returned `referenceId`; reports are not automatically retried after lost responses.
+
+The `reports` table starts entries in the `open` queue for Step 13's admin dashboard. A PostgreSQL trigger protects submitted text, reason, timestamp and snapshot. Snapshots capture public profile text, city and sports, without coordinates, email, object keys or provider tokens. Users cannot read the queue or alter evidence. `safety_audit_events` stores actor, target, action, server request ID and time, without raw IP or duplicated notes. User foreign keys become null on deletion; Step 14 must apply the published deletion/retention policy to remaining snapshots and audit data.
+
+Block, unblock and report writes each allow 20 attempts per minute per user and IP using the current single-process limiter. No new secrets are required. Deploy code and `20260913020000_profile_safety` together using the existing Render startup flow. Integration tests reset only an explicitly selected test database.
+
+After deployment, run `npm run verify:step-07:staging --prefix backend` using the existing ignored `backend/.env.staging`. The verifier creates three disposable Email profiles, checks real API isolation and evidence, then deletes its reports, audit entries, accounts and dependent records. A private journal precedes registration; recover using `--cleanup-state /path/from/output/cleanup.json`. Cleanup refuses fixtures that acquired photos, external identities or unrelated evidence. Passwords, tokens and connection URLs are never printed.
+
+Native safety pages use the Expo reference's warm light/dark backgrounds, orange accent and rounded Profile settings cards. Full Expo/native screenshot alignment and Product Owner visual sign-off remain Step 14A deliverables.

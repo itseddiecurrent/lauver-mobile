@@ -7,6 +7,7 @@ import type { AuthServicing } from './auth.js';
 import type { ProfilePhotoStorage } from './object-storage.js';
 import { normalizedPaceValue, paceDefinitions, ProfileError, supportedSports, type Sport } from './profile.js';
 import type { StoredSport } from './profile-repository.js';
+import { noBlockSQL } from './block-policy.js';
 
 const paceBound = z.string().regex(/^\d+(?:\.\d{1,17})?$/).max(20)
   .transform(Number).pipe(z.number().finite().positive())
@@ -160,9 +161,7 @@ export class PrismaDiscoverRepository implements DiscoverRepository {
         FROM profiles p JOIN users u ON u.id = p.user_id
         WHERE p.user_id <> ${userId}::uuid AND u.status = 'ACTIVE' AND p.is_complete
           AND p.city_latitude IS NOT NULL AND p.city_longitude IS NOT NULL
-          AND NOT EXISTS (SELECT 1 FROM blocks b
-            WHERE (b.blocker_id = ${userId}::uuid AND b.blocked_id = p.user_id)
-               OR (b.blocked_id = ${userId}::uuid AND b.blocker_id = p.user_id))
+          AND ${noBlockSQL(userId, Prisma.sql`p.user_id`)}
           ${sportFilter}
       )
       SELECT id, "displayName", "photoKey", "cityName", "regionCode", "countryCode", distance,

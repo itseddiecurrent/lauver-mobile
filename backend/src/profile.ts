@@ -74,7 +74,7 @@ export class ProfileError extends Error {
 
 export interface ProfileServicing {
   getOwnProfile(userId: string): Promise<ProfileResponse>;
-  getPublicProfile(userId: string): Promise<ProfileResponse>;
+  getPublicProfile(userId: string, viewerId: string): Promise<ProfileResponse>;
   updateProfile(userId: string, patch: ProfilePatch): Promise<ProfileResponse>;
   createPhotoUpload(input: {
     userId: string;
@@ -115,8 +115,8 @@ export class ProfileService implements ProfileServicing {
     return this.#response(profile ?? emptyProfile(userId), true);
   }
 
-  async getPublicProfile(userId: string): Promise<ProfileResponse> {
-    const profile = await this.#repository.findProfile(userId, true);
+  async getPublicProfile(userId: string, viewerId: string): Promise<ProfileResponse> {
+    const profile = await this.#repository.findProfile(userId, true, viewerId);
     if (profile === null || !profile.isComplete) {
       throw new ProfileError(404, 'profile_not_found', 'Profile not found');
     }

@@ -64,13 +64,14 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     });
   }));
 
-  app.get('/v1/users/:userId', authenticated(dependencies.authService, async (_user, request, response) => {
+  app.get('/v1/users/:userId', authenticated(dependencies.authService, async (user, request, response) => {
     const userID = userIDSchema.safeParse(request.params.userId);
     if (!userID.success) {
       validationResponse(response);
       return;
     }
-    response.status(200).json({ profile: await dependencies.profileService.getPublicProfile(userID.data) });
+    response.setHeader('Cache-Control', 'no-store');
+    response.status(200).json({ profile: await dependencies.profileService.getPublicProfile(userID.data, user.id) });
   }));
 
   app.post('/v1/me/photo/upload-url', authenticated(dependencies.authService, async (user, request, response) => {

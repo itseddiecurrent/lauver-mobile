@@ -1,6 +1,6 @@
 # Step 06 — Discover 手动筛选列表
 
-日期：2026-09-13。状态：新版 Render staging API **62/62**、iPhone 14 Plus 固定数据 UI 与完整 CI 验收通过，全部 34 个新版 API 测试账户已清理；待用户确认新版真机实际 API 交互。
+日期：2026-09-13。状态：**✅ Step 06 验收通过**。新版 Render staging API **62/62**、iPhone 14 Plus 固定数据 UI、完整 CI 和新版真机实际 API 交互（含分页、断网提示与 Retry 恢复）均通过；34 个新版 API 自动测试账户和后补 44 个临时分页账户全部清理。下文保留各阶段历史记录，最终结论见文末。
 
 ## 实现
 
@@ -135,4 +135,30 @@
 - 运行 `npm run verify:step-06:staging --prefix backend`，新版实际 API **62/62 通过**。包括数值配速区间与单值、单端范围、缺 pace 排除、所有新增半径和 Unlimited、10 次稳定排序、页大小 1/7/20 无重复遗漏、参数与游标隔离、双向 Block、暂停/删除/未完成排除和新 session。
 - 结果 `{"result":"passed","checks":62,"deletedAccounts":34}`。确认 34 个账户及其关联资料、运动、训练时间、凭据、session、email token 与 Block 全部删除；旧 viewer session 返回 401。额外只读查询确认本 run 的账户残留 **0**，恢复 journal 不存在。
 - 远端证据：[step-06-new-staging-20260913.log](step-06-new-staging-20260913.log)；完整安全 CLI 日志 `/tmp/lauver-step06-new-staging-20260913.log`。
-- 已向用户请求新版真机实际 API 的列表 → Profile、100 km / Unlimited、Running 数值范围和刷新反馈；尚未收到明确测试结果，不将固定数据 UI 或 API verifier 结果当作这项手动反馈。真机实际分页、断网与重试仍需逐项确认。
+- 用户明确确认新版真机实际 API 的 **Discover 列表 → Profile、100 km / Unlimited 切换、Running 数值配速范围和下拉刷新均已测试且正常**。这是实际 API 手动反馈，与固定数据 UI 和 API verifier 的证据分别记录。
+- 真机实际分页、断网与重试仍需逐项确认；已请求这两项反馈。只读检查 staging 目前只有 **3 个完整 ACTIVE Profile**，不足默认 20 条分页；必要时补充临时分页资料，并在验收后按精确 journal 清理。
+
+## 最后两项真机验收准备（2026-09-13）
+
+- 已启动已连接、已解锁的 iPhone 14 Plus 上的正常 staging App，未传入固定数据或重置登录参数。
+- 在原有 2 个城市中心点各补充 22 个临时 Running 资料，共 **44 个账户**，自报配速 **5:30 min/km**，显示名 `Step 06 Page 1-01` / `Step 06 Page 2-01` 等。未修改原有账户，无头像或外部 provider 数据。
+- 临时账户通过实际 staging API 登录，确认 API 与数据库对应同一 fixture ID；默认 20 条、Unlimited 分页遍历 **3 页**，本批其余 43 个资料无重复、无遗漏。这是 API 证据，尚不代表真机 Load more 交互已通过。
+- 首次准备因临时脚本未填写数据库必需的更新时间而失败，事务回滚；恢复清理确认 **0 个新增账户**，首批 journal 删除。补齐字段后第二次准备成功。
+- 第二批精确清理 journal：`/tmp/lauver-step06-live-f28126ff223e4f060ffb409a61464ba6/cleanup.json`（私有权限）。本批 **44 个账户已在真机验收后全部清理**，已执行：
+
+  ```bash
+  npm run verify:step-06:staging --prefix backend -- --cleanup-state /tmp/lauver-step06-live-f28126ff223e4f060ffb409a61464ba6/cleanup.json
+  ```
+
+- 用户已逐项确认真机分页加载正常、最后 Load more 消失；断网时错误提示和恢复网络后的 Retry 恢复均正常。两项均为正常 staging App 的实际 API 手动验收反馈。
+- 同轮 Simulator Discover XCTest **8/8 通过，TEST SUCCEEDED**，含分页失败保留列表和游标、重试成功、失效游标恢复、筛选切换和过期请求隔离。没有把固定服务 XCTest 作为真实断网验收证据。
+- 证据：[step-06-pagination-retry-20260913.log](step-06-pagination-retry-20260913.log)。完整日志 `/tmp/lauver-step06-pagination-retry-20260913.log`、bundle `/tmp/lauver-step06-pagination-retry-20260913.xcresult`；fixture 准备日志 `/tmp/lauver-step06-live-pagination-20260913.log`，首次回滚清理日志 `/tmp/lauver-step06-live-prepare-cleanup.log`。
+
+## 最终验收结论（2026-09-13）
+
+- **Step 06 验收通过**：新版实际 Render API 62/62、完整 CI、原生 UI 与 XCTest，以及用户明确确认的全部真机实际 API 交互，证据齐全。
+- 真机分页反馈：“分页加载正常，最后 Load more 消失”。用户此前已确认列表 → Profile、100 km / Unlimited、Running 数值配速范围和下拉刷新正常。
+- 真机断网与恢复反馈：“错误提示和重试恢复均正常”。固定服务测试与真实设备手动反馈分别记录，不混用证据。
+- 使用本 run 精确 journal 执行清理，结果 `{"result":"passed","checks":0,"deletedAccounts":44}`；账户、资料、运动、训练时间、凭据、session、email token 和 Block 级联数据全部删除。`checks:0` 表示本次只执行清理，不是再次运行 API 验收。
+- 独立只读核对本 run 账户残留 **0**，清理 journal 已删除；完整 ACTIVE Profile 恢复为原有 **3 个**。没有剩余 Step 06 临时分页数据或待确认项。
+- 最终证据：[step-06-pagination-retry-20260913.log](step-06-pagination-retry-20260913.log)；完整清理日志 `/tmp/lauver-step06-live-final-cleanup-20260913.log`，只读核对日志 `/tmp/lauver-step06-live-residual-20260913.log`。

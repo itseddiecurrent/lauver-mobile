@@ -89,11 +89,16 @@ describe('Step 06 full acceptance lifecycle', () => {
   it('handles a terminated fixture connection and cleans through a fresh connection', async () => {
     const directory = await mkdtemp(path.join(os.tmpdir(), 'lauver-step06-disconnect-test-'));
     let termination: Promise<unknown> | undefined;
+    // Hold the next fixture write until termination completes, so a fast run
+    // cannot close its own connection before the injected failure arrives.
+    await sql.query('BEGIN');
+    await sql.query('LOCK TABLE blocks IN ACCESS EXCLUSIVE MODE');
     try {
       await expect(runAcceptance({ databaseURL, baseURL, local: true, stateDirectory: directory,
         output: (line) => {
           if (line === 'PASS viewer-login-and-api-database-target-match') {
-            termination = sql.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name='lauver-step06-verifier' AND pid<>pg_backend_pid()");
+            termination = sql.query("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE application_name='lauver-step06-verifier' AND pid<>pg_backend_pid()")
+              .finally(() => sql.query('ROLLBACK'));
           }
         },
       })).rejects.toThrow();
@@ -102,6 +107,7 @@ describe('Step 06 full acceptance lifecycle', () => {
       await assertNoFixturesRemain();
     } finally {
       await termination;
+      if (termination === undefined) await sql.query('ROLLBACK');
       if ((await readdir(directory)).includes('cleanup.json')) {
         await runAcceptance({ databaseURL, baseURL, local: true, cleanupState: path.join(directory, 'cleanup.json'), output: () => {} });
       }

@@ -46,8 +46,45 @@ model User {
   photoUploads  ProfilePhotoUpload[]
   outgoingBlocks Block[] @relation("Blocker")
   incomingBlocks Block[] @relation("Blocked")
+  submittedReports Report[] @relation("Reporter")
+  targetedReports Report[] @relation("ReportTarget")
+  safetyActions SafetyAuditEvent[] @relation("SafetyActor")
+  safetyTargets SafetyAuditEvent[] @relation("SafetyTarget")
 
   @@map("users")
+}
+
+model Report {
+  id String @id @default(uuid()) @db.Uuid
+  reporterId String? @map("reporter_id") @db.Uuid
+  targetUserId String? @map("target_user_id") @db.Uuid
+  targetType String @map("target_type") @db.VarChar(20)
+  source String @db.VarChar(20)
+  reason String @db.VarChar(30)
+  details String? @db.VarChar(2000)
+  status String @default("open") @db.VarChar(20)
+  snapshot Json
+  requestId String @map("request_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  reporter User? @relation("Reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  targetUser User? @relation("ReportTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  @@index([status, createdAt])
+  @@index([targetUserId])
+  @@map("reports")
+}
+
+model SafetyAuditEvent {
+  id String @id @default(uuid()) @db.Uuid
+  actorId String? @map("actor_id") @db.Uuid
+  targetId String? @map("target_id") @db.Uuid
+  action String @db.VarChar(30)
+  reportId String? @map("report_id") @db.Uuid
+  requestId String @map("request_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+  actor User? @relation("SafetyActor", fields: [actorId], references: [id], onDelete: SetNull)
+  target User? @relation("SafetyTarget", fields: [targetId], references: [id], onDelete: SetNull)
+  @@index([actorId, createdAt])
+  @@map("safety_audit_events")
 }
 
 model Profile {

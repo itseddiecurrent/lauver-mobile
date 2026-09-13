@@ -417,6 +417,90 @@ paths:
           description: Session is invalid or expired.
         '422':
           description: Invalid query, missing caller city, or invalid/changed cursor context.
+  /v1/blocks:
+    get:
+      operationId: listBlockedUsers
+      summary: List only the authenticated user's outgoing blocks
+      description: UUID-ordered pages of at most 50 entries; unavailable accounts have no display name or city. No coordinates are exposed.
+      parameters:
+        - in: query
+          name: cursor
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A private no-store page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockedUsersPage'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+  /v1/blocks/{userId}:
+    parameters:
+      - in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: blockUser
+      summary: Idempotently block an active user
+      description: Owner derives from the bearer session. Self-block returns 422. Both public Profile reads and Discover exclude either direction of a block. Body must be absent or empty.
+      responses:
+        '204':
+          description: Block stored and request audit metadata recorded.
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '404':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+    delete:
+      operationId: unblockUser
+      summary: Idempotently remove only the caller's outgoing block
+      description: Does not remove the other user's block or restore an old conversation.
+      responses:
+        '204':
+          description: Outgoing block absent and audit metadata recorded.
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+  /v1/reports:
+    post:
+      operationId: reportUser
+      summary: Submit Profile evidence to the review queue, optionally blocking the user atomically
+      description: Step 07 supports user/profile targets only. Server captures immutable public profile text and sports, without coordinates, email or object keys. A repeat target creates a new report. Reporter identity and snapshots cannot be supplied by the client. No automatic block unless explicitly requested.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserReportRequest'
+      responses:
+        '201':
+          description: Evidence stored in the open queue; optional block and audit committed in one transaction.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportReceipt'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '404':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
 components:
   securitySchemes:
     bearerAuth:
@@ -760,6 +844,59 @@ components:
           type: object
           additionalProperties:
             type: string
+    BlockedUsersPage:
+      type: object
+      additionalProperties: false
+      required: [users, nextCursor]
+      properties:
+        users:
+          type: array
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, displayName, cityName]
+            properties:
+              id:
+                type: string
+                format: uuid
+              displayName:
+                type: [string, 'null']
+              cityName:
+                type: [string, 'null']
+        nextCursor:
+          type: [string, 'null']
+          format: uuid
+    UserReportRequest:
+      type: object
+      additionalProperties: false
+      required: [targetType, targetId, reason]
+      properties:
+        targetType:
+          type: string
+          const: user
+        targetId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          enum: [spam, harassment, hate_abuse, unsafe_event, impersonation, other]
+        details:
+          type: string
+          maxLength: 2000
+        blockUser:
+          type: boolean
+          default: false
+    ReportReceipt:
+      type: object
+      additionalProperties: false
+      required: [referenceId, blockedUser]
+      properties:
+        referenceId:
+          type: string
+          format: uuid
+        blockedUser:
+          type: boolean
     DiscoverUser:
       type: object
       additionalProperties: false

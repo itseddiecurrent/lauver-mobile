@@ -25,3 +25,12 @@ Configure the same staging database's external connection URL in the ignored
 The verifier checks numeric pace ranges, radius options, Unlimited, deterministic
 pagination, account exclusions and location privacy, then deletes its 34 test accounts.
 See [Step 06 evidence](../artifacts/acceptance/step-06.md) for results and cleanup recovery.
+
+## Step 07 acceptance
+
+Deploy code and `20260913020000_profile_safety` together, then run `npm run verify:step-07:staging`
+using the same ignored `.env.staging` configuration. The verifier checks Profile / Discover block
+isolation, Profile evidence and Report and Block, then removes its three disposable accounts,
+reports and safety audit data. Recover interrupted cleanup with `--cleanup-state` and the exact
+private journal printed by the script. No new provider account or secret is required.
+See [Step 07 evidence](../artifacts/acceptance/step-07.md) and the repository README for the contract.

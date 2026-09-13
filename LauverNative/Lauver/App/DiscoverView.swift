@@ -64,6 +64,13 @@ final class DiscoverViewModel: ObservableObject {
 
     init(service: any DiscoverServicing) { self.service = service }
 
+    func hideBlockedUser(_ userID: String) {
+        generation += 1
+        isLoading = false
+        users.removeAll { $0.id == userID }
+        nextCursor = nil
+    }
+
     func apply(_ filters: DiscoverFilters) async {
         self.filters = filters
         users = []
@@ -110,10 +117,12 @@ struct DiscoverView: View {
     @StateObject private var viewModel: DiscoverViewModel
     @State private var showingFilters = false
     let profileService: any ProfileServicing
+    let safetyService: any SafetyServicing
 
-    init(service: any DiscoverServicing, profileService: any ProfileServicing) {
+    init(service: any DiscoverServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing) {
         _viewModel = StateObject(wrappedValue: DiscoverViewModel(service: service))
         self.profileService = profileService
+        self.safetyService = safetyService
     }
 
     var body: some View {
@@ -137,7 +146,7 @@ struct DiscoverView: View {
             }
             ForEach(viewModel.users) { user in
                 NavigationLink {
-                    OtherProfileScreen(userID: user.id, service: profileService)
+                    OtherProfileScreen(userID: user.id, service: profileService, safetyService: safetyService)
                 } label: {
                     HStack(alignment: .top, spacing: LauverDesign.Spacing.medium) {
                         ProfileAvatar(photoURL: user.photoURL, size: 48)
@@ -176,6 +185,10 @@ struct DiscoverView: View {
         }
         .task { if !viewModel.hasLoaded { await viewModel.load() } }
         .refreshable { await viewModel.load() }
+        .onReceive(NotificationCenter.default.publisher(for: .safetyPolicyChanged)) { notification in
+            if let userID = notification.userInfo?["blockedUserID"] as? String { viewModel.hideBlockedUser(userID) }
+            Task { await viewModel.load() }
+        }
         .sheet(isPresented: $showingFilters) {
             DiscoverFilterSheet(filters: viewModel.filters) { filters in
                 Task { await viewModel.apply(filters) }

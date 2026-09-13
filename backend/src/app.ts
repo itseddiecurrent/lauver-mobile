@@ -14,6 +14,7 @@ import type { Database } from './database.js';
 import type { InMemoryRateLimiter } from './rate-limiter.js';
 import { ProfileError, type ProfileServicing } from './profile.js';
 import { installProfileRoutes } from './profile-routes.js';
+import { installSafetyRoutes, type SafetyServicing } from './safety.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -42,6 +43,8 @@ export type AppDependencies = {
   profileService: ProfileServicing;
   discoverService: DiscoverServicing;
   profileRateLimiter: InMemoryRateLimiter;
+  safetyService: SafetyServicing;
+  safetyRateLimiter: InMemoryRateLimiter;
 };
 
 class CorsOriginError extends Error {
@@ -125,6 +128,7 @@ export function createApp(dependencies: AppDependencies): Express {
     rateLimiter: dependencies.authRateLimiter,
   });
   installDiscoverRoutes(app, dependencies);
+  installSafetyRoutes(app, dependencies);
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,

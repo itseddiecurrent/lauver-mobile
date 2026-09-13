@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
+import { visibleUserWhere } from './block-policy.js';
 
 export type StoredSport = {
   sport: string;
@@ -29,7 +30,7 @@ export type StoredProfile = {
 export type ProfileReplacement = Omit<StoredProfile, 'photoKey'>;
 
 export interface ProfileRepository {
-  findProfile(userId: string, requireActiveUser?: boolean): Promise<StoredProfile | null>;
+  findProfile(userId: string, requireActiveUser?: boolean, viewerId?: string): Promise<StoredProfile | null>;
   replaceProfile(profile: ProfileReplacement): Promise<StoredProfile>;
   replacePhoto(userId: string, objectKey: string | null): Promise<string | null>;
   createPhotoUpload(input: {
@@ -59,11 +60,11 @@ export class PrismaProfileRepository implements ProfileRepository {
     this.#client = client;
   }
 
-  async findProfile(userId: string, requireActiveUser = false): Promise<StoredProfile | null> {
+  async findProfile(userId: string, requireActiveUser = false, viewerId?: string): Promise<StoredProfile | null> {
     const profile = await this.#client.profile.findFirst({
       where: {
         userId,
-        ...(requireActiveUser ? { user: { status: 'ACTIVE' } } : {}),
+        ...(viewerId !== undefined ? { user: visibleUserWhere(viewerId) } : requireActiveUser ? { user: { status: 'ACTIVE' } } : {}),
       },
       include: {
         user: {

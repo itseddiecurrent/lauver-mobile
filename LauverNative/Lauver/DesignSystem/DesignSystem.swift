@@ -13,9 +13,19 @@ enum LauverDesign {
     }
 
     enum ColorToken {
-        static let accent = Color.green
-        static let surface = Color(.secondarySystemBackground)
+        static let accent = Color(red: 232 / 255, green: 96 / 255, blue: 44 / 255)
+        static let background = adaptive(light: 0xF0EDE8, dark: 0x161412)
+        static let surface = adaptive(light: 0xEAE6DF, dark: 0x201D1A)
         static let danger = Color.red
+
+        private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+            Color(uiColor: UIColor { traits in
+                let hex = traits.userInterfaceStyle == .dark ? dark : light
+                return UIColor(red: CGFloat((hex >> 16) & 255) / 255,
+                               green: CGFloat((hex >> 8) & 255) / 255,
+                               blue: CGFloat(hex & 255) / 255, alpha: 1)
+            })
+        }
     }
 }
 

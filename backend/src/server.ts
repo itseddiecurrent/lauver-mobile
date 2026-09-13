@@ -81,6 +81,8 @@ const server = createServer(
     ),
     discoverService: new DiscoverService(database.discoverRepository, photoStorage, config.authAccessTokenSecret),
     profileService,
+    safetyService: database.safetyService,
+    safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(
       config.authRateLimitWindowMilliseconds,
       config.authRateLimitMaxAttempts,

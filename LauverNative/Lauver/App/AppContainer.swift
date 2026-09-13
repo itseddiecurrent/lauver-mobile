@@ -6,6 +6,7 @@ struct AppContainer {
     let authService: any AuthServicing
     let discoverService: any DiscoverServicing
     let profileService: any ProfileServicing
+    let safetyService: any SafetyServicing
     let authSessionStore: any AuthSessionStoring
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
     let appleCredentialStateChecker: any AppleCredentialStateChecking
@@ -78,21 +79,37 @@ struct AppContainer {
         let profileService: any ProfileServicing = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
             ? UITestProfileService()
             : ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
+        let testSafetyService = UITestSafetyService()
 
         return AppContainer(
             configuration: configuration,
             healthService: healthService,
             authService: authService,
             discoverService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
-                ? UITestDiscoverService()
+                ? UITestDiscoverService(safetyService: testSafetyService)
                 : ProfileService(client: client, authService: authService, sessionStore: authSessionStore),
             profileService: profileService,
+            safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? testSafetyService
+                : ProfileService(client: client, authService: authService, sessionStore: authSessionStore),
             authSessionStore: authSessionStore,
             appleUserIdentifierStore: appleUserIdentifierStore,
             appleCredentialStateChecker: AppleCredentialStateChecker(),
             tokenStore: tokenStore,
             uiStateStore: uiStateStore
         )
+    }
+}
+
+private final class UITestSafetyService: SafetyServicing {
+    private var blocked: [BlockedUser] = []
+    func block(userID: String) async throws { blocked = [BlockedUser(id: userID, displayName: "UI Test Runner", cityName: "Shanghai")] }
+    func isBlocked(userID: String) -> Bool { blocked.contains { $0.id == userID } }
+    func unblock(userID: String) async throws { blocked.removeAll { $0.id == userID } }
+    func blockedUsers(cursor: String?) async throws -> BlockedUsersPage { BlockedUsersPage(users: blocked, nextCursor: nil) }
+    func report(userID: String, reason: ReportReason, details: String, blockUser: Bool) async throws -> ReportReceipt {
+        if blockUser { try await block(userID: userID) }
+        return ReportReceipt(referenceId: "ui-test-report-reference", blockedUser: blockUser)
     }
 }
 
@@ -193,7 +210,9 @@ private struct UITestHealthService: HealthServicing {
 }
 
 private struct UITestDiscoverService: DiscoverServicing {
+    let safetyService: UITestSafetyService
     func discover(filters: DiscoverFilters, cursor: String?) async throws -> DiscoverPage {
+        if safetyService.isBlocked(userID: "ui-test-partner") { return DiscoverPage(users: [], nextCursor: nil) }
         if filters.sport != nil && filters.sport != .running { return DiscoverPage(users: [], nextCursor: nil) }
         if filters.paceMin.map({ 5.5 < $0 }) == true || filters.paceMax.map({ 5.5 > $0 }) == true {
             return DiscoverPage(users: [], nextCursor: nil)

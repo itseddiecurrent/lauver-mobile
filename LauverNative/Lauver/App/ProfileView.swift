@@ -90,10 +90,12 @@ struct OwnProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
     @State private var editingProfile: WorkoutProfile?
     let signOut: () -> Void
+    let safetyService: any SafetyServicing
 
-    init(service: any ProfileServicing, signOut: @escaping () -> Void) {
+    init(service: any ProfileServicing, safetyService: any SafetyServicing, signOut: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: ProfileViewModel(service: service))
         self.signOut = signOut
+        self.safetyService = safetyService
     }
 
     var body: some View {
@@ -119,6 +121,11 @@ struct OwnProfileView: View {
         }
         .navigationTitle("Profile")
         .accessibilityIdentifier("screen-profile")
+        .toolbar {
+            NavigationLink { SafetySettingsView(service: safetyService, signOut: signOut) } label: {
+                Label("Settings", systemImage: "gearshape")
+            }.accessibilityIdentifier("profile-settings")
+        }
         .task { await viewModel.load() }
         .sheet(item: $editingProfile) { profile in
             EditProfileView(profile: profile, viewModel: viewModel)
@@ -444,14 +451,22 @@ struct OtherProfileView: View {
                 if let bio = profile.bio { Text(bio).frame(maxWidth: .infinity, alignment: .leading) }
                 ProfileSection(title: "Sports") {
                     ForEach(profile.sports) { sport in
-                        Text(sport.sport.title)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(sport.sport.title).fontWeight(.semibold)
+                            if let pace = sport.paceValue, let unit = sport.paceUnit {
+                                Text("\(sport.sport.formattedPace(pace)) \(unit) · Self-reported").font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }.frame(maxWidth: .infinity, alignment: .leading)
                     }
+                }
+                if !profile.trainingTimes.isEmpty {
+                    ProfileSection(title: "Preferred training times") { Text(trainingSummary(profile.trainingTimes)) }
                 }
             }
             .padding()
         }
         .navigationTitle("Profile")
+        .background(LauverDesign.ColorToken.background)
     }
 }
 
@@ -480,6 +495,8 @@ private final class OtherProfileViewModel: ObservableObject {
             error = nil
         } catch let apiError as APIError {
             guard !Task.isCancelled, apiError != .transport(.cancelled) else { return }
+            if case .notFound = apiError { profile = nil }
+            if case .unauthorized = apiError { profile = nil }
             error = apiError
         } catch {
             guard !Task.isCancelled, !(error is CancellationError) else { return }
@@ -490,9 +507,24 @@ private final class OtherProfileViewModel: ObservableObject {
 
 struct OtherProfileScreen: View {
     @StateObject private var viewModel: OtherProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var confirmBlock = false
+    @State private var isBlocking = false
+    @State private var blockError: String?
+    @State private var reportMode: ReportMode?
+    private let userID: String
+    private let safetyService: any SafetyServicing
 
-    init(userID: String, service: any ProfileServicing) {
+    private enum ReportMode: String, Identifiable {
+        case report, reportAndBlock
+        var id: String { rawValue }
+    }
+
+    init(userID: String, service: any ProfileServicing, safetyService: any SafetyServicing) {
         _viewModel = StateObject(wrappedValue: OtherProfileViewModel(userID: userID, service: service))
+        self.userID = userID
+        self.safetyService = safetyService
     }
 
     var body: some View {
@@ -513,6 +545,46 @@ struct OtherProfileScreen: View {
         }
         .navigationTitle("Profile")
         .task { await viewModel.load() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await viewModel.load() } } }
+        .toolbar {
+            if viewModel.profile != nil {
+                Menu {
+                    Button("Report User", systemImage: "flag") { reportMode = .report }.accessibilityIdentifier("profile-report")
+                    Button("Report and Block", systemImage: "shield") { reportMode = .reportAndBlock }.accessibilityIdentifier("profile-report-block")
+                    Button("Block User", systemImage: "person.crop.circle.badge.xmark", role: .destructive) { confirmBlock = true }
+                        .accessibilityIdentifier("profile-block")
+                } label: { Label(isBlocking ? "Blocking…" : "Safety", systemImage: "ellipsis.circle") }
+                .disabled(isBlocking).accessibilityIdentifier("profile-safety-menu")
+            }
+        }
+        .alert("Block this user?", isPresented: $confirmBlock) {
+            Button("Block User", role: .destructive) {
+                isBlocking = true
+                Task {
+                    defer { isBlocking = false }
+                    do {
+                        try await safetyService.block(userID: userID)
+                        NotificationCenter.default.post(name: .safetyPolicyChanged, object: nil, userInfo: ["blockedUserID": userID])
+                        dismiss()
+                    } catch { blockError = (error as? APIError)?.userMessage ?? "This user could not be blocked. Please try again." }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Your profiles will be hidden from each other. You can unblock this user in Settings.") }
+        .alert("Unable to block", isPresented: Binding(get: { blockError != nil }, set: { if !$0 { blockError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(blockError ?? "Please try again.") }
+        .sheet(item: $reportMode) { mode in
+            ReportUserView(userID: userID, displayName: viewModel.profile?.displayName ?? "user", blockUser: mode == .reportAndBlock,
+                           service: safetyService) { blocked in
+                if blocked {
+                    // Keep the receipt visible until Done; removing the source list row
+                    // earlier would pop its NavigationLink and dismiss this sheet.
+                    NotificationCenter.default.post(name: .safetyPolicyChanged, object: nil, userInfo: ["blockedUserID": userID])
+                    dismiss()
+                }
+            }
+        }
     }
 }
 
