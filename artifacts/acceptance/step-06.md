@@ -129,7 +129,7 @@
 
 ## 新版 Render API 验收完成（2026-09-13）
 
-- 目录内文档提交 `594030b` 已推送；GitHub deployment `6420142782` 记录实际 `lauver-api-staging` 部署成功，时间 **2026-09-13 09:43:08 UTC / 17:43:08 Asia/Shanghai**。记录证明部署结果，未通过直连 Render 工具核实手动或自动触发方式。
+- 目录内文档提交 `594030b` 已推送；GitHub deployment `6420142782` 记录实际 `lauver-api-staging` 部署成功，时间 **2026-09-13 09:43:08 UTC / 17:43:08 Asia/Shanghai**。用户随后明确确认已在 Render 手动触发最新提交；再次核对部署记录，最新成功部署仍为 `594030b`，补记触发方式为用户手动部署。
 - API 实现与 migration 为已通过完整 CI 的 `10bd58d`；`594030b` 仅新增部署文档，其独立 CI 仍在执行，不将已通过的实现 CI 冒称为该文档提交的新 CI 结果。
 - 实际 staging 已应用 `20260913010000_explicit_pace_ranges`；独立只读核对确认 `pace_value` 为 **Decimal(9,6)**，`pace_bracket` 已删除；`/readyz` 返回 200。
 - 运行 `npm run verify:step-06:staging --prefix backend`，新版实际 API **62/62 通过**。包括数值配速区间与单值、单端范围、缺 pace 排除、所有新增半径和 Unlimited、10 次稳定排序、页大小 1/7/20 无重复遗漏、参数与游标隔离、双向 Block、暂停/删除/未完成排除和新 session。
