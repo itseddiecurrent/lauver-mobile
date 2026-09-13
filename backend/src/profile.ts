@@ -356,25 +356,28 @@ type PaceDefinition = {
   unit: string;
   minimum: number;
   maximum: number;
-  fastBoundary: number;
-  moderateBoundary: number;
-  higherIsFaster: boolean;
 };
 
-const paceDefinitions: Record<Sport, PaceDefinition> = {
-  running: { unit: 'min/km', minimum: 2, maximum: 15, fastBoundary: 4.5, moderateBoundary: 6.5, higherIsFaster: false },
-  trail_running: { unit: 'min/km', minimum: 3, maximum: 30, fastBoundary: 6, moderateBoundary: 9, higherIsFaster: false },
-  cycling: { unit: 'km/h', minimum: 5, maximum: 80, fastBoundary: 30, moderateBoundary: 20, higherIsFaster: true },
-  swimming: { unit: 'min/100m', minimum: 0.5, maximum: 10, fastBoundary: 1.5, moderateBoundary: 2.5, higherIsFaster: false },
-  walking: { unit: 'min/km', minimum: 5, maximum: 30, fastBoundary: 9, moderateBoundary: 13, higherIsFaster: false },
-  hiking: { unit: 'min/km', minimum: 5, maximum: 60, fastBoundary: 12, moderateBoundary: 20, higherIsFaster: false },
-  rowing: { unit: 'min/500m', minimum: 0.8, maximum: 10, fastBoundary: 1.8, moderateBoundary: 2.5, higherIsFaster: false },
+export const paceDefinitions: Record<Sport, PaceDefinition> = {
+  running: { unit: 'min/km', minimum: 2, maximum: 15 },
+  trail_running: { unit: 'min/km', minimum: 3, maximum: 30 },
+  cycling: { unit: 'km/h', minimum: 5, maximum: 80 },
+  swimming: { unit: 'min/100m', minimum: 0.5, maximum: 10 },
+  walking: { unit: 'min/km', minimum: 5, maximum: 30 },
+  hiking: { unit: 'min/km', minimum: 5, maximum: 60 },
+  rowing: { unit: 'min/500m', minimum: 0.8, maximum: 10 },
 };
+
+// Preserve whole-second duration paces in the database and use the same
+// precision for inclusive Discover bounds (minutes are the API's stored unit).
+export function normalizedPaceValue(value: number): number {
+  return Math.round(value * 1_000_000) / 1_000_000;
+}
 
 function normalizeSport(input: { sport: Sport; paceValue: number | null }): StoredSport {
   const definition = paceDefinitions[input.sport];
   if (input.paceValue === null) {
-    return { sport: input.sport, paceValue: null, paceUnit: null, paceBracket: null };
+    return { sport: input.sport, paceValue: null, paceUnit: null };
   }
   if (input.paceValue < definition.minimum || input.paceValue > definition.maximum) {
     throw new ProfileError(
@@ -383,21 +386,11 @@ function normalizeSport(input: { sport: Sport; paceValue: number | null }): Stor
       `${input.sport} pace must be between ${definition.minimum} and ${definition.maximum} ${definition.unit}`,
     );
   }
-  let paceBracket: string;
-  if (definition.higherIsFaster) {
-    paceBracket = input.paceValue >= definition.fastBoundary
-      ? 'fast'
-      : input.paceValue >= definition.moderateBoundary ? 'moderate' : 'easy';
-  } else {
-    paceBracket = input.paceValue <= definition.fastBoundary
-      ? 'fast'
-      : input.paceValue <= definition.moderateBoundary ? 'moderate' : 'easy';
-  }
   return {
     sport: input.sport,
-    paceValue: Math.round(input.paceValue * 100) / 100,
+    paceValue: normalizedPaceValue(definition.unit === 'km/h'
+      ? input.paceValue : Math.round(input.paceValue * 60) / 60),
     paceUnit: definition.unit,
-    paceBracket,
   };
 }
 

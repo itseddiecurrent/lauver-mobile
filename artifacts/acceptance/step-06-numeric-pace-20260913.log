@@ -1,0 +1,14 @@
+Scope: actual self-reported pace/speed ranges and expanded Discover radius; local validation.
+Backend unit: 123/123 passed
+PostgreSQL migration-from-zero/integration: 28/28 passed
+Migration: legacy displayed seconds and cycling values preserved; category column removed; pace/unit integrity constraint retained.
+UI: malformed seconds disable Apply; duration range 5:01-5:30; range prefills; changing sport clears range; cycling 20.5-30 km/h.
+	 Executed 75 tests, with 0 failures (0 unexpected) in 1.053 (1.127) seconds
+	 Executed 75 tests, with 0 failures (0 unexpected) in 1.053 (1.130) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 62.242 (62.245) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 62.242 (62.248) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 62.242 (62.253) seconds
+** TEST SUCCEEDED **
+Test Case '-[LauverUITests.LauverUITests testProfileCanOpenEditorAndShowsPersistedWorkoutFields]' passed (27.895 seconds).
+iOS built configuration tests passed.
+New staging deployment and actual API device acceptance: pending.

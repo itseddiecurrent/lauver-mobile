@@ -236,10 +236,37 @@ Never send secrets in chat or commit them to this repository. Add them directly 
 
 ## Discover manual filters (Step 06)
 
-The native Discover tab is a normal list with a filter sheet, pull-to-refresh, Load more, and navigation to public profiles. `GET /v1/discover` accepts optional `sport`, `radius` (5/10/25/50 km, default 25), `paceBracket` (easy/moderate/fast), `limit` (1–50, default 20), and a signed `cursor`. Pace filtering requires a sport because units and static thresholds differ. Users without a self-reported pace remain visible only when no pace bracket is selected.
+The native Discover tab is a normal list with a filter sheet, pull-to-refresh, Load more, and navigation to public profiles. `GET /v1/discover` accepts optional `sport`, `radius` (5/10/20/25/30/40/50/60/70/80/90/100 km or `unlimited`, default 25), `paceMin` / `paceMax` (inclusive numeric bounds), `limit` (1–50, default 20), and a signed `cursor`. Unlimited removes the distance cap and keeps city-centre distance sorting, location privacy, all exclusions and cursor pagination. Pace filtering requires a sport because units differ. The filter sheet accepts mm:ss for running/trail running/walking/hiking (per km), swimming (per 100 m) and rowing (per 500 m); cycling uses km/h. Duration bounds are sent as decimal minutes in the sport’s unit. Either end may be blank; both bounds must be in ascending numeric order. It does not label users by subjective pace categories. Users without a self-reported pace remain visible only when neither pace bound is set.
 
 Distances use city-centre Haversine calculations with Earth radius 6371.0088 km. SQL orders by unrounded distance ascending, profile update time descending, and user UUID ascending. The public response rounds distance to whole kilometres and omits coordinates. Each request excludes both directions of `blocks`, plus the caller and incomplete/suspended/deleted profiles. Step 06 establishes the minimal blocks schema; Step 07 adds its management and report APIs.
 
 A saved caller city is required (otherwise `discover_city_required`, HTTP 422). Cursors use a domain-separated HMAC with the existing backend access-token secret and bind the caller, city and filters. A changed context or invalid cursor returns `invalid_discover_cursor`, HTTP 422; refresh starts over. Pagination guarantees apply to unchanged data; profiles edited during traversal can change their ordering.
 
 Run `./scripts/test-step-06.sh` with an isolated `TEST_DATABASE_URL` to run migrations, backend tests, both iOS configurations, and Simulator tests. Evidence and remaining staging/device checks are recorded in `artifacts/acceptance/step-06.md`.
+
+For example, a running range of `5:01`–`5:30` sends `paceMin=5.016666666666667&paceMax=5.5`; cycling at 20–30 km/h sends `paceMin=20&paceMax=30`. Profile values and Discover bounds share six-decimal storage precision so whole-second endpoints match. Migration `20260913010000_explicit_pace_ranges` expands stored precision, preserves the displayed whole seconds of legacy duration paces, removes derived category data and indexes sport with the actual pace value.
+
+### Automated staging acceptance and complete fixture deletion
+
+Step 06 has a verifier that creates 34 generated Email test accounts, runs Discover filtering, ordering, pagination, location privacy and bidirectional block checks, then deletes every generated account and its dependent database rows. It uses the real staging API for login, profile writes and queries. Synthetic city centres and fixed timestamps make distance boundaries and sorting repeatable; direct database fixtures supply suspended/deleted states and blocks because those management endpoints are later steps.
+
+The account-deletion API is not implemented yet, so complete removal requires a PostgreSQL connection to the **same** `lauver_staging` database used by the API. Copy the example and enter the staging external connection URL from Render into the ignored file:
+
+```bash
+cp backend/.env.staging.example backend/.env.staging
+npm run verify:step-06:staging --prefix backend
+```
+
+Set `STAGING_DATABASE_URL` in `backend/.env.staging` before running the command. If your database's external-access rules restrict connections, allow the machine running the verifier. The verifier permits only `https://lauver-api-staging.onrender.com` and the `lauver_staging` database, and automatically enables verified TLS for external PostgreSQL connections. On a Render staging runtime, it can also use the existing `DATABASE_URL` when `NODE_ENV=staging`.
+
+Successful output ends with `"result":"passed"` and `"deletedAccounts":34`. A failed assertion or Ctrl+C also triggers cleanup. The script writes a private cleanup journal **before** creating any accounts; if cleanup cannot finish, keep the printed file and retry:
+
+```bash
+npm run verify:step-06:staging --prefix backend -- --cleanup-state /path/from/output/cleanup.json
+```
+
+Cleanup selects exact emails belonging to that random run, verifies they have no external credentials/photos/uploads, deletes users transactionally, checks cascade removal, and verifies the old viewer session returns 401. Passwords, tokens and database connection strings are never printed. This verifier does not reset the database schema. It does not keep accounts for manual iPhone testing; it removes them when API acceptance ends.
+
+The verifier closes its fixture database connection before the longer HTTP pagination checks and opens a fresh connection for cleanup, so database idle-connection limits do not interrupt pagination. Unexpected PostgreSQL connection errors stop acceptance and trigger cleanup without an unhandled process error.
+
+The deployed staging API passed all 44 checks for the original radius options on 2026-09-13, and all 34 generated accounts were deleted. See `artifacts/acceptance/step-06-staging-20260913.log`; the expanded radius options and explicit numeric pace ranges require a new deployment and acceptance run. Actual API interaction on iPhone is tracked separately in `artifacts/acceptance/step-06.md`.

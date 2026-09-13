@@ -116,7 +116,18 @@ class MemoryPhotoStorage implements ProfilePhotoStorage {
 }
 
 describe('ProfileService', () => {
-  it('derives pace units and brackets and marks required profile fields complete', async () => {
+  it('stores duration paces as displayed whole seconds and preserves decimal cycling speed', async () => {
+    const service = new ProfileService({ repository: new MemoryProfileRepository(), storage: new MemoryPhotoStorage() });
+    const profile = await service.updateProfile('user-1', {
+      sports: [{ sport: 'running', paceValue: 5.02 }, { sport: 'cycling', paceValue: 25.123456 }],
+    });
+    expect(profile.sports).toEqual([
+      { sport: 'running', paceValue: 5.016667, paceUnit: 'min/km' },
+      { sport: 'cycling', paceValue: 25.123456, paceUnit: 'km/h' },
+    ]);
+  });
+
+  it('derives pace units and marks required profile fields complete without subjective classifications', async () => {
     const repository = new MemoryProfileRepository();
     const service = new ProfileService({ repository, storage: new MemoryPhotoStorage() });
 
@@ -144,9 +155,9 @@ describe('ProfileService', () => {
     expect(profile.displayName).toBe('Alex Runner');
     expect(profile.isComplete).toBe(true);
     expect(profile.sports).toEqual([
-      { sport: 'running', paceValue: 4.25, paceUnit: 'min/km', paceBracket: 'fast' },
-      { sport: 'cycling', paceValue: 24, paceUnit: 'km/h', paceBracket: 'moderate' },
-      { sport: 'swimming', paceValue: null, paceUnit: null, paceBracket: null },
+      { sport: 'running', paceValue: 4.25, paceUnit: 'min/km' },
+      { sport: 'cycling', paceValue: 24, paceUnit: 'km/h' },
+      { sport: 'swimming', paceValue: null, paceUnit: null },
     ]);
     expect(profile.trainingTimes).toEqual([{ weekday: 1, timeBucket: 'morning' }]);
   });
@@ -176,7 +187,7 @@ describe('ProfileService', () => {
       countryCode: 'CN',
       cityLatitude: 31.2304,
       cityLongitude: 121.4737,
-      sports: [{ sport: 'running', paceValue: 6, paceUnit: 'min/km', paceBracket: 'moderate' }],
+      sports: [{ sport: 'running', paceValue: 6, paceUnit: 'min/km' }],
       trainingTimes: [{ weekday: 2, timeBucket: 'evening' }],
       isComplete: true,
     };

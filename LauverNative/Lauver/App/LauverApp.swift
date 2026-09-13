@@ -44,7 +44,7 @@ struct LauverApp: App {
         city: ProfileCity(name: "Shanghai", regionCode: "SH", countryCode: "CN",
                           latitude: 31.2304, longitude: 121.4737),
         sports: [ProfileSport(sport: .running, paceValue: 5.2,
-                              paceUnit: "min/km", paceBracket: "moderate")],
+                              paceUnit: "min/km")],
         trainingTimes: [], isComplete: true
     )
     #endif

@@ -4,14 +4,44 @@ import XCTest
 @MainActor
 final class DiscoverTests: XCTestCase {
     func testFilterPathEncodesQueryAndOmitsPaceWithoutSport() throws {
-        let filters = DiscoverFilters(sport: .cycling, radius: 50, paceBracket: "fast")
+        let filters = DiscoverFilters(sport: .cycling, radius: 50, paceMin: 20, paceMax: 30)
         let components = try XCTUnwrap(URLComponents(string: filters.path(cursor: "signed+cursor/=")))
         let query = Dictionary(uniqueKeysWithValues: components.queryItems!.map { ($0.name, $0.value!) })
         XCTAssertEqual(query["sport"], "cycling")
         XCTAssertEqual(query["radius"], "50")
-        XCTAssertEqual(query["paceBracket"], "fast")
+        XCTAssertEqual(query["paceMin"], "20.0")
+        XCTAssertEqual(query["paceMax"], "30.0")
         XCTAssertEqual(query["cursor"], "signed+cursor/=")
-        XCTAssertFalse(DiscoverFilters(paceBracket: "fast").path().contains("paceBracket"))
+        XCTAssertFalse(DiscoverFilters(paceMin: 5, paceMax: 6).path().contains("paceMin"))
+    }
+
+    func testUnlimitedRadiusIsExplicitAndChangingRadiusStartsANewTraversal() async throws {
+        let filters = DiscoverFilters(radius: nil)
+        let components = try XCTUnwrap(URLComponents(string: filters.path()))
+        XCTAssertEqual(components.queryItems?.first(where: { $0.name == "radius" })?.value, "unlimited")
+        XCTAssertEqual(filters.radiusTitle, "Unlimited distance")
+        XCTAssertEqual(DiscoverFilters(radius: 100).radiusTitle, "Within 100 km")
+        let service = DiscoverFakeService()
+        let model = DiscoverViewModel(service: service)
+        await model.load()
+        await model.load(refresh: false)
+        await model.apply(filters)
+        XCTAssertNil(model.filters.radius)
+        XCTAssertEqual(model.users.map(\.id), ["first"])
+        XCTAssertEqual(model.nextCursor, "page-two")
+    }
+
+    func testDurationAndSpeedRangeSummariesUseActualUnits() throws {
+        for sport in WorkoutSport.allCases {
+            let low = try XCTUnwrap(sport.parsedPace(sport.usesDurationPace ? "5:01" : "20.5"))
+            let high = try XCTUnwrap(sport.parsedPace(sport.usesDurationPace ? "6:30" : "30"))
+            let filters = DiscoverFilters(sport: sport, paceMin: low, paceMax: high)
+            XCTAssertEqual(filters.paceTitle, "\(sport.usesDurationPace ? "5:01–6:30" : "20.5–30") \(sport.paceUnit)")
+            XCTAssertEqual(DiscoverFilters(sport: sport, paceMin: low).paceTitle, "From \(sport.formattedPace(low)) \(sport.paceUnit)")
+            XCTAssertEqual(DiscoverFilters(sport: sport, paceMax: high).paceTitle, "Up to \(sport.formattedPace(high)) \(sport.paceUnit)")
+        }
+        XCTAssertNil(DiscoverFilters(paceMin: 5).paceTitle)
+        XCTAssertEqual(DiscoverFilters(sport: .cycling, paceMin: 25.123456, paceMax: 25.123457).paceTitle, "25.123456–25.123457 km/h")
     }
 
     func testPaginationRetryPreservesRowsAndCursor() async {

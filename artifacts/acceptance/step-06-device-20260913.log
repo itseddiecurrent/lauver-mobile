@@ -1,0 +1,9 @@
+Device: iPhone 14 Plus
+Configuration: Lauver-Staging
+Test: LauverUITests/testDiscoverListOpensProfileAndAppliesFilters
+Services: fixed fake Discover/Profile services; actual API device checks remain separate.
+Test Case '-[LauverUITests.LauverUITests testDiscoverListOpensProfileAndAppliesFilters]' passed (18.695 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 18.695 (18.697) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 18.695 (18.699) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 18.695 (18.703) seconds
+** TEST SUCCEEDED **

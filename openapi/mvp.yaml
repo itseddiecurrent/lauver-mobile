@@ -363,7 +363,7 @@ paths:
         Requires a city in the caller's profile. Excludes the caller, incomplete,
         suspended, deleted and bidirectionally blocked users. Sorts by unrounded
         city-centre Haversine distance ascending, profile update time descending,
-        then UUID ascending. Pace requires a selected sport. With unchanged data,
+        then UUID ascending. Numeric pace bounds require a selected sport. With unchanged data,
         cursor pages have no duplicates or omissions. Changed profiles may move
         between pages; refresh starts a new traversal. Cursors are signed and bound
         to the caller, city and filters. Responses expose no coordinates.
@@ -377,16 +377,23 @@ paths:
             enum: [running, trail_running, cycling, swimming, walking, hiking, rowing]
         - in: query
           name: radius
-          schema:
-            type: integer
-            enum: [5, 10, 25, 50]
-            default: 25
-        - in: query
-          name: paceBracket
-          description: Fixed sport-specific bracket; profiles without pace are excluded.
+          description: City-centre radius in kilometres; unlimited removes the distance cap while preserving sorting and pagination.
           schema:
             type: string
-            enum: [easy, moderate, fast]
+            enum: ['5', '10', '20', '25', '30', '40', '50', '60', '70', '80', '90', '100', unlimited]
+            default: '25'
+        - in: query
+          name: paceMin
+          description: Inclusive lower bound in the selected sport's native pace unit (minutes/km, minutes/100m, minutes/500m, or km/h). Duration UI uses mm:ss and converts to decimal minutes. Requires sport; profiles without pace are excluded. May be omitted for an open lower end.
+          schema:
+            type: number
+            exclusiveMinimum: 0
+        - in: query
+          name: paceMax
+          description: Inclusive upper bound in the selected sport's native pace unit. Requires sport and must be at least paceMin when both are supplied. May be omitted for an open upper end. Bounds share six-decimal precision with stored profile paces.
+          schema:
+            type: number
+            exclusiveMinimum: 0
         - in: query
           name: limit
           schema:
@@ -605,7 +612,7 @@ components:
     ProfileSport:
       type: object
       additionalProperties: false
-      required: [sport, paceValue, paceUnit, paceBracket]
+      required: [sport, paceValue, paceUnit]
       properties:
         sport:
           type: string
@@ -614,9 +621,6 @@ components:
           type: [number, 'null']
         paceUnit:
           type: [string, 'null']
-        paceBracket:
-          type: [string, 'null']
-          enum: [fast, moderate, easy, null]
     TrainingTime:
       type: object
       additionalProperties: false

@@ -36,8 +36,27 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
 
     var usesDurationPace: Bool { self != .cycling }
 
+    var paceInputUnit: String {
+        usesDurationPace ? paceUnit.replacingOccurrences(of: "min/", with: "mm:ss/") : paceUnit
+    }
+
+    var allowedPaceRange: ClosedRange<Double> {
+        switch self {
+        case .running: 2...15
+        case .trailRunning: 3...30
+        case .cycling: 5...80
+        case .swimming: 0.5...10
+        case .walking: 5...30
+        case .hiking: 5...60
+        case .rowing: 0.8...10
+        }
+    }
+
     func formattedPace(_ value: Double) -> String {
-        guard usesDurationPace else { return String(format: "%g", value) }
+        guard usesDurationPace else {
+            return String(format: "%.6f", locale: Locale(identifier: "en_US_POSIX"), value)
+                .replacingOccurrences(of: "\\.?0+$", with: "", options: .regularExpression)
+        }
         let seconds = Int((value * 60).rounded())
         return String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
@@ -82,7 +101,6 @@ struct ProfileSport: Codable, Equatable, Identifiable {
     let sport: WorkoutSport
     let paceValue: Double?
     let paceUnit: String?
-    let paceBracket: String?
 
     var id: String { sport.rawValue }
 }

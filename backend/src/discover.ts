@@ -5,17 +5,27 @@ import { z } from 'zod';
 
 import type { AuthServicing } from './auth.js';
 import type { ProfilePhotoStorage } from './object-storage.js';
-import { ProfileError, supportedSports, type Sport } from './profile.js';
+import { normalizedPaceValue, paceDefinitions, ProfileError, supportedSports, type Sport } from './profile.js';
 import type { StoredSport } from './profile-repository.js';
 
+const paceBound = z.string().regex(/^\d+(?:\.\d{1,17})?$/).max(20)
+  .transform(Number).pipe(z.number().finite().positive())
+  .transform(normalizedPaceValue);
 export const discoverQuerySchema = z.object({
   sport: z.enum(supportedSports).optional(),
-  radius: z.enum(['5', '10', '25', '50']).default('25').transform(Number),
-  paceBracket: z.enum(['easy', 'moderate', 'fast']).optional(),
+  radius: z.enum(['5', '10', '20', '25', '30', '40', '50', '60', '70', '80', '90', '100', 'unlimited'])
+    .default('25').transform((value) => value === 'unlimited' ? null : Number(value)),
+  paceMin: paceBound.optional(),
+  paceMax: paceBound.optional(),
   limit: z.string().regex(/^(?:[1-9]|[1-4][0-9]|50)$/).default('20').transform(Number),
   cursor: z.string().min(1).max(2048).optional(),
-}).strict().refine((query) => query.paceBracket === undefined || query.sport !== undefined, {
+}).strict().refine((query) => (query.paceMin === undefined && query.paceMax === undefined) || query.sport !== undefined, {
   message: 'Choose a sport before filtering pace',
+}).refine((query) => query.paceMin === undefined || query.paceMax === undefined || query.paceMin <= query.paceMax, {
+  message: 'Pace range must be in ascending numeric order',
+}).refine((query) => query.sport === undefined || [query.paceMin, query.paceMax].every((bound) =>
+  bound === undefined || (bound >= paceDefinitions[query.sport!].minimum && bound <= paceDefinitions[query.sport!].maximum)), {
+  message: 'Pace range must use the selected sport’s units and supported bounds',
 });
 export type DiscoverQuery = z.infer<typeof discoverQuerySchema>;
 export type DiscoverUser = {
@@ -64,7 +74,7 @@ export class DiscoverService implements DiscoverServicing {
     }
     const context = createHash('sha256').update(JSON.stringify([
       userId, origin.latitude, origin.longitude, query.sport ?? null, query.radius,
-      query.paceBracket ?? null,
+      query.paceMin ?? null, query.paceMax ?? null,
     ])).digest('hex');
     const cursor = query.cursor === undefined ? null : this.decodeCursor(query.cursor, context);
     const rows = await this.repository.search(userId, origin, query, cursor);
@@ -131,8 +141,12 @@ export class PrismaDiscoverRepository implements DiscoverRepository {
     const sport: Sport | undefined = query.sport;
     const sportFilter = sport === undefined ? Prisma.empty : Prisma.sql`AND EXISTS (
       SELECT 1 FROM user_sports s WHERE s.user_id = p.user_id AND s.sport = ${sport}
-      ${query.paceBracket === undefined ? Prisma.empty : Prisma.sql`AND s.pace_bracket = ${query.paceBracket} AND s.pace_value IS NOT NULL`}
+      ${query.paceMin === undefined ? Prisma.empty : Prisma.sql`AND s.pace_value >= ${query.paceMin.toString()}::numeric`}
+      ${query.paceMax === undefined ? Prisma.empty : Prisma.sql`AND s.pace_value <= ${query.paceMax.toString()}::numeric`}
     )`;
+    // Bind the round-trip decimal text: Prisma's numeric parameter transport can
+    // round a float and make the previous page's final row appear again.
+    const cursorDistance = cursor?.distance.toString();
     return this.client.$queryRaw<DiscoverRow[]>(Prisma.sql`
       WITH candidates AS (
         SELECT p.user_id AS id, p.display_name AS "displayName", p.photo_key AS "photoKey",
@@ -155,14 +169,15 @@ export class PrismaDiscoverRepository implements DiscoverRepository {
         to_char(updated_at, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "updatedAt",
         (SELECT coalesce(jsonb_agg(jsonb_build_object(
           'sport', s.sport, 'paceValue', s.pace_value::double precision,
-          'paceUnit', s.pace_unit, 'paceBracket', s.pace_bracket
+          'paceUnit', s.pace_unit
         ) ORDER BY s.sport), '[]'::jsonb) FROM user_sports s WHERE s.user_id = c.id) AS sports
       FROM candidates c
-      WHERE distance <= ${query.radius}::double precision
+      WHERE TRUE
+      ${query.radius === null ? Prisma.empty : Prisma.sql`AND distance <= ${query.radius}::double precision`}
       ${cursor === null ? Prisma.empty : Prisma.sql`AND (
-        distance > ${cursor.distance}::double precision OR
-        (distance = ${cursor.distance}::double precision AND updated_at < ${cursor.updatedAt}::timestamp) OR
-        (distance = ${cursor.distance}::double precision AND updated_at = ${cursor.updatedAt}::timestamp AND id > ${cursor.id}::uuid)
+        distance > ${cursorDistance}::double precision OR
+        (distance = ${cursorDistance}::double precision AND updated_at < ${cursor.updatedAt}::timestamp) OR
+        (distance = ${cursorDistance}::double precision AND updated_at = ${cursor.updatedAt}::timestamp AND id > ${cursor.id}::uuid)
       )`}
       ORDER BY distance ASC, updated_at DESC, id ASC LIMIT ${query.limit + 1}
     `);
@@ -177,7 +192,7 @@ export function installDiscoverRoutes(app: Express, dependencies: {
     const user = await dependencies.authService.restore(authorization?.startsWith('Bearer ') ? authorization.slice(7) : '');
     const query = discoverQuerySchema.safeParse(request.query);
     if (!query.success) {
-      response.status(422).json({ code: 'validation_failed', message: 'Choose a valid sport, radius, and pace bracket.', requestId: response.getHeader('x-request-id') });
+      response.status(422).json({ code: 'validation_failed', message: 'Choose a valid sport, radius, and numeric pace range in that sport’s units.', requestId: response.getHeader('x-request-id') });
       return;
     }
     response.setHeader('Cache-Control', 'no-store');

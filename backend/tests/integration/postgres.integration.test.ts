@@ -82,6 +82,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Unlimited Discover must not observe this suite's completed profile fixtures.
+  await sqlClient.query(`DELETE FROM users WHERE id IN (
+    SELECT user_id FROM auth_identities WHERE
+      (provider='EMAIL' AND provider_subject=ANY($1::text[])) OR
+      (provider='APPLE' AND provider_subject='integration-apple-subject')
+  )`, [['integration-runner@example.com', 'integration-profile@example.com', 'integration-photo-retry@example.com']]);
   await database.disconnect();
   await sqlClient.end();
 });

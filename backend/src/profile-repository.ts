@@ -4,7 +4,6 @@ export type StoredSport = {
   sport: string;
   paceValue: number | null;
   paceUnit: string | null;
-  paceBracket: string | null;
 };
 
 export type StoredTrainingTime = {
@@ -113,7 +112,6 @@ export class PrismaProfileRepository implements ProfileRepository {
             sport: sport.sport,
             paceValue: decimal(sport.paceValue),
             paceUnit: sport.paceUnit,
-            paceBracket: sport.paceBracket,
           })),
         });
       }
@@ -254,7 +252,7 @@ type ProfileRow = {
 
 function toStoredProfile(
   profile: ProfileRow,
-  sports: Array<{ sport: string; paceValue: Prisma.Decimal | number | null; paceUnit: string | null; paceBracket: string | null }>,
+  sports: Array<{ sport: string; paceValue: Prisma.Decimal | number | null; paceUnit: string | null }>,
   trainingTimes: StoredTrainingTime[],
 ): StoredProfile {
   return {
@@ -272,7 +270,6 @@ function toStoredProfile(
       sport: sport.sport,
       paceValue: sport.paceValue instanceof Prisma.Decimal ? sport.paceValue.toNumber() : sport.paceValue,
       paceUnit: sport.paceUnit,
-      paceBracket: sport.paceBracket,
     })),
     trainingTimes: trainingTimes.map((time) => ({ weekday: time.weekday, timeBucket: time.timeBucket })),
   };

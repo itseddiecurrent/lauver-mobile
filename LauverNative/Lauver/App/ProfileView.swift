@@ -283,7 +283,7 @@ private struct EditProfileView: View {
                                         .keyboardType(sport.usesDurationPace ? .numbersAndPunctuation : .decimalPad)
                                         .autocorrectionDisabled()
                                         .accessibilityIdentifier("profile-pace-\(sport.rawValue)")
-                                    Text(sport.paceUnit).foregroundStyle(.secondary)
+                                    Text(sport.paceInputUnit).foregroundStyle(.secondary)
                                 }
                             }
                         }

@@ -1,0 +1,14 @@
+Scope: expanded Discover radius options and unlimited pagination; local validation.
+Backend unit: 110/110 passed
+PostgreSQL migration-from-zero/integration: 26/26 passed
+Prisma numeric precision probe: 6.6717048140119735 bound as numeric -> 6.671704814011973; text binding preserves the value.
+Manual device fixture cleanup: 44 accounts and dependent rows deleted.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.021 (0.092) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.021 (0.093) seconds
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.021 (0.094) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 53.876 (53.886) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 53.876 (53.889) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 53.876 (53.916) seconds
+** TEST SUCCEEDED **
+iOS built configuration tests passed.
+Expanded-radius staging deployment/device API recheck: pending.

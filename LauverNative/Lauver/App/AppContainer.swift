@@ -112,8 +112,7 @@ private final class UITestProfileService: ProfileServicing {
         sports: [ProfileSport(
             sport: .running,
             paceValue: 5.5,
-            paceUnit: "min/km",
-            paceBracket: "moderate"
+            paceUnit: "min/km"
         )],
         trainingTimes: [TrainingTime(weekday: 1, timeBucket: .morning)],
         isComplete: true
@@ -135,8 +134,7 @@ private final class UITestProfileService: ProfileServicing {
                 ProfileSport(
                     sport: $0,
                     paceValue: $0.parsedPace(draft.paceValues[$0] ?? ""),
-                    paceUnit: $0.paceUnit,
-                    paceBracket: nil
+                    paceUnit: $0.paceUnit
                 )
             },
             trainingTimes: Array(draft.trainingTimes),
@@ -197,11 +195,14 @@ private struct UITestHealthService: HealthServicing {
 private struct UITestDiscoverService: DiscoverServicing {
     func discover(filters: DiscoverFilters, cursor: String?) async throws -> DiscoverPage {
         if filters.sport != nil && filters.sport != .running { return DiscoverPage(users: [], nextCursor: nil) }
+        if filters.paceMin.map({ 5.5 < $0 }) == true || filters.paceMax.map({ 5.5 > $0 }) == true {
+            return DiscoverPage(users: [], nextCursor: nil)
+        }
         return DiscoverPage(users: [DiscoverUser(
             id: "ui-test-partner", displayName: "Nearby Runner", photoURL: nil,
             city: ProfileCity(name: "Shanghai", regionCode: "SH", countryCode: "CN", latitude: nil, longitude: nil),
             approximateDistanceKm: 0,
-            sports: [ProfileSport(sport: .running, paceValue: 5.5, paceUnit: "min/km", paceBracket: "moderate")],
+            sports: [ProfileSport(sport: .running, paceValue: 5.5, paceUnit: "min/km")],
             commonSports: [.running]
         )], nextCursor: nil)
     }

@@ -211,8 +211,8 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 
 - 使用可滚动用户列表，不使用卡片堆叠；
 - 每行展示头像、姓名、城市、近似距离、共同运动和自报 pace；
-- Filter Sheet 支持 Sport、Radius、Pace Bracket；
-- Radius 建议选项：5 / 10 / 25 / 50 km；
+- Filter Sheet 支持 Sport、Radius 和用户填写的实际 Pace Range（2026-09-13 按真机反馈改为数值范围）；
+- Radius 选项：5 / 10 / 20 / 25 / 30 / 40 / 50 / 60 / 70 / 80 / 90 / 100 km 和 Unlimited（不限距离）；2026-09-13 按真机验收反馈扩展；
 - 支持分页和下拉刷新；
 - 点击列表项进入完整 Profile；
 - Profile 上提供 Message、Block 和 Report。
@@ -225,7 +225,7 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 2. 排除任一方向存在 Block 的用户；
 3. 按选定 sport 做精确 tag 匹配；
 4. 用两个城市中心点的 Haversine 距离过滤 radius；
-5. 按用户手动填写或静态阈值计算的 pace bracket 过滤；
+5. 直接对用户自报 pace 数值做闭区间过滤，允许只填一端；跑步等用 mm:ss，骑车用 km/h，游泳用 mm:ss/100m、划船用 mm:ss/500m；不使用 Fast/Slow/Easy 等主观分档；
 6. 固定按近似距离升序、profile 更新时间降序、user ID 排序；
 7. 使用 cursor pagination，保证结果稳定。
 
@@ -493,7 +493,7 @@ iOS 可包含的只有公开配置，例如 API base URL、Apple bundle/client I
 | `password_credentials` | user_id, argon2_hash, updated_at |
 | `sessions` | user_id, refresh_token_hash, expires_at, revoked_at, device metadata |
 | `email_tokens` | user_id, purpose(reset/verify), token_hash, expires_at, used_at |
-| `user_sports` | user_id, sport, pace_value, pace_unit, pace_bracket；user + sport 唯一 |
+| `user_sports` | user_id, sport, pace_value, pace_unit；user + sport 唯一 |
 | `training_times` | user_id, weekday, time_bucket；组合唯一 |
 | `oauth_connections` | user_id, provider, encrypted access/refresh token, scopes, expires_at, last_sync_at |
 | `activities` | user_id, source(strava/healthkit), external_id, sport, title, starts_at, duration, distance, energy, visibility；来源 ID 幂等唯一 |
@@ -539,7 +539,7 @@ GET    /v1/users/:userId
 GET    /v1/users/:userId/activities?limit=10
 POST   /v1/me/photo/upload-url
 DELETE /v1/me/photo
-GET    /v1/discover?sport=&radiusKm=&paceBracket=&cursor=
+GET    /v1/discover?sport=&radius=&paceMin=&paceMax=&cursor=
 ```
 
 ### Strava / HealthKit
@@ -873,13 +873,13 @@ xcodebuild test \
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：🟡 实现和本地验证已完成，待 staging/真机验收（2026-09-13）。** 后端 96 项单元测试、18 项 PostgreSQL 集成测试、iOS 73 项单元测试、11 项既有 UI 回归及修复后的 Discover 导航/筛选 UI 复验、双环境构建和范围/secret 检查均通过；准确证据与外部验收项见 `artifacts/acceptance/step-06.md`。
+**状态：🟡 原范围的 Render staging API、新版半径与实际数值 pace range 的真机固定数据 UI 验收通过，待新版后端同步部署与实际 API 复验（2026-09-13）。** 原版本 staging 44/44；自动 API 验收 34 个及手动验收 44 个临时账户全部清理。新版 Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI 1/1、Profile editor UI 1/1、双环境构建及范围/secret 检查通过。本轮只读核对确认 staging 尚未应用实际配速 migration；已修复空输入框断言在 iOS 18/26 的差异。准确证据见 `artifacts/acceptance/step-06.md`。
 
 **依赖：** Step 05。
 
 **实现任务：**
 
-1. 实现 sport、radius、pace bracket 三类参数校验；
+1. 实现 sport、radius、paceMin/paceMax 数值范围参数校验（范围必须指定 sport、下限不得大于上限）；
 2. 使用城市中心点 Haversine 距离和确定性 SQL 过滤；
 3. 排除自己、未完成、暂停、删除以及任一方向已 Block 的用户；
 4. 实现固定排序和 cursor pagination；
@@ -897,7 +897,7 @@ xcodebuild test \
 1. 给定固定 seed，同一请求执行 10 次顺序完全一致；
 2. 分页前后不重复、不漏用户；
 3. 测试半径边界内、恰好边界、边界外；
-4. 缺 pace 的用户不会进入指定 pace bracket；
+4. 缺 pace 的用户不会进入指定数值范围，准确包含 mm:ss / km/h 范围的两端；
 5. XCUITest 验证列表 → Profile，且不存在卡片滑动手势与 Like 按钮。
 
 **通过标准：** Discover 是完全可解释、稳定、零 AI 的过滤列表，返回数据不泄露精确位置。

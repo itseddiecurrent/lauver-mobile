@@ -46,14 +46,14 @@ final class ProfileServiceTests: XCTestCase {
             XCTAssertEqual(request.url?.path, "/v1/discover")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
             let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
-            XCTAssertTrue(query.contains(URLQueryItem(name: "paceBracket", value: "moderate")))
+            XCTAssertTrue(query.contains(URLQueryItem(name: "paceMin", value: "5.0")))
             return Self.response(request, status: 200, body: """
             {"users":[{"id":"partner","displayName":"Runner","photoURL":null,
             "city":{"name":"Shanghai","regionCode":"SH","countryCode":"CN"},
             "approximateDistanceKm":0,"sports":[],"commonSports":["running"]}],"nextCursor":"signed-cursor"}
             """)
         }
-        let page = try await service.discover(filters: DiscoverFilters(sport: .running, radius: 10, paceBracket: "moderate"), cursor: nil)
+        let page = try await service.discover(filters: DiscoverFilters(sport: .running, radius: 10, paceMin: 5, paceMax: 6), cursor: nil)
         XCTAssertNil(page.users.first?.city.latitude)
         XCTAssertNil(page.users.first?.city.longitude)
         XCTAssertEqual(page.users.first?.commonSports, [.running])
@@ -275,7 +275,7 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertNil(envelope.profile.city?.longitude)
     }
 
-    private static let profileJSON = #"{"profile":{"id":"profile-user","displayName":"Alex Runner","bio":"Morning miles","photoURL":null,"city":{"name":"Shanghai","regionCode":"SH","countryCode":"CN","latitude":31.2304,"longitude":121.4737},"sports":[{"sport":"running","paceValue":5.2,"paceUnit":"min/km","paceBracket":"moderate"}],"trainingTimes":[{"weekday":1,"timeBucket":"morning"}],"isComplete":true}}"#
+    private static let profileJSON = #"{"profile":{"id":"profile-user","displayName":"Alex Runner","bio":"Morning miles","photoURL":null,"city":{"name":"Shanghai","regionCode":"SH","countryCode":"CN","latitude":31.2304,"longitude":121.4737},"sports":[{"sport":"running","paceValue":5.2,"paceUnit":"min/km"}],"trainingTimes":[{"weekday":1,"timeBucket":"morning"}],"isComplete":true}}"#
 
     private static func response(_ request: URLRequest, status: Int, body: String) -> (HTTPURLResponse, Data) {
         (

@@ -1,0 +1,15 @@
+Scope: numeric pace ranges and expanded radius; local and fixed-service UI acceptance.
+Staging read-only: latest applied migration 20260913000000_discover_block_policy; pace_value Decimal(7,2); pace_bracket present.
+Numeric migration 20260913010000_explicit_pace_ranges: not applied to staging.
+Staging fixtures created in this run: 0.
+Backend lint/typecheck/build: passed.
+Backend unit: 123/123 passed.
+PostgreSQL migration-from-zero/integration: 28/28 passed; isolated local server stopped.
+iPhone 14 Plus iOS 18.7.8 XCTest: 75/75 passed.
+Initial device UI: failed on empty field nil versus placeholder; assertion updated to require an existing empty field.
+Device final UI: 1/1 passed; TEST SUCCEEDED.
+Simulator final UI: 1/1 passed; TEST SUCCEEDED.
+Staging/production built configuration: passed.
+Step 06 structure/MVP scope/secret scan/diff hygiene: passed.
+Device app relaunched without fake-service arguments.
+New staging deployment and actual API device acceptance: pending.

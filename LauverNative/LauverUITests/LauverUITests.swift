@@ -39,11 +39,58 @@ final class LauverUITests: XCTestCase {
         app.navigationBars.buttons.firstMatch.tap()
         app.buttons["discover-filters"].tap()
         XCTAssertTrue(app.buttons["discover-apply-filters"].waitForExistence(timeout: 5))
+        app.buttons["discover-radius"].tap()
+        app.buttons["100 km"].tap()
+        app.buttons["discover-apply-filters"].tap()
+        assertDiscoverSummary("Within 100 km", in: app)
+        app.buttons["discover-filters"].tap()
+        app.buttons["discover-radius"].tap()
+        app.buttons["Unlimited"].tap()
+        app.buttons["discover-apply-filters"].tap()
+        assertDiscoverSummary("Unlimited distance", in: app)
+        app.buttons["discover-filters"].tap()
+        app.buttons["discover-sport"].tap()
+        app.buttons["Running"].tap()
+        XCTAssertFalse(app.buttons["discover-pace"].exists)
+        let from = app.textFields["discover-pace-min"]
+        let to = app.textFields["discover-pace-max"]
+        from.tap()
+        from.typeText("5:60")
+        XCTAssertTrue(app.staticTexts["discover-pace-error"].exists)
+        XCTAssertFalse(app.buttons["discover-apply-filters"].isEnabled)
+        from.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "5:01")
+        to.tap()
+        to.typeText("5:30")
+        app.buttons["discover-apply-filters"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        assertDiscoverSummary("5:01–5:30 min/km", in: app)
+        app.buttons["discover-filters"].tap()
+        XCTAssertEqual(from.value as? String, "5:01")
+        XCTAssertEqual(to.value as? String, "5:30")
         app.buttons["discover-sport"].tap()
         app.buttons["Cycling"].tap()
+        assertEmptyPaceField(from, placeholder: "From")
+        assertEmptyPaceField(to, placeholder: "To")
+        from.tap()
+        from.typeText("20.5")
+        to.tap()
+        to.typeText("30")
         app.buttons["discover-apply-filters"].tap()
         XCTAssertTrue(app.staticTexts["No workout partners found"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["discover-filter-summary"].label.contains("Cycling"))
+        assertDiscoverSummary("Cycling", in: app)
+        assertDiscoverSummary("20.5–30 km/h", in: app)
+    }
+
+    private func assertEmptyPaceField(_ field: XCUIElement, placeholder: String,
+                                      file: StaticString = #filePath, line: UInt = #line) {
+        // iOS 18 exposes an empty field's value as nil; newer versions expose its placeholder.
+        let empty = NSPredicate { _, _ in
+            guard field.exists else { return false }
+            let value = field.value as? String
+            return value == nil || value == "" || value == placeholder
+        }
+        let cleared = XCTNSPredicateExpectation(predicate: empty, object: field)
+        XCTAssertEqual(XCTWaiter.wait(for: [cleared], timeout: 5), .completed, file: file, line: line)
     }
 
     func testEventsTabNavigation() {
@@ -169,6 +216,14 @@ final class LauverUITests: XCTestCase {
             tabButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         }
         XCTAssertTrue(screenElement.waitForExistence(timeout: 5))
+    }
+
+    private func assertDiscoverSummary(_ text: String, in app: XCUIApplication) {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS %@", text),
+            object: app.staticTexts["discover-filter-summary"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 10), .completed)
     }
 
     private func launchAuthenticatedShell() -> XCUIApplication {

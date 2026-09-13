@@ -2,15 +2,30 @@ import SwiftUI
 
 struct DiscoverFilters: Equatable {
     var sport: WorkoutSport?
-    var radius = 25
-    var paceBracket: String?
+    var radius: Int? = 25
+
+    var radiusTitle: String { radius.map { "Within \($0) km" } ?? "Unlimited distance" }
+    var paceMin: Double?
+    var paceMax: Double?
+
+    var paceTitle: String? {
+        guard let sport, paceMin != nil || paceMax != nil else { return nil }
+        if let paceMin, let paceMax {
+            return "\(sport.formattedPace(paceMin))–\(sport.formattedPace(paceMax)) \(sport.paceUnit)"
+        }
+        if let paceMin { return "From \(sport.formattedPace(paceMin)) \(sport.paceUnit)" }
+        return paceMax.map { "Up to \(sport.formattedPace($0)) \(sport.paceUnit)" }
+    }
 
     func path(cursor: String? = nil) -> String {
         var components = URLComponents()
         components.path = "/v1/discover"
-        components.queryItems = [URLQueryItem(name: "radius", value: String(radius))]
+        components.queryItems = [URLQueryItem(name: "radius", value: radius.map(String.init) ?? "unlimited")]
         if let sport { components.queryItems?.append(URLQueryItem(name: "sport", value: sport.rawValue)) }
-        if let paceBracket, sport != nil { components.queryItems?.append(URLQueryItem(name: "paceBracket", value: paceBracket)) }
+        if sport != nil {
+            if let paceMin { components.queryItems?.append(URLQueryItem(name: "paceMin", value: String(paceMin))) }
+            if let paceMax { components.queryItems?.append(URLQueryItem(name: "paceMax", value: String(paceMax))) }
+        }
         if let cursor { components.queryItems?.append(URLQueryItem(name: "cursor", value: cursor)) }
         return components.string!
     }
@@ -106,7 +121,7 @@ struct DiscoverView: View {
             Section {
                 Text("Distances are approximate, based on city centres.")
                     .font(.footnote).foregroundStyle(.secondary)
-                Text("\(viewModel.filters.sport?.title ?? "All sports") · Within \(viewModel.filters.radius) km\(viewModel.filters.paceBracket.map { " · \($0.capitalized) pace" } ?? "")")
+                Text("\(viewModel.filters.sport?.title ?? "All sports") · \(viewModel.filters.radiusTitle)\(viewModel.filters.paceTitle.map { " · \($0)" } ?? "")")
                     .font(.subheadline)
                     .accessibilityIdentifier("discover-filter-summary")
             }
@@ -140,6 +155,8 @@ struct DiscoverView: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .accessibilityIdentifier("discover-user-\(user.id)")
             }
@@ -170,7 +187,41 @@ struct DiscoverView: View {
 private struct DiscoverFilterSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State var filters: DiscoverFilters
+    @State private var paceFrom: String
+    @State private var paceTo: String
     let apply: (DiscoverFilters) -> Void
+
+    init(filters: DiscoverFilters, apply: @escaping (DiscoverFilters) -> Void) {
+        _filters = State(initialValue: filters)
+        _paceFrom = State(initialValue: filters.paceMin.flatMap { filters.sport?.formattedPace($0) } ?? "")
+        _paceTo = State(initialValue: filters.paceMax.flatMap { filters.sport?.formattedPace($0) } ?? "")
+        self.apply = apply
+    }
+
+    private var paceError: String? {
+        guard let sport = filters.sport else { return nil }
+        let from = paceFrom.trimmingCharacters(in: .whitespacesAndNewlines)
+        let to = paceTo.trimmingCharacters(in: .whitespacesAndNewlines)
+        for text in [from, to] where !text.isEmpty {
+            guard let value = sport.parsedPace(text) else {
+                return "Enter \(sport.usesDurationPace ? "mm:ss" : "a number") in \(sport.paceInputUnit)."
+            }
+            guard sport.allowedPaceRange.contains(value) else {
+                return "Use values between \(sport.formattedPace(sport.allowedPaceRange.lowerBound)) and \(sport.formattedPace(sport.allowedPaceRange.upperBound)) \(sport.paceUnit)."
+            }
+        }
+        if let low = sport.parsedPace(from), let high = sport.parsedPace(to), low > high {
+            return "From must be less than or equal to To."
+        }
+        return nil
+    }
+
+    private func clearPace() {
+        filters.paceMin = nil
+        filters.paceMax = nil
+        paceFrom = ""
+        paceTo = ""
+    }
 
     var body: some View {
         NavigationStack {
@@ -180,26 +231,48 @@ private struct DiscoverFilterSheet: View {
                     ForEach(WorkoutSport.allCases) { Text($0.title).tag(Optional($0)) }
                 }
                 .accessibilityIdentifier("discover-sport")
-                .onChange(of: filters.sport) { _, _ in filters.paceBracket = nil }
+                .onChange(of: filters.sport) { _, _ in clearPace() }
                 Picker("Radius", selection: $filters.radius) {
-                    ForEach([5, 10, 25, 50], id: \.self) { Text("\($0) km").tag($0) }
+                    ForEach([5, 10, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100], id: \.self) {
+                        Text("\($0) km").tag(Optional($0))
+                    }
+                    Text("Unlimited").tag(nil as Int?)
                 }
                 .accessibilityIdentifier("discover-radius")
-                Picker("Self-reported pace", selection: $filters.paceBracket) {
-                    Text("Any pace").tag(nil as String?)
-                    ForEach(["easy", "moderate", "fast"], id: \.self) { Text($0.capitalized).tag(Optional($0)) }
+                if let sport = filters.sport {
+                    Section("Self-reported \(sport.usesDurationPace ? "pace" : "speed") (\(sport.paceInputUnit))") {
+                        TextField("From", text: $paceFrom)
+                            .keyboardType(sport.usesDurationPace ? .numbersAndPunctuation : .decimalPad)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("discover-pace-min")
+                        TextField("To", text: $paceTo)
+                            .keyboardType(sport.usesDurationPace ? .numbersAndPunctuation : .decimalPad)
+                            .autocorrectionDisabled()
+                            .accessibilityIdentifier("discover-pace-max")
+                        Text("Leave either end blank for no limit. Both ends are included; profiles without a self-reported value are excluded when a range is set.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                        if let error = paceError {
+                            Text(error).foregroundStyle(.red).accessibilityIdentifier("discover-pace-error")
+                        }
+                    }
+                } else {
+                    Text("Choose a sport to set a pace or speed range.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-                .disabled(filters.sport == nil)
-                .accessibilityIdentifier("discover-pace")
-                Text("Select a sport to filter pace. Groups use fixed thresholds for that sport; profiles without a pace are excluded when a group is selected.")
-                    .font(.footnote).foregroundStyle(.secondary)
-                Button("Reset filters") { filters = DiscoverFilters() }
+                Button("Reset filters") { filters = DiscoverFilters(); clearPace() }
             }
             .navigationTitle("Filters")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Apply") { apply(filters); dismiss() }.accessibilityIdentifier("discover-apply-filters")
+                    Button("Apply") {
+                        filters.paceMin = filters.sport?.parsedPace(paceFrom)
+                        filters.paceMax = filters.sport?.parsedPace(paceTo)
+                        apply(filters)
+                        dismiss()
+                    }
+                    .disabled(paceError != nil)
+                    .accessibilityIdentifier("discover-apply-filters")
                 }
             }
         }

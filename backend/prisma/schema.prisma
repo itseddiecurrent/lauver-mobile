@@ -72,15 +72,14 @@ model Profile {
 model UserSport {
   userId      String   @map("user_id") @db.Uuid
   sport       String   @db.VarChar(32)
-  paceValue   Decimal? @map("pace_value") @db.Decimal(7, 2)
+  paceValue   Decimal? @map("pace_value") @db.Decimal(9, 6)
   paceUnit    String?  @map("pace_unit") @db.VarChar(20)
-  paceBracket String?  @map("pace_bracket") @db.VarChar(20)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, sport])
-  @@index([sport, paceBracket])
+  @@index([sport, paceValue])
   @@map("user_sports")
 }
 
