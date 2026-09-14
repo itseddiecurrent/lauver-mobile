@@ -169,6 +169,7 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - 相同 Workout 重复导入不会生成重复记录；
 - Info.plist purpose string 与实际“只读 Workout 摘要”一致。
 - Step 9 真机验收：已完成 Apple Health 授权并成功导入 Workout 摘要。
+- Step 9 完整验收：连续导入不会重复，Delete Imported Data 删除成功。
 
 ### F4. Editable Workout Profile
 
