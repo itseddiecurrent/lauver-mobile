@@ -978,7 +978,7 @@ xcodebuild test \
 
 ### Step 09：可选 HealthKit Workout Import
 
-**状态：🟡 已实现，待真实 iPhone 与 staging 验收（2026-09-14）。** 已加入 HealthKit read-only capability、准确 purpose string、完全 opt-in 的 Enable Apple Health 页面、手动 Import、不可用/拒绝/空结果状态，以及仅上传最小 workout 摘要的后端接口。后端 `health_workouts` migration 按用户和 HealthKit workout UUID 幂等 upsert，并提供本人可见的查询和删除接口。Backend lint、typecheck、production build、unit tests 142/142 与 iOS Staging Simulator build 通过。真实 iPhone 授权、重复导入、删除数据和 staging migration/API 验收待完成。证据见 `artifacts/acceptance/step-09.md`。
+**状态：✅ 已完成（2026-09-14）。** 已加入 HealthKit read-only capability、准确 purpose string、完全 opt-in 的 Enable Apple Health 页面、手动 Import、不可用/拒绝/空结果状态，以及仅上传最小 workout 摘要的后端接口。后端 `health_workouts` migration 按用户和 HealthKit workout UUID 幂等 upsert，并提供本人可见的查询和删除接口。Backend lint、typecheck、production build、unit tests 142/142、iOS Staging Simulator build 与真实 iPhone 验收均通过；真实设备已完成授权、成功导入、重复导入不产生重复记录、Delete Imported Data 删除成功。证据见 `artifacts/acceptance/step-09.md`。
 
 **依赖：** Step 05；真实 iPhone。
 
