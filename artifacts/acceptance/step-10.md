@@ -8,6 +8,13 @@
 - 当前仓库尚未接入 Stream server SDK、Stream token provider、canonical direct channel 或 iOS Chat SDK。
 - Stream staging application 是本步骤的外部前置条件；API key 可以进入 App 配置，API secret 只能保存在 Render。
 
+## 第一阶段已完成
+
+- 后端已加入 `stream-chat` server SDK 和 `STREAM_ENABLED`、`STREAM_API_KEY`、`STREAM_API_SECRET`、`STREAM_TOKEN_TTL_SECONDS` 配置校验。
+- 新增认证后的 `POST /v1/chat/token`，只为当前 Lauver 用户签发短期 Stream token。
+- 新增认证后的 `POST /v1/chat/direct`，按双方排序后的 UUID SHA-256 生成唯一 channel ID；创建前检查双方用户状态和双向 Block。
+- `npm run lint`、`npm run typecheck` 和 `npm test`（142/142）通过；提交 `453644a` 已推送。
+
 ## 实施顺序
 
 1. 增加 Stream staging 环境变量和启动配置校验。
