@@ -28,3 +28,4 @@
 
 - 真机导入返回 `workouts.*.distanceMeters: expected number, received undefined`；原因是没有距离的 HealthKit workout 由 Swift `Codable` 省略可选字段，而后端曾要求字段存在。
 - 后端已将 `distanceMeters` 校验改为可选，缺省按 `null` 保存；lint、typecheck、build、142/142 tests 通过，提交 `ecc63fe` 已推送并部署。线上 HealthKit route 返回 401（需要登录），说明新路由已生效。
+- 客户端已增加自定义 Codable 编码：无距离的 workout 也明确发送 `distanceMeters: null`，避免可选字段被编码为 `undefined`；已重新构建并安装到真机，待再次点击 Import 验证。

@@ -321,6 +321,16 @@ struct HealthWorkoutSummary: Codable, Equatable, Identifiable {
     let endedAt: String
     let durationSeconds: Int
     let distanceMeters: Double?
+    private enum CodingKeys: String, CodingKey { case id, sport, startedAt, endedAt, durationSeconds, distanceMeters }
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id); try container.encode(sport, forKey: .sport)
+        try container.encode(startedAt, forKey: .startedAt); try container.encode(endedAt, forKey: .endedAt)
+        try container.encode(durationSeconds, forKey: .durationSeconds)
+        // Keep the key present when HealthKit has no distance; the API accepts null.
+        try container.encodeIfPresent(distanceMeters, forKey: .distanceMeters)
+        if distanceMeters == nil { try container.encodeNil(forKey: .distanceMeters) }
+    }
 }
 struct HealthImportResponse: Decodable { let imported: Int }
 struct HealthWorkoutsResponse: Decodable { let workouts: [HealthWorkoutSummary] }
