@@ -19,6 +19,9 @@ export interface SafetyServicing {
   unblock(actorId: string, targetId: string, requestId: string): Promise<void>;
   blockedUsers(actorId: string, cursor?: string): Promise<BlockedPage>;
   report(actorId: string, input: ReportInput, requestId: string): Promise<{ referenceId: string; blockedUser: boolean }>;
+  reportChatMessage?(actorId: string, targetUserId: string, channelId: string, messageId: string,
+    messageText: string, messageSenderId: string, reason: ReportInput['reason'], details: string | undefined,
+    requestId: string): Promise<{ referenceId: string; blockedUser: boolean }>;
 }
 
 export class SafetyService implements SafetyServicing {
@@ -87,6 +90,22 @@ export class SafetyService implements SafetyServicing {
         action: input.blockUser ? 'report_and_block' : 'report', requestId, reportId: report.id } });
       return { referenceId: report.id, blockedUser: input.blockUser };
     });
+  }
+
+  async reportChatMessage(actorId: string, targetUserId: string, channelId: string, messageId: string,
+    messageText: string, messageSenderId: string, reason: ReportInput['reason'], details: string | undefined,
+    requestId: string): Promise<{ referenceId: string; blockedUser: boolean }> {
+    this.validatePair(actorId, targetUserId);
+    if (messageSenderId !== targetUserId) throw new ProfileError(422, 'invalid_report_target', 'The message sender is not the reported user.');
+    const profile = await this.client.profile.findFirst({ where: { userId: targetUserId, isComplete: true, user: { status: 'ACTIVE' } }, select: { userId: true } });
+    if (!profile) throw new ProfileError(404, 'user_not_found', 'User not found.');
+    const snapshot: Prisma.InputJsonObject = { channelId, messageId, senderId: messageSenderId, text: messageText.slice(0, 500) };
+    const report = await this.client.report.create({ data: {
+      reporterId: actorId, targetUserId, targetType: 'user', source: 'chat', reason,
+      details: details ?? null, snapshot, requestId,
+    } });
+    await this.client.safetyAuditEvent.create({ data: { actorId, targetId: targetUserId, action: 'report_message', requestId, reportId: report.id } });
+    return { referenceId: report.id, blockedUser: false };
   }
 }
 

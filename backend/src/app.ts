@@ -146,7 +146,7 @@ export function createApp(dependencies: AppDependencies): Express {
   installSafetyRoutes(app, dependencies);
   if (dependencies.stravaService) installStravaRoutes(app, { authService: dependencies.authService, stravaService: dependencies.stravaService });
   if (dependencies.healthKitService) installHealthKitRoutes(app, { authService: dependencies.authService, service: dependencies.healthKitService });
-  if (dependencies.streamService) installStreamRoutes(app, { authService: dependencies.authService, service: dependencies.streamService });
+  if (dependencies.streamService) installStreamRoutes(app, { authService: dependencies.authService, service: dependencies.streamService, safetyService: dependencies.safetyService });
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,
