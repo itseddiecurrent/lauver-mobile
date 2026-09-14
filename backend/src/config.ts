@@ -41,6 +41,10 @@ const environmentSchema = z.object({
       !url.username && !url.password && !url.search && !url.hash;
   }, { message: 'Use the fixed HTTPS backend Strava callback URL' }).optional(),
   STRAVA_TOKEN_ENCRYPTION_KEY: z.string().optional(),
+  STREAM_ENABLED: z.enum(['true', 'false']).default('false'),
+  STREAM_API_KEY: z.string().min(1).optional(),
+  STREAM_API_SECRET: z.string().min(1).optional(),
+  STREAM_TOKEN_TTL_SECONDS: z.coerce.number().int().min(300).max(3_600).default(900),
   PROFILE_PHOTO_STORAGE_ENABLED: z.enum(['true', 'false']).default('false'),
   OBJECT_STORAGE_ENDPOINT: httpURLSchema.optional(),
   OBJECT_STORAGE_REGION: z.string().min(1).optional(),
@@ -57,6 +61,11 @@ const environmentSchema = z.object({
     const key = environment.STRAVA_TOKEN_ENCRYPTION_KEY;
     if (key && (!/^[A-Za-z0-9+/]{43}=$/.test(key) || Buffer.from(key,'base64').length !== 32 || key === environment.APPLE_TOKEN_ENCRYPTION_KEY)) {
       context.addIssue({ code:'custom',path:['STRAVA_TOKEN_ENCRYPTION_KEY'],message:'Use a separate base64-encoded 32-byte Strava encryption key' });
+    }
+  }
+  if (environment.STREAM_ENABLED === 'true') {
+    for (const key of ['STREAM_API_KEY', 'STREAM_API_SECRET'] as const) {
+      if (!environment[key]) context.addIssue({ code: 'custom', path: [key], message: `${key} is required when STREAM_ENABLED=true` });
     }
   }
   if (environment.PASSWORD_RESET_DELIVERY === 'resend') {
@@ -138,6 +147,7 @@ export type AppConfig = {
   applePrivateKey?: string;
   appleTokenEncryptionKey?: string;
   strava?: { clientID: string; clientSecret: string; callbackURL: string; tokenEncryptionKey: string };
+  stream?: { apiKey: string; apiSecret: string; tokenTTLSeconds: number };
   profilePhotoStorageEnabled: boolean;
   objectStorageEndpoint?: string;
   objectStorageRegion?: string;
@@ -192,6 +202,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     appleTokenEncryptionKey: parsed.APPLE_TOKEN_ENCRYPTION_KEY,
     ...(parsed.STRAVA_ENABLED === 'true' ? { strava: { clientID: parsed.STRAVA_CLIENT_ID!, clientSecret: parsed.STRAVA_CLIENT_SECRET!,
       callbackURL: parsed.STRAVA_CALLBACK_URL!, tokenEncryptionKey: parsed.STRAVA_TOKEN_ENCRYPTION_KEY! } } : {}),
+    ...(parsed.STREAM_ENABLED === 'true' ? { stream: { apiKey: parsed.STREAM_API_KEY!, apiSecret: parsed.STREAM_API_SECRET!, tokenTTLSeconds: parsed.STREAM_TOKEN_TTL_SECONDS } } : {}),
     profilePhotoStorageEnabled: parsed.PROFILE_PHOTO_STORAGE_ENABLED === 'true',
     objectStorageEndpoint: parsed.OBJECT_STORAGE_ENDPOINT,
     objectStorageRegion: parsed.OBJECT_STORAGE_REGION,

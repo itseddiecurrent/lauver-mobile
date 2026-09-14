@@ -36,6 +36,7 @@
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "sharp": "^0.35.4",
+    "stream-chat": "^9.52.1",
     "zod": "^4.1.5"
   },
   "devDependencies": {

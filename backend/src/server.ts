@@ -17,6 +17,7 @@ import { ProfileService } from './profile.js';
 import { StravaService } from './strava.js';
 import { StravaProvider, StravaTokenCipher } from './strava-provider.js';
 import { HealthKitService } from './healthkit.js';
+import { StreamService } from './stream.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -94,6 +95,7 @@ const server = createServer(
     profileService,
     stravaService,
     healthKitService: new HealthKitService(database.client),
+    streamService: config.stream ? new StreamService(database.client, config.stream.apiKey, config.stream.apiSecret, config.stream.tokenTTLSeconds) : undefined,
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(
