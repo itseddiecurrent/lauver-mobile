@@ -432,7 +432,9 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         struct Payload: Encodable { let workouts: [HealthWorkoutSummary] }
         let body = try encoder.encode(Payload(workouts: workouts))
         let _: HealthImportResponse = try await authenticatedRequest { token in
-            APIRequest(method: .post, path: "/v1/integrations/healthkit/workouts", body: body, headers: Self.jsonAuthorization(token))
+            // The server upserts by (user, workout UUID), so retrying after a
+            // lost connection is safe and prevents transient -1005 failures.
+            APIRequest(method: .post, path: "/v1/integrations/healthkit/workouts", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
         }
     }
 
