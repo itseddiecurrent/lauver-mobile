@@ -21,7 +21,10 @@ export class HealthKitService {
     });
     return workouts.length;
   }
-  async list(userId: string) { return this.client.healthWorkout.findMany({ where: { userId }, orderBy: [{ startedAt: 'desc' }, { workoutUUID: 'desc' }], take: 100, select: { workoutUUID: true, sport: true, startedAt: true, endedAt: true, durationSeconds: true, distanceMeters: true } }); }
+  async list(userId: string) {
+    const workouts = await this.client.healthWorkout.findMany({ where: { userId }, orderBy: [{ startedAt: 'desc' }, { workoutUUID: 'desc' }], take: 100, select: { workoutUUID: true, sport: true, startedAt: true, endedAt: true, durationSeconds: true, distanceMeters: true } });
+    return workouts.map(({ workoutUUID, ...workout }) => ({ id: workoutUUID, ...workout }));
+  }
   async delete(userId: string) { await this.client.healthWorkout.deleteMany({ where: { userId } }); }
 }
 
