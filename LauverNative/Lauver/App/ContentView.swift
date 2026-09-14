@@ -244,11 +244,13 @@ struct ContentView: View {
     private let discoverService: any DiscoverServicing
     private let profileService: any ProfileServicing
     private let safetyService: any SafetyServicing
+    private let stravaService: any StravaServicing
 
     init(container: AppContainer) {
         discoverService = container.discoverService
         profileService = container.profileService
         safetyService = container.safetyService
+        stravaService = container.stravaService
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
             healthService: container.healthService,
@@ -266,7 +268,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService, stravaService: stravaService)
             }
         }
         .task {
@@ -489,6 +491,7 @@ private struct AuthenticatedShellView: View {
     let profileService: any ProfileServicing
     let discoverService: any DiscoverServicing
     let safetyService: any SafetyServicing
+    let stravaService: any StravaServicing
 
     var body: some View {
         TabView {
@@ -508,7 +511,7 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
 
             NavigationStack {
-                OwnProfileView(service: profileService, safetyService: safetyService) {
+                OwnProfileView(service: profileService, safetyService: safetyService, stravaService: stravaService) {
                     Task { await viewModel.signOut() }
                 }
             }

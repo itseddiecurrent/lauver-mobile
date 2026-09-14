@@ -909,7 +909,7 @@ xcodebuild test \
 
 ### Step 07：Block 与 Report 安全基础
 
-**状态：✅ 验收通过（2026-09-13）。** 后端双向 Block / Profile 隔离、blocked users 分页、普通举报与原子 Report and Block、不可变快照/reference/audit 全部交付。Backend unit 129/129、隔离 PostgreSQL integration 37/37、staging 实际 API 34/34 与手机操作通过；额外实际 API 双向隔离 4/4 通过。用户逐项确认普通举报不自动拉黑、取消/确认拉黑、B 也看不到 A、Settings 解除恢复 Discover、Report and Block、断网失败后的联网恢复及过期后刷新。真机发现的 session 刷新竞态已修复，XCTest 88/88、相关 UI 4/4 通过并重新安装；云端确认手机 session rotation 成功且未撤销。独立手机 run 的 3 个账号、3 条举报、6 条安全审计与依赖数据全部清理，独立残留核对为 0，旧 access/refresh 返回 401，私人凭据与 journal 已删除。提交 `20fd09f` 的完整云端 CI（XCTest 81/81、UI 14/14）和同提交手动/自动部署均通过；原生 session 修复提交 `05ee272` 已推送；其 CI XCTest 88/88、已完成 UI 12/12 通过，但总计时 900 秒中断未完成的套件；CI 总预算调整后完整重跑待完成，不以部分通过代替全套。完整证据见 `artifacts/acceptance/step-07.md`；全部页面视觉签收仍按 Step 14A 执行。
+**状态：✅ 验收通过，完整 CI 已闭环（2026-09-13）。** 后端双向 Block / Profile 隔离、blocked users 分页、普通举报与原子 Report and Block、不可变快照/reference/audit 全部交付。Backend unit 129/129、隔离 PostgreSQL integration 37/37、staging 实际 API 34/34 与手机操作通过；额外实际 API 双向隔离 4/4 通过。用户逐项确认普通举报不自动拉黑、取消/确认拉黑、B 也看不到 A、Settings 解除恢复 Discover、Report and Block、断网失败后的联网恢复及过期后刷新。真机发现的 session 刷新竞态已修复并重新安装；云端确认手机 session rotation 成功且未撤销。独立手机 run 的 3 个账号、3 条举报、6 条安全审计与依赖数据全部清理，独立残留核对为 0，旧 access/refresh 返回 401，私人凭据与 journal 已删除。提交 `20fd09f` 的手动/自动部署均通过；原生 session 修复 `05ee272` 及 UI 交互修复 `d38c9a5`、`33aaf3f` 已推送。最终源码 `33aaf3f` 的完整云端 CI 全部通过：Backend、guardrails、XCTest 88/88、完整 UI 14/14 与 staging/production 构建配置检查；此前超时中断及部分通过仅保留为历史记录。完整证据见 `artifacts/acceptance/step-07.md`；全部页面视觉签收仍按 Step 14A 执行。
 
 **依赖：** Step 05、Step 06。
 
@@ -940,6 +940,8 @@ xcodebuild test \
 **通过标准：** Block 是后端强制策略而不只是客户端隐藏；Profile 举报已进入可审核的数据队列。
 
 ### Step 08：Strava OAuth 2.0 只读集成
+
+**状态：🟡 已实现，后端本地验收通过（2026-09-14）。** 已实现一次性 state、只读 OAuth、加密 token、自动轮换、最近 20 条摘要、推荐 revoke 与失败重试，以及原生 Connected Apps / Profile 活动列表；backend unit 142/142、隔离 PostgreSQL integration 54/54 通过。用户自己的 Strava API application 已创建（Client ID `229012`），callback domain、Render Client ID/Secret 已确认保存，剩余 encryption key/callback URL/enabled 配置待确认；真实授权/刷新/撤销、原生完整测试、真机和真实 secret/IPA 验收尚未完成，不能标记 Step 通过。Staging/production 构建与未签名 staging archive 已通过；现有 Render API healthz 返回 200，Strava status 仍为 404，需要部署本 Step。证据及配置步骤见 `artifacts/acceptance/step-08.md`。
 
 **依赖：** Step 03、Step 05；Strava staging application。
 

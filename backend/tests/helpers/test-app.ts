@@ -8,6 +8,7 @@ import type { Database } from '../../src/database.js';
 import { InMemoryRateLimiter } from '../../src/rate-limiter.js';
 import type { ProfileServicing } from '../../src/profile.js';
 import type { SafetyServicing } from '../../src/safety.js';
+import type { StravaServicing } from '../../src/strava.js';
 
 export function createDatabaseStub(overrides: Partial<Database> = {}): Database {
   return {
@@ -27,6 +28,7 @@ export function createTestApp(options: {
   profileRateLimiter?: InMemoryRateLimiter;
   safetyService?: SafetyServicing;
   safetyRateLimiter?: InMemoryRateLimiter;
+  stravaService?: StravaServicing;
 } = {}) {
   return createApp({
     database: options.database ?? createDatabaseStub(),
@@ -41,6 +43,7 @@ export function createTestApp(options: {
       block: vi.fn(), unblock: vi.fn(), blockedUsers: vi.fn().mockResolvedValue({ users: [], nextCursor: null }), report: vi.fn(),
     },
     safetyRateLimiter: options.safetyRateLimiter ?? new InMemoryRateLimiter(60_000, 20),
+    stravaService: options.stravaService,
   });
 }
 

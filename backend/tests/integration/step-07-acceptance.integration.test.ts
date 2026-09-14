@@ -40,6 +40,23 @@ async function assertClean(): Promise<void> {
   expect((await sql.query(`SELECT 1 FROM reports WHERE snapshot->>'displayName' LIKE 'Step 07 %'`)).rowCount).toBe(0);
 }
 describe('Step 07 HTTP verifier and recovery safety',()=>{
+  it('preserves a fixture with Strava credentials until its external grant is cleared',async()=>{
+    const directory=await mkdtemp(path.join(os.tmpdir(),'lauver-step07-strava-guard-'));
+    const statePath=path.join(directory,'cleanup.json'),runId='b'.repeat(32),userID='e1700000-0000-4000-8000-000000000997';
+    const state={version:1,runId,baseURL,databaseName:new URL(databaseURL).pathname.slice(1),emails:[0,1,2].map(n=>`step07-${runId}-${n}@example.com`)};
+    try{
+      await sql.query('INSERT INTO users(id,updated_at) VALUES($1,now())',[userID]);
+      await sql.query(`INSERT INTO auth_identities(id,user_id,provider,provider_subject,updated_at) VALUES(gen_random_uuid(),$1,'EMAIL',$2,now())`,[userID,state.emails[0]]);
+      await sql.query('INSERT INTO profiles(user_id,updated_at) VALUES($1,now())',[userID]);
+      await sql.query(`INSERT INTO strava_connections(user_id,status,athlete_id,athlete_name,scopes,access_token_encrypted,refresh_token_encrypted,expires_at)
+        VALUES($1,'revocation_pending','42','Test athlete','read,activity:read','test-ciphertext','test-ciphertext',1)`,[userID]);
+      await writeFile(statePath,JSON.stringify(state));
+      await expect(verifyStep07({databaseURL,baseURL,local:true,cleanupState:statePath,output:()=>{}})).rejects.toThrow();
+      await access(statePath);expect((await sql.query('SELECT 1 FROM users WHERE id=$1',[userID])).rowCount).toBe(1);
+      await sql.query('DELETE FROM strava_connections WHERE user_id=$1',[userID]);
+      expect((await verifyStep07({databaseURL,baseURL,local:true,cleanupState:statePath,output:()=>{}})).deletedAccounts).toBe(1);
+    }finally{await sql.query('DELETE FROM users WHERE id=$1',[userID]);await rm(directory,{recursive:true,force:true});}
+  });
   it('verifies all real HTTP operations and cleans reports, sessions and fixtures',async()=>{
     const result=await verifyStep07({databaseURL,baseURL,local:true,output:()=>{}});
     expect(result.checks).toBeGreaterThan(25);expect(result.deletedAccounts).toBe(3);await assertClean();

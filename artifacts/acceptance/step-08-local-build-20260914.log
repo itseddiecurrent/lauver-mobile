@@ -1,0 +1,10 @@
+Step 08 local native build evidence (2026-09-14)
+Device archive uses CODE_SIGNING_ALLOWED=NO; no signed IPA or real provider credential scan.
+staging-build: ** BUILD SUCCEEDED **
+production-build: ** BUILD SUCCEEDED **
+archive: ** ARCHIVE SUCCEEDED **
+PASS built Staging environment, API URL, bundle ID, OAuth return scheme
+PASS built Production environment, API URL, bundle ID, OAuth return scheme
+PASS unsigned staging archive environment and API URL
+PASS existing high-confidence secret checker on archive files and executable strings
+Real configured Strava secret/token values and Git history: pending configuration.

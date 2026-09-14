@@ -14,6 +14,8 @@ import { shutdownServer } from './server-lifecycle.js';
 import { S3ProfilePhotoStorage, UnavailableProfilePhotoStorage } from './object-storage.js';
 import { DiscoverService } from './discover.js';
 import { ProfileService } from './profile.js';
+import { StravaService } from './strava.js';
+import { StravaProvider, StravaTokenCipher } from './strava-provider.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -60,6 +62,14 @@ const profileService = new ProfileService({
   repository: database.profileRepository,
   storage: photoStorage,
 });
+const stravaService = new StravaService(database.stravaRepository,
+  config.strava ? new StravaProvider(config.strava) : undefined,
+  config.strava ? new StravaTokenCipher(config.strava.tokenEncryptionKey) : undefined);
+void stravaService.processCleanup().catch(() => { logger.warn('Initial Strava cleanup failed'); });
+const stravaCleanupInterval = setInterval(() => {
+  void stravaService.processCleanup().catch(() => { logger.warn('Scheduled Strava cleanup failed'); });
+}, 60_000);
+stravaCleanupInterval.unref();
 void profileService.processPhotoCleanup().catch((error: unknown) => {
   logger.warn({ err: error }, 'Initial profile-photo cleanup failed');
 });
@@ -81,6 +91,7 @@ const server = createServer(
     ),
     discoverService: new DiscoverService(database.discoverRepository, photoStorage, config.authAccessTokenSecret),
     profileService,
+    stravaService,
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(
@@ -101,6 +112,7 @@ function handleSignal(signal: string): void {
   }
   shuttingDown = true;
   clearInterval(photoCleanupInterval);
+  clearInterval(stravaCleanupInterval);
 
   void shutdownServer(
     server,

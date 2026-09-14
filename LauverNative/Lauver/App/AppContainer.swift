@@ -7,6 +7,7 @@ struct AppContainer {
     let discoverService: any DiscoverServicing
     let profileService: any ProfileServicing
     let safetyService: any SafetyServicing
+    let stravaService: any StravaServicing
     let authSessionStore: any AuthSessionStoring
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
     let appleCredentialStateChecker: any AppleCredentialStateChecking
@@ -94,6 +95,9 @@ struct AppContainer {
             safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? testSafetyService
                 : liveProfileService,
+            stravaService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? UITestStravaService()
+                : liveProfileService,
             authSessionStore: authSessionStore,
             appleUserIdentifierStore: appleUserIdentifierStore,
             appleCredentialStateChecker: AppleCredentialStateChecker(),
@@ -101,6 +105,16 @@ struct AppContainer {
             uiStateStore: uiStateStore
         )
     }
+}
+
+private final class UITestStravaService: StravaServicing {
+    private var connection = StravaStatus(status: .connected, athleteName: "Test Runner", lastSyncedAt: "2026-09-14T01:00:00.000Z", scopes: ["read", "activity:read"], activities: [
+        StravaActivity(id: "123", title: "Morning run", sport: "Run", startedAt: "2026-09-14T01:00:00.000Z", durationSeconds: 3600, distanceMeters: 10000)
+    ])
+    func stravaStatus() async throws -> StravaStatus { connection }
+    func startStrava() async throws -> StravaStart { throw StravaConnectionError.authorizationFailed }
+    func syncStrava() async throws -> StravaStatus { connection }
+    func disconnectStrava() async throws -> StravaStatus { connection = .disconnected; return connection }
 }
 
 private final class UITestSafetyService: SafetyServicing {

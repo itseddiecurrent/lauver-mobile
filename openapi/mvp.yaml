@@ -501,6 +501,129 @@ paths:
           $ref: '#/components/responses/AuthError'
         '429':
           $ref: '#/components/responses/AuthError'
+  /v1/integrations/strava/start:
+    post:
+      operationId: startStravaConnection
+      summary: Start a one-time account-bound read-only Strava authorization
+      description: No user IDs or tokens accepted. Supersedes earlier pending attempts. Disconnect an existing connection first.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: false }
+      responses:
+        '200':
+          description: Ten-minute authorization flow. State is private and must not be logged.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StravaStart'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '409':
+          description: An existing connection or another integration operation must finish first.
+        '422':
+          description: Unexpected input.
+        '429':
+          description: Too many connection attempts.
+        '503':
+          description: Strava integration is disabled.
+  /v1/integrations/strava/callback:
+    get:
+      operationId: finishStravaAuthorization
+      summary: Fixed HTTPS provider callback; exchange and token storage happen on the server
+      security: []
+      parameters:
+        - name: state
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[A-Za-z0-9_-]{43}$' }
+        - name: code
+          in: query
+          schema: { type: string, minLength: 1, maxLength: 2048 }
+        - name: scope
+          in: query
+          description: Actual accepted scopes; both read and activity:read are required, with no additional scope.
+          schema: { type: string, maxLength: 500 }
+        - name: error
+          in: query
+          schema: { type: string, maxLength: 100 }
+      responses:
+        '303':
+          description: Return to lauver://oauth/strava with state and a non-sensitive result only. The App must re-read its authenticated status.
+          headers:
+            Location:
+              schema: { type: string, format: uri }
+        '400':
+          description: Missing, malformed, expired, superseded or reused state. No redirect occurs.
+        '401':
+          description: The initiating account is no longer active.
+        '409':
+          description: Another integration operation is in progress.
+        '429':
+          description: Too many callback requests.
+        '503':
+          description: Strava integration is disabled.
+  /v1/integrations/strava/status:
+    get:
+      operationId: getStravaConnection
+      summary: Read only your connection and latest 20 activity summaries
+      description: Cache-Control no-store. Provider credentials and precise locations are never returned. No account ID parameters accepted.
+      responses:
+        '200':
+          description: Disabled, disconnected, connected, reconnect-required or pending-revocation status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StravaStatus'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '409':
+          description: Another integration operation is in progress.
+        '422':
+          description: Unexpected parameters.
+  /v1/integrations/strava/sync:
+    post:
+      operationId: refreshStravaActivities
+      summary: Refresh expired credentials and replace your recent summary window
+      description: Idempotent per-user activity IDs. Always persist the newest refresh token before fetching activities. No caller-supplied account IDs or provider tokens accepted.
+      responses:
+        '200':
+          description: Updated connected status and summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StravaStatus'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '409':
+          description: Disconnected, invalid authorization, changed scopes or concurrent integration request.
+        '422':
+          description: Unexpected input.
+        '429':
+          description: Lauver or Strava rate limit exceeded.
+        '502':
+          description: Strava temporarily unavailable; the latest credentials remain persisted.
+        '503':
+          description: Integration disabled.
+  /v1/integrations/strava/disconnect:
+    post:
+      operationId: disconnectStrava
+      summary: Clear summaries and revoke your refresh token with the recommended Strava endpoint
+      description: Idempotent. Pending states are cancelled. Failed revocation remains durable and is retried each minute; pending is not a completed revocation.
+      responses:
+        '200':
+          description: Disconnected after confirmed provider revocation, or revocation_pending after provider failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StravaStatus'
+        '401': { $ref: '#/components/responses/AuthError' }
+        '409':
+          description: Another integration operation is in progress.
+        '422':
+          description: Unexpected input.
+        '429':
+          description: Too many disconnect attempts.
+        '503':
+          description: Integration disabled.
 components:
   securitySchemes:
     bearerAuth:
@@ -524,6 +647,52 @@ components:
         type: string
         format: uuid
   schemas:
+    StravaStart:
+      type: object
+      additionalProperties: false
+      required: [authorizationURL, state, expiresIn]
+      properties:
+        authorizationURL:
+          type: string
+          format: uri
+        state:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{43}$'
+        expiresIn:
+          type: integer
+          const: 600
+    StravaStatus:
+      type: object
+      additionalProperties: false
+      required: [status, athleteName, lastSyncedAt, scopes, activities]
+      properties:
+        status:
+          type: string
+          enum: [disabled, disconnected, connected, revocation_pending, reconnect_required]
+        athleteName:
+          type: [string, 'null']
+        lastSyncedAt:
+          type: [string, 'null']
+          format: date-time
+        scopes:
+          type: array
+          items: { type: string, enum: [read, 'activity:read'] }
+        activities:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/StravaActivity'
+    StravaActivity:
+      type: object
+      additionalProperties: false
+      required: [id, title, sport, startedAt, durationSeconds, distanceMeters]
+      properties:
+        id: { type: string, pattern: '^[0-9]+$' }
+        title: { type: string, maxLength: 500 }
+        sport: { type: string, maxLength: 80 }
+        startedAt: { type: string, format: date-time }
+        durationSeconds: { type: integer, minimum: 0 }
+        distanceMeters: { type: number, minimum: 0, maximum: 100000000 }
     HealthResponse:
       type: object
       additionalProperties: false

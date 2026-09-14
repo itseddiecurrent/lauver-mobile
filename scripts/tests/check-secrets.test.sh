@@ -9,11 +9,13 @@ trap 'rm -rf "$fixture_dir"' EXIT
 printf '%s\n' 'const publicValue = "safe";' > "$fixture_dir/clean.ts"
 "$checker" "$fixture_dir" >/dev/null
 
-printf '%s\n' 'STRAVA_CLIENT_SECRET=definitelynotarealsecretvalue' > "$fixture_dir/leaked.env.production"
-if "$checker" "$fixture_dir" >/dev/null 2>&1; then
-  echo "Expected secret checker to reject a populated secret." >&2
-  exit 1
-fi
+for sensitive_key in STRAVA_CLIENT_SECRET STRAVA_TOKEN_ENCRYPTION_KEY; do
+  printf '%s\n' "$sensitive_key=definitelynotarealsecretvalue" > "$fixture_dir/leaked.env.production"
+  if "$checker" "$fixture_dir" >/dev/null 2>&1; then
+    echo "Expected secret checker to reject a populated secret." >&2
+    exit 1
+  fi
+done
 rm "$fixture_dir/leaked.env.production"
 
 printf '%s\n' '-----BEGIN PRIVATE KEY-----' > "$fixture_dir/leaked.pem.txt"

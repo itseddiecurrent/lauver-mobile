@@ -152,6 +152,12 @@ describe('Step 06 full acceptance lifecycle', () => {
       expect(await readFile(file, 'utf8')).toBe(journal);
       expect((await sql.query('SELECT 1 FROM users WHERE id=$1', [userId])).rows).toHaveLength(1);
       await sql.query('UPDATE profiles SET photo_key=NULL WHERE user_id=$1', [userId]);
+      await sql.query(`INSERT INTO strava_connections(user_id,status,athlete_id,athlete_name,scopes,access_token_encrypted,refresh_token_encrypted,expires_at)
+        VALUES($1,'revocation_pending','42','Test athlete','read,activity:read','test-ciphertext','test-ciphertext',1)`,[userId]);
+      await expect(runAcceptance({ databaseURL, baseURL, local: true, cleanupState: file, output: () => {} })).rejects.toThrow('Test cleanup failed');
+      expect(await readFile(file,'utf8')).toBe(journal);
+      expect((await sql.query('SELECT 1 FROM users WHERE id=$1',[userId])).rowCount).toBe(1);
+      await sql.query('DELETE FROM strava_connections WHERE user_id=$1',[userId]);
       expect((await runAcceptance({ databaseURL, baseURL, local: true, cleanupState: file, output: () => {} })).deletedAccounts).toBe(1);
       expect(await readdir(directory)).toEqual([]);
     } finally { await sql.query('DELETE FROM users WHERE id=$1', [userId]); await rm(directory, { recursive: true, force: true }); }

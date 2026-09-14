@@ -35,6 +35,8 @@
 		A1000000000000000000001A /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000022 /* DiscoverView.swift */; };
 		A1000000000000000000001B /* DiscoverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000023 /* DiscoverTests.swift */; };
 		A1000000000000000000001C /* SafetyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000024 /* SafetyView.swift */; };
+		A1000000000000000000001D /* StravaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* StravaView.swift */; };
+		A1000000000000000000001E /* StravaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* StravaTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,6 +93,8 @@
 		A20000000000000000000022 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
 		A20000000000000000000023 /* DiscoverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000024 /* SafetyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafetyView.swift; sourceTree = "<group>"; };
+		A20000000000000000000025 /* StravaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StravaView.swift; sourceTree = "<group>"; };
+		A20000000000000000000026 /* StravaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StravaTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +154,7 @@
 				A20000000000000000000020 /* ProfileView.swift */,
 				A20000000000000000000022 /* DiscoverView.swift */,
 				A20000000000000000000024 /* SafetyView.swift */,
+				A20000000000000000000025 /* StravaView.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -197,6 +202,7 @@
 				A2000000000000000000001E /* AppleSignInTests.swift */,
 				A20000000000000000000021 /* ProfileServiceTests.swift */,
 				A20000000000000000000023 /* DiscoverTests.swift */,
+				A20000000000000000000026 /* StravaTests.swift */,
 			);
 			path = LauverTests;
 			sourceTree = "<group>";
@@ -429,6 +435,7 @@
 				A10000000000000000000018 /* ProfileView.swift in Sources */,
 				A1000000000000000000001A /* DiscoverView.swift in Sources */,
 				A1000000000000000000001C /* SafetyView.swift in Sources */,
+				A1000000000000000000001D /* StravaView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -447,6 +454,7 @@
 				A10000000000000000000016 /* AppleSignInTests.swift in Sources */,
 				A10000000000000000000019 /* ProfileServiceTests.swift in Sources */,
 				A1000000000000000000001B /* DiscoverTests.swift in Sources */,
+				A1000000000000000000001E /* StravaTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

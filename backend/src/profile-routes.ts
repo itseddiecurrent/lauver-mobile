@@ -101,7 +101,7 @@ type AuthenticatedHandler = (
   response: Response,
 ) => Promise<void>;
 
-function authenticated(authService: AuthServicing, handler: AuthenticatedHandler) {
+export function authenticated(authService: AuthServicing, handler: AuthenticatedHandler) {
   return async (request: Request, response: Response, next: NextFunction): Promise<void> => {
     const authorization = request.get('authorization');
     const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';

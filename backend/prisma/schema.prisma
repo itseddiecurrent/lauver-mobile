@@ -50,8 +50,52 @@ model User {
   targetedReports Report[] @relation("ReportTarget")
   safetyActions SafetyAuditEvent[] @relation("SafetyActor")
   safetyTargets SafetyAuditEvent[] @relation("SafetyTarget")
+  stravaConnection StravaConnection?
+  stravaOAuthState StravaOAuthState?
 
   @@map("users")
+}
+
+model StravaConnection {
+  userId String @id @map("user_id") @db.Uuid
+  status String @db.VarChar(30)
+  athleteId String @map("athlete_id") @db.VarChar(30)
+  athleteName String @map("athlete_name") @db.VarChar(201)
+  scopes String @db.VarChar(500)
+  accessTokenEncrypted String @map("access_token_encrypted")
+  refreshTokenEncrypted String @map("refresh_token_encrypted")
+  expiresAt BigInt @map("expires_at")
+  lastSyncedAt DateTime? @map("last_synced_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activities StravaActivity[]
+  @@index([status])
+  @@map("strava_connections")
+}
+
+model StravaOAuthState {
+  stateHash String @id @map("state_hash") @db.VarChar(64)
+  userId String @unique @map("user_id") @db.Uuid
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([expiresAt])
+  @@map("strava_oauth_states")
+}
+
+model StravaActivity {
+  userId String @map("user_id") @db.Uuid
+  providerActivityId String @map("provider_activity_id") @db.VarChar(30)
+  title String @db.VarChar(500)
+  sport String @db.VarChar(80)
+  startedAt DateTime @map("started_at") @db.Timestamptz(3)
+  durationSeconds Int @map("duration_seconds")
+  distanceMeters Float @map("distance_meters")
+  connection StravaConnection @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  @@id([userId, providerActivityId])
+  @@index([userId, startedAt])
+  @@map("strava_activities")
 }
 
 model Report {

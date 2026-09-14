@@ -48,6 +48,16 @@ services:
         sync: false
       - key: APPLE_TOKEN_ENCRYPTION_KEY
         sync: false
+      - key: STRAVA_ENABLED
+        value: false
+      - key: STRAVA_CLIENT_ID
+        sync: false
+      - key: STRAVA_CLIENT_SECRET
+        sync: false
+      - key: STRAVA_CALLBACK_URL
+        value: https://lauver-api-staging.onrender.com/v1/integrations/strava/callback
+      - key: STRAVA_TOKEN_ENCRYPTION_KEY
+        sync: false
       - key: PROFILE_PHOTO_STORAGE_ENABLED
         sync: false
       - key: OBJECT_STORAGE_ENDPOINT

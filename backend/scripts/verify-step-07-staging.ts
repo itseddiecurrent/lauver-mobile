@@ -111,6 +111,12 @@ export async function verifyStep07(options: { databaseURL: string; baseURL?: str
               WHERE ai.provider_subject=ANY($1::text[]) FOR UPDATE OF u`,[state!.emails]);
             if(owned.rows.some(row=>row.photo_key!==null || row.providers.length!==1 || row.providers[0]!=='EMAIL')) throw new Error('Fixture acquired external data');
             const ids=owned.rows.map(row=>row.id);
+            for(const id of [...ids].sort()){
+              const locked=await client.query<{locked:boolean}>('SELECT pg_try_advisory_xact_lock(hashtextextended($1,8)) AS locked',[id]);
+              if(!locked.rows[0]!.locked)throw new Error('Fixture has a Strava operation in progress; retry cleanup');
+            }
+            const stravaTable=await client.query<{present:boolean}>("SELECT to_regclass('public.strava_connections') IS NOT NULL AS present");
+            if(stravaTable.rows[0]!.present && (await client.query('SELECT 1 FROM strava_connections WHERE user_id=ANY($1::uuid[]) LIMIT 1',[ids])).rowCount) throw new Error('Fixture acquired Strava credentials; revoke the grant before cleanup');
             if((await client.query('SELECT 1 FROM profile_photo_uploads WHERE user_id=ANY($1::uuid[]) LIMIT 1',[ids])).rowCount) throw new Error('Fixture acquired upload data');
             const foreign=await client.query(`SELECT 1 FROM reports WHERE target_user_id=ANY($1::uuid[]) AND (reporter_id IS NULL OR NOT reporter_id=ANY($1::uuid[])) LIMIT 1`,[ids]);
             if(foreign.rowCount) throw new Error('Fixture acquired external evidence');

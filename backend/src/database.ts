@@ -5,6 +5,7 @@ import { PrismaDiscoverRepository } from './discover.js';
 import { SafetyService } from './safety.js';
 import { PrismaAuthRepository, type AuthRepository } from './auth-repository.js';
 import { PrismaProfileRepository, type ProfileRepository } from './profile-repository.js';
+import { PgStravaRepository } from './strava-repository.js';
 
 export interface Database {
   checkHealth(): Promise<void>;
@@ -17,6 +18,7 @@ export class PrismaDatabase implements Database {
   readonly profileRepository: ProfileRepository;
   readonly discoverRepository: PrismaDiscoverRepository;
   readonly safetyService: SafetyService;
+  readonly stravaRepository: PgStravaRepository;
 
   constructor(databaseURL: string) {
     const adapter = new PrismaPg({
@@ -30,6 +32,7 @@ export class PrismaDatabase implements Database {
     this.profileRepository = new PrismaProfileRepository(this.#client);
     this.discoverRepository = new PrismaDiscoverRepository(this.#client);
     this.safetyService = new SafetyService(this.#client);
+    this.stravaRepository = new PgStravaRepository(databaseURL);
   }
 
   async checkHealth(): Promise<void> {
@@ -37,6 +40,7 @@ export class PrismaDatabase implements Database {
   }
 
   async disconnect(): Promise<void> {
+    await this.stravaRepository.close();
     await this.#client.$disconnect();
   }
 }

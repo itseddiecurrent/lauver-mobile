@@ -15,6 +15,8 @@ import type { InMemoryRateLimiter } from './rate-limiter.js';
 import { ProfileError, type ProfileServicing } from './profile.js';
 import { installProfileRoutes } from './profile-routes.js';
 import { installSafetyRoutes, type SafetyServicing } from './safety.js';
+import { installStravaRoutes, type StravaServicing } from './strava.js';
+import { StravaError } from './strava-provider.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -45,6 +47,7 @@ export type AppDependencies = {
   profileRateLimiter: InMemoryRateLimiter;
   safetyService: SafetyServicing;
   safetyRateLimiter: InMemoryRateLimiter;
+  stravaService?: StravaServicing;
 };
 
 class CorsOriginError extends Error {
@@ -80,6 +83,12 @@ export function createApp(dependencies: AppDependencies): Express {
         const id = randomUUID();
         response.setHeader('x-request-id', id);
         return id;
+      },
+      serializers: {
+        req: (request: { url?: string }) => ({ ...request, url: request.url?.split('?')[0], query: undefined }),
+        res: (response: { headers?: Record<string, unknown> }) => ({ ...response,
+          headers: response.headers ? { ...response.headers, ...(typeof response.headers.location === 'string'
+            ? { location: response.headers.location.split('?')[0] } : {}) } : undefined }),
       },
     }),
   );
@@ -129,6 +138,7 @@ export function createApp(dependencies: AppDependencies): Express {
   });
   installDiscoverRoutes(app, dependencies);
   installSafetyRoutes(app, dependencies);
+  if (dependencies.stravaService) installStravaRoutes(app, { authService: dependencies.authService, stravaService: dependencies.stravaService });
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,
@@ -173,7 +183,7 @@ export function createApp(dependencies: AppDependencies): Express {
       return;
     }
 
-    if (error instanceof ProfileError) {
+    if (error instanceof ProfileError || error instanceof StravaError) {
       response.status(error.statusCode).json({
         code: error.code,
         message: error.publicMessage,

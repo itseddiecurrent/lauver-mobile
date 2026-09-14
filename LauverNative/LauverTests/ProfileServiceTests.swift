@@ -41,6 +41,38 @@ final class ProfileServiceTests: XCTestCase {
         super.tearDown()
     }
 
+    func testStravaRequestsUseSharedAuthenticationAndOnlyReturnSummaries() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            XCTAssertNil(request.url?.query)
+            if request.url?.path == "/v1/integrations/strava/start" {
+                XCTAssertEqual(request.httpMethod, "POST")
+                return Self.response(request, status: 200, body: """
+                {"authorizationURL":"https://www.strava.com/oauth/mobile/authorize?state=\(String(repeating: "a", count: 43))&scope=read,activity:read","state":"\(String(repeating: "a", count: 43))","expiresIn":600}
+                """)
+            }
+            return Self.response(request, status: 200, body: """
+            {"status":"connected","athleteName":"Test Runner","lastSyncedAt":"2026-09-14T01:00:00.000Z","scopes":["read","activity:read"],
+            "activities":[{"id":"123","title":"Morning run","sport":"Run","startedAt":"2026-09-14T01:00:00.000Z","durationSeconds":3600,"distanceMeters":10000}]}
+            """)
+        }
+        let status = try await service.stravaStatus()
+        XCTAssertEqual(status.athleteName, "Test Runner")
+        let flow = try await service.startStrava()
+        try flow.validate()
+        let refreshed = try await service.syncStrava()
+        XCTAssertEqual(refreshed.activities.first?.id, "123")
+        let disconnected = try await service.disconnectStrava()
+        XCTAssertEqual(disconnected.status, .connected)
+    }
+
+    func testStravaStartDoesNotAutomaticallyReplayLostResponse() async {
+        var attempts = 0
+        ProfileURLProtocolStub.requestHandler = { _ in attempts += 1; throw URLError(.networkConnectionLost) }
+        do { _ = try await service.startStrava(); XCTFail("Expected failure") } catch {}
+        XCTAssertEqual(attempts, 1)
+    }
+
     func testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates() async throws {
         ProfileURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/discover")

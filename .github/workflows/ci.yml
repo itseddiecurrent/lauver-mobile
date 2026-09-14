@@ -43,6 +43,8 @@ jobs:
         run: ./scripts/tests/check-step-06-structure.test.sh
       - name: Check Step 07 repository structure
         run: ./scripts/tests/check-step-07-structure.test.sh
+      - name: Check Step 08 repository structure
+        run: ./scripts/tests/check-step-08-structure.test.sh
       - name: Check working tree for secrets
         run: ./scripts/check-secrets.sh
       - name: Scan Git history with Gitleaks

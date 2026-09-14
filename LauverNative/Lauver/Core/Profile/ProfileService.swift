@@ -278,7 +278,7 @@ protocol ProfileServicing {
     func deletePhoto() async throws
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing {
+final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -404,6 +404,22 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
             // Repeated evidence is intentionally a new report; do not automatically retry.
             APIRequest(method: .post, path: "/v1/reports", body: body, headers: Self.jsonAuthorization(token))
         }
+    }
+
+    func stravaStatus() async throws -> StravaStatus {
+        try await authenticatedRequest { token in APIRequest(path: "/v1/integrations/strava/status", headers: Self.authorization(token)) }
+    }
+
+    func startStrava() async throws -> StravaStart {
+        try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/integrations/strava/start", headers: Self.authorization(token)) }
+    }
+
+    func syncStrava() async throws -> StravaStatus {
+        try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/integrations/strava/sync", headers: Self.authorization(token)) }
+    }
+
+    func disconnectStrava() async throws -> StravaStatus {
+        try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/integrations/strava/disconnect", headers: Self.authorization(token)) }
     }
 
     @MainActor

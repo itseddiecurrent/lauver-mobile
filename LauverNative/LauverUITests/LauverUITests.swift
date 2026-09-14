@@ -272,6 +272,29 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(app.buttons["auth-reset-complete"].waitForExistence(timeout: 5))
     }
 
+    func testConnectedAppsShowsStravaSummariesAndConfirmsDisconnect() {
+        let app = launchAuthenticatedShell()
+        selectTab("Profile", in: app)
+        tapWhenHittable(app.buttons["profile-settings"])
+        tapWhenHittable(app.buttons["settings-connected-apps"])
+        tapWhenHittable(app.buttons["connected-apps-strava"])
+        XCTAssertTrue(app.staticTexts["strava-connected"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Morning run"].waitForExistence(timeout: 5))
+        tapWhenHittable(app.buttons["strava-refresh"])
+        XCTAssertTrue(app.staticTexts["Morning run"].waitForExistence(timeout: 5))
+        let disconnect = app.buttons["strava-disconnect"]
+        app.swipeUp()
+        tapWhenHittable(disconnect)
+        XCTAssertTrue(app.alerts["Disconnect Strava?"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Cancel"].tap()
+        XCTAssertTrue(app.staticTexts["strava-connected"].exists)
+        tapWhenHittable(disconnect)
+        app.alerts.buttons["Disconnect"].tap()
+        XCTAssertTrue(app.staticTexts["strava-disconnected"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["strava-connect"].exists)
+        XCTAssertFalse(app.staticTexts["Morning run"].exists)
+    }
+
     private func assertNavigation(tab: String, screen: String) {
         let app = launchAuthenticatedShell()
         let tabButton = app.tabBars.firstMatch.buttons[tab]

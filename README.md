@@ -275,7 +275,7 @@ The deployed staging API passed all **62 checks** for the expanded radius option
 
 ## Block and Profile reports (Step 07)
 
-Step 07 functional acceptance is complete on staging and iPhone, including bidirectional blocking, reports, offline recovery and session refresh after expiry. All automated and manual fixtures were removed; see `artifacts/acceptance/step-07.md`. The native refresh-race fix passed 88 XCTest cases and four affected UI regressions and was installed and verified on iPhone; the fix is included in this acceptance commit, separate from the successful cloud CI for `20fd09f`; no new cloud CI result is claimed.
+Step 07 functional acceptance is complete on staging and iPhone, including bidirectional blocking, reports, offline recovery and session refresh after expiry. All automated and manual fixtures were removed; see `artifacts/acceptance/step-07.md`. The native refresh-race fix is in `05ee272`; subsequent UI interaction fixes are in `d38c9a5` and `33aaf3f`. The final source `33aaf3f` passed [complete cloud CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34765002713): backend unit 129/129, PostgreSQL integration 37/37, XCTest 88/88, all 14 UI tests, guardrails, and built staging/production configuration checks. The earlier interrupted CI remains historical evidence, not the final result.
 
 Open another user's Profile and select **Safety** to Block User, Report User, or Report and Block. Blocking requires confirmation and hides both profiles from Discover and direct public Profile API reads. **Profile > Settings > Blocked Users** lists your outgoing blocks and allows unblocking; the other user's block still applies, and old conversations are not restored. Stream messaging enforcement is added in Step 10.
 
@@ -290,3 +290,23 @@ Block, unblock and report writes each allow 20 attempts per minute per user and 
 After deployment, run `npm run verify:step-07:staging --prefix backend` using the existing ignored `backend/.env.staging`. The verifier creates three disposable Email profiles, checks real API isolation and evidence, then deletes its reports, audit entries, accounts and dependent records. A private journal precedes registration; recover using `--cleanup-state /path/from/output/cleanup.json`. Cleanup refuses fixtures that acquired photos, external identities or unrelated evidence. Passwords, tokens and connection URLs are never printed.
 
 Native safety pages use the Expo reference's warm light/dark backgrounds, orange accent and rounded Profile settings cards. Full Expo/native screenshot alignment and Product Owner visual sign-off remain Step 14A deliverables.
+
+## Read-only Strava integration (Step 08)
+
+The API and native flow are implemented. Backend unit tests (142) and isolated PostgreSQL integration tests (54) pass; both native configurations build, and an unsigned staging device archive passes the existing secret checker. Native test execution, real Strava staging authorization and iPhone acceptance remain pending. See [Step 08 acceptance](artifacts/acceptance/step-08.md) for evidence, application creation fields, Render configuration and the manual checklist. The user's own Strava account will create the staging application and serve as its test athlete.
+
+Create a separate Strava API application for staging, with callback domain `lauver-api-staging.onrender.com`. Configure `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, and a dedicated base64-encoded 32-byte `STRAVA_TOKEN_ENCRYPTION_KEY` directly in Render. Set `STRAVA_CALLBACK_URL=https://lauver-api-staging.onrender.com/v1/integrations/strava/callback`, deploy the code and `20260914000000_strava_readonly` migration, then enable `STRAVA_ENABLED=true`. New environments default to disabled. Production needs its own application, credentials, callback domain and encryption key.
+
+**Profile > Settings > Connected Apps > Strava** opens a system authentication session requesting only `read,activity:read`. The App validates the returned flow state and reads its authenticated connection status. Profile and the integration page show up to 20 recent summaries visible only to the owner. Refresh rotates expired credentials on the server; activity failures retain the newest refresh token. Summary storage excludes routes, coordinates, heart rate and raw provider payloads, and does not affect Discover pace.
+
+Disconnect requires confirmation and uses the current recommended `POST https://www.strava.com/oauth/revoke`, authenticating server-side and revoking the refresh token. Cached summaries disappear immediately. Provider failure returns `revocation_pending`; automatic cleanup retries each minute, and the App offers Retry Disconnect. Successful provider revocation clears the connection. A pending result is not a completed revoke. Account deletion in Step 14 must revoke the external grant before relying on database cascades. Existing Step 06/07 fixture cleanup refuses accounts that acquired Strava credentials.
+
+Run local regression with an explicitly selected disposable test database:
+
+```bash
+TEST_DATABASE_URL=postgresql://.../lauver_test ./scripts/test-step-08.sh
+```
+
+Do not rotate the encryption key while old encrypted grants remain without a re-encryption/revocation plan. Never put provider credentials in `.xcconfig`, App resources or committed files. The official [Strava authentication contract](https://developers.strava.com/docs/authentication/) describes read scopes, refresh-token rotation and the new revoke endpoint.
+
+After deployment and enablement, run `npm run verify:step-08:staging --prefix backend -- --action prepare` with the existing ignored `backend/.env.staging`. This writes private login/recovery credentials before creating one disposable account. Use that account on iPhone with your real Strava athlete, then run the `connected`, `expire`, `refresh`, `disconnect`, and `cleanup` commands documented in the acceptance record. The tool never prints passwords/provider tokens, never resets schema, and retains its private journal if confirmed revocation or safe cleanup fails. A provider-token 401 probe requires the saved encrypted token and the server-side key in Render; otherwise it explicitly remains unverified.

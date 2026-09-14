@@ -32,6 +32,15 @@ const environmentSchema = z.object({
   APPLE_KEY_ID: z.string().min(1).optional(),
   APPLE_PRIVATE_KEY: z.string().min(1).optional(),
   APPLE_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+  STRAVA_ENABLED: z.enum(['true', 'false']).default('false'),
+  STRAVA_CLIENT_ID: z.string().regex(/^[1-9][0-9]*$/).optional(),
+  STRAVA_CLIENT_SECRET: z.string().min(1).optional(),
+  STRAVA_CALLBACK_URL: z.url().refine(value => {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.pathname === '/v1/integrations/strava/callback' &&
+      !url.username && !url.password && !url.search && !url.hash;
+  }, { message: 'Use the fixed HTTPS backend Strava callback URL' }).optional(),
+  STRAVA_TOKEN_ENCRYPTION_KEY: z.string().optional(),
   PROFILE_PHOTO_STORAGE_ENABLED: z.enum(['true', 'false']).default('false'),
   OBJECT_STORAGE_ENDPOINT: httpURLSchema.optional(),
   OBJECT_STORAGE_REGION: z.string().min(1).optional(),
@@ -41,6 +50,15 @@ const environmentSchema = z.object({
   OBJECT_STORAGE_PUBLIC_BASE_URL: httpURLSchema.optional(),
   OBJECT_STORAGE_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('false'),
 }).superRefine((environment, context) => {
+  if (environment.STRAVA_ENABLED === 'true') {
+    for (const key of ['STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_CALLBACK_URL','STRAVA_TOKEN_ENCRYPTION_KEY'] as const) {
+      if (!environment[key]) context.addIssue({ code: 'custom', path: [key], message: `${key} is required when STRAVA_ENABLED=true` });
+    }
+    const key = environment.STRAVA_TOKEN_ENCRYPTION_KEY;
+    if (key && (!/^[A-Za-z0-9+/]{43}=$/.test(key) || Buffer.from(key,'base64').length !== 32 || key === environment.APPLE_TOKEN_ENCRYPTION_KEY)) {
+      context.addIssue({ code:'custom',path:['STRAVA_TOKEN_ENCRYPTION_KEY'],message:'Use a separate base64-encoded 32-byte Strava encryption key' });
+    }
+  }
   if (environment.PASSWORD_RESET_DELIVERY === 'resend') {
     if (environment.RESEND_API_KEY === undefined) {
       context.addIssue({
@@ -119,6 +137,7 @@ export type AppConfig = {
   appleKeyID?: string;
   applePrivateKey?: string;
   appleTokenEncryptionKey?: string;
+  strava?: { clientID: string; clientSecret: string; callbackURL: string; tokenEncryptionKey: string };
   profilePhotoStorageEnabled: boolean;
   objectStorageEndpoint?: string;
   objectStorageRegion?: string;
@@ -171,6 +190,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     appleKeyID: parsed.APPLE_KEY_ID,
     applePrivateKey: parsed.APPLE_PRIVATE_KEY,
     appleTokenEncryptionKey: parsed.APPLE_TOKEN_ENCRYPTION_KEY,
+    ...(parsed.STRAVA_ENABLED === 'true' ? { strava: { clientID: parsed.STRAVA_CLIENT_ID!, clientSecret: parsed.STRAVA_CLIENT_SECRET!,
+      callbackURL: parsed.STRAVA_CALLBACK_URL!, tokenEncryptionKey: parsed.STRAVA_TOKEN_ENCRYPTION_KEY! } } : {}),
     profilePhotoStorageEnabled: parsed.PROFILE_PHOTO_STORAGE_ENABLED === 'true',
     objectStorageEndpoint: parsed.OBJECT_STORAGE_ENDPOINT,
     objectStorageRegion: parsed.OBJECT_STORAGE_REGION,

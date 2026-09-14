@@ -10,6 +10,17 @@ const requiredEnvironment = {
 };
 
 describe('loadConfig', () => {
+  it('requires server-only Strava credentials and a fixed HTTPS callback when enabled', () => {
+    expect(() => loadConfig({ ...requiredEnvironment, STRAVA_ENABLED: 'true' })).toThrow('STRAVA_CLIENT_ID');
+    const strava = { STRAVA_ENABLED:'true',STRAVA_CLIENT_ID:'12345',STRAVA_CLIENT_SECRET:'config-test-secret',
+      STRAVA_CALLBACK_URL:'https://example.com/v1/integrations/strava/callback',STRAVA_TOKEN_ENCRYPTION_KEY:Buffer.alloc(32,18).toString('base64') };
+    expect(loadConfig({ ...requiredEnvironment,...strava }).strava).toMatchObject({clientID:'12345',callbackURL:strava.STRAVA_CALLBACK_URL});
+    for (const url of ['http://example.com/v1/integrations/strava/callback','https://example.com/other','https://example.com/v1/integrations/strava/callback?next=evil']) {
+      expect(() => loadConfig({ ...requiredEnvironment,...strava,STRAVA_CALLBACK_URL:url })).toThrow('fixed HTTPS');
+    }
+    expect(() => loadConfig({ ...requiredEnvironment,...strava,STRAVA_TOKEN_ENCRYPTION_KEY:'invalid' })).toThrow('32-byte');
+    expect(() => loadConfig({ ...requiredEnvironment,...strava,APPLE_TOKEN_ENCRYPTION_KEY:strava.STRAVA_TOKEN_ENCRYPTION_KEY })).toThrow('separate');
+  });
   it('uses safe local defaults around the required database URL', () => {
     expect(loadConfig(requiredEnvironment)).toEqual({
       nodeEnvironment: 'development',

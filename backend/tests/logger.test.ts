@@ -36,6 +36,13 @@ describe('structured request logging', () => {
       safetyService: { block: () => Promise.resolve(), unblock: () => Promise.resolve(), blockedUsers: () => Promise.resolve({ users: [], nextCursor: null }), report: () => Promise.resolve({ referenceId: 'test', blockedUser: false }) },
       safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
       profileRateLimiter: new InMemoryRateLimiter(60_000, 10),
+      stravaService: {
+        start: () => Promise.reject(new Error('unused')),
+        callback: () => Promise.resolve('connected'),
+        status: () => Promise.reject(new Error('unused')),
+        sync: () => Promise.reject(new Error('unused')),
+        disconnect: () => Promise.reject(new Error('unused')),
+      },
     });
 
     await request(app)
@@ -53,11 +60,15 @@ describe('structured request logging', () => {
       .send({ refreshToken: 'raw-refresh-token-value' })
       .expect(204);
 
+    await request(app).get(`/v1/integrations/strava/callback?state=${'s'.repeat(43)}&code=private-oauth-code&scope=read,activity:read`).expect(303);
+
     expect(output).toContain('[Redacted]');
     expect(output).not.toContain('should-never-appear');
     expect(output).not.toContain('RawPassword9');
     expect(output).not.toContain('raw-refresh-token-value');
     expect(output).not.toContain('response-refresh-token');
+    expect(output).not.toContain('private-oauth-code');
+    expect(output).not.toContain('s'.repeat(43));
     expect(output).toContain('lauver-api');
   });
 });
