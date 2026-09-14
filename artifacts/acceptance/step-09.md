@@ -23,3 +23,8 @@
 - 执行真实 Import 两次并核对 `(user_id, workout_uuid)` 只保留一条。
 - 执行 Delete Imported Data，确认服务器记录清除；验证 Disconnect 只说明系统权限需在 Settings 管理，不伪称撤销权限。
 - staging 部署 migration 后执行 API authorization、幂等和最小字段检查。
+
+## 2026-09-14 真机修复记录
+
+- 真机导入返回 `workouts.*.distanceMeters: expected number, received undefined`；原因是没有距离的 HealthKit workout 由 Swift `Codable` 省略可选字段，而后端曾要求字段存在。
+- 后端已将 `distanceMeters` 校验改为可选，缺省按 `null` 保存；lint、typecheck、build、142/142 tests 通过，提交 `ecc63fe` 已推送并部署。线上 HealthKit route 返回 401（需要登录），说明新路由已生效。
