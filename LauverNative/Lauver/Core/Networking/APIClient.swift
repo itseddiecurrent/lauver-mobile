@@ -82,7 +82,7 @@ enum APIError: Error, Equatable {
         case .transport(.notConnectedToInternet):
             "You appear to be offline."
         case .transport(.timedOut):
-            "The request timed out."
+            "The request timed out. Check your connection and try again."
         case .transport(.networkConnectionLost):
             "The connection was interrupted (error -1005). Please try again."
         case let .transport(code):

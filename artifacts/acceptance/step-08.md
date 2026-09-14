@@ -1,6 +1,6 @@
 # Step 08 — Strava OAuth 2.0 只读集成
 
-日期：2026-09-14。状态：🟡 实现、后端本地验收与真机 XCTest 已通过；真实 Strava staging athlete 授权、刷新、撤销与完整 UI 验收待完成。不能以 provider fake / XCTest 结果代替真实服务验收。
+日期：2026-09-14。状态：🟡 实现、后端本地验收与真机 XCTest 已通过；真实 Strava 授权和两次活动同步已通过，20 条摘要且仅 read/activity:read。真实强制过期刷新、撤销（旧 token 401）及测试账户清理已通过；其余 UI/发布检查仍待完成。不能以 provider fake / XCTest 结果代替真实服务验收。
 
 ## 实现范围
 
@@ -39,6 +39,37 @@
 - `mvp-step08-strava` 分支也已上传。当前 GitHub credential 的 PR creation 返回 HTTP 403；未创建 PR，沿用项目已有 main / CI / Render staging 流程。
 - Blueprint enabled flag 保留手动值的配置修正与真机验收记录会随后提交；完整 CI、线上 migration/status 与真实 OAuth 的结果需据实际部署续记。
 
+### 本轮续验收
+
+- 用户已确认全部 Render Strava 配置保存并部署。线上 `/healthz`、`/readyz` 均 HTTP 200；未登录 `/v1/integrations/strava/status` HTTP 401，路由已部署且要求认证。
+- 功能提交 `2adf300` 的 [完整 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34802025321) 已 **success**，backend / guardrails / iOS 全部通过。最新配置提交 `e0a5797` 的 [CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34802230944) backend / guardrails 已通过，iOS 最终失败（exit 65；配置检查被跳过，具体失败用例待取日志定位）。此前部署与 CI 待完成描述为历史进度。
+- 标准 `prepare` 在数据库连接阶段失败，未创建账户或 private journal。DNS 返回本机网络的 `198.18.*` 地址；经两个 HTTPS DNS 服务核对真实地址后，TCP、PostgreSQL SSLRequest 与 TLS 证书校验可通过，但 PostgreSQL 会话仍关闭。Node 24 / 26 与使用系统根证书的 psql 均不能建立数据库会话；原因未确定，未降低 TLS 校验。
+- 改用真实 REST API 准备一个独立 `step08-<run>@example.com` Email fixture；注册 HTTP 201，登录成功，Strava status **HTTP 200 / disconnected**，确认配置已生效。private journal 在注册前写入仓库外私人目录，目录 0700、文件 0600，字段与既有验收工具兼容；凭据及 user ID 不记入此文档。
+- 准备会话 logout 返回空响应，临时 Python JSON parser 因空 body 报错；账户注册与 enabled 检查已成功。后续 API 核对正确处理空响应，Strava 仍为 disconnected，验证会话 logout **HTTP 204**；不将先前解析错误记为 OAuth 功能失败。
+- 已指导用户在已安装的 staging App 使用私人文件登录，再完成系统 Connect Strava。保留 fixture 等待真实授权；外部数据库连接恢复前，owner/schema SQL、强制 expiry 与加密凭据检查均未验证。不得删除尚未完成 revoke 的 fixture。
+- 本轮 scope、secret 和 Step 08 structure 检查通过。真实 provider Client Secret/token 的精确扫描和正式签名 IPA 检查仍待完成。
+
+### 真机连接与 loading 反馈
+
+- 用户报告登录时 loading 卡住，随后确认 reload 后连接成功。独立 API 登录 HTTP 200（约 2.7 秒），同期一次资料请求网络失败；不能据此断言手机 loading 的唯一原因。
+- 随后真实 status **HTTP 200 / connected**，仅 `activity:read` 和 `read`，athlete name / lastSyncedAt 存在，**20 条活动摘要**；两次真实 sync 均 HTTP 200 / connected，响应活动 ID 无重复、数量不超过 20、字段严格为摘要白名单。证据 `step-08-real-connect-20260914.log`；未记录姓名、活动内容或凭据。
+- 以上是首次真实授权记录；后续已完成强制 token 过期、refresh-token 轮换、数据库去重、撤销和精确清理，详见“撤销与清理完成”。
+- 本地追加网络 idle timeout 15 秒、resource timeout 30 秒以及明确重试文案，并新增登录超时后可再次登录的 XCTest。用户恢复连接后停止尚在编译的真机测试，未安装这些修改，避免打断 OAuth 验收。模拟器 App/测试编译与签名完成，但系统启动黑屏、没有 Test Case 开始，已停止等待；不能记为 XCTest 通过。日志 `/tmp/lauver-step08-login-simulator-tests.log`。此次 reload 恢复不能记为新修改的验证结果。
+- 最后再次核对 `/v1/me` HTTP 200，资料 envelope 正常；独立验证会话 logout HTTP 204，手机会话未撤销。
+- 用户明确确认真机三项正常：Strava 姓名与摘要正确、Refresh Activities 完成、返回 Profile 可见最近活动。
+- 用户随后确认线上数据库当前允许所有 IP，故仓库 `ipAllowList: []` 不能作为此次线上故障的已确认原因。再次检查时，Node 24 使用 TLS 1.2 / TLS 1.3 均已成功连接并读到 `20260914000000_strava_readonly` migration；未修改线上网络规则，先前断连原因仍未确定。
+- 数据库恢复后，标准验收工具 `connected` / `expire` / `refresh` 全部通过：精确 fixture owner、真实只读 scopes、保存旧 access token 加密证据、仅测试账户 expires_at 置为过去、真实 provider refresh + sync、最新加密凭据和未来 expiry 持久化、重复同步、SQL 活动去重与最多 20 条窗口。
+- 使用本地独立 encryption key 成功解密测试账户的旧/current token，仅在内存做精确扫描；原生目录 42 个文件、已有未签名 archive App 4 个文件、Git text history 均无真实 token/key。未扫描到的 Render-only Client Secret 与正式 signed IPA 不记为通过。证据追加在 `step-08-real-connect-20260914.log`。
+- 已请用户在手机点击 Disconnect 并返回 Profile 检查摘要移除；用户确认完成，随后核对 DB 清理和旧 provider token HTTP 401。
+- 后续定位到仓库 `render.yaml` 的数据库配置为 `ipAllowList: []`，按 [Render 官方文档](https://render.com/docs/postgresql-creating-connecting#restricting-external-access) 表示禁止外部连接；这与内部 API 正常、外部数据库连接关闭的现象一致。线上实际规则待用户核对；已请用户临时添加本机当前出口地址的单 IP `/32` 规则，保留其他规则，验收后移除。当前没有 Render 管理凭据，未擅自修改线上规则或将 Blueprint 改为公开访问。
+
+### 撤销与清理完成
+
+- 用户确认 Disconnect 后显示未连接，返回 Profile 活动列表已消失。标准 disconnect verifier 核对 connection / activities / OAuth state 均为空，旧 provider access token **HTTP 401**。
+- 独立 fixture 的真实 callback 检查：缺失 state、未知 state、过期 state、已消费 state 重放均 HTTP 400；access_denied 返回 cancelled。未进行新的 provider 授权，检查后清除临时 state；断开后的 sync HTTP 409。
+- 标准 cleanup verifier 再次确认旧 token 401，精确删除测试账户；删除后的 Lauver session **HTTP 401**，私人登录/recovery journal 已移除。先前给用户的测试邮箱密码已失效。未删除用户本人 Strava 活动。
+- 证据 `step-08-real-connect-20260914.log`。手机断开流程完成后，已连接 iPhone 的本地超时改进单元测试 **100/100** 通过。
+
 ## Staging 配置
 
 1. 用用户自己的 Strava 账户登录 [My API Application](https://www.strava.com/settings/api) 创建 staging 应用：Application Name 填 `Lauver Staging`，Website 填 `https://lauver.ai`，Authorization Callback Domain 只填 `lauver-api-staging.onrender.com`（不加协议或路径），Description 说明只读最近运动摘要。其他必填项按实际情况选择。当前 [官方 Getting Started](https://developers.strava.com/docs/getting-started/) 要求创建者拥有 Strava subscription；新应用默认 single-player mode，只允许创建者本人授权，适用于本轮个人账户验收。
@@ -46,9 +77,9 @@
 3. 部署本 Step 代码与 migration，使用正常 `npm run db:migrate:deploy && npm start`；在登录后 status 返回 disconnected 而非 disabled 时再开始授权。不要把 secret 写入 iOS config、git、聊天或验收日志。
 4. 安装最新 staging App；使用独立 Email 测试账户与真实 Strava test athlete。
 
-用户已确认使用自己的 Strava 账户作为 test athlete。2026-09-14 已创建 API application，截图确认 public Client ID 为 `229012`；用户已确认 callback domain 与 Render `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` 填写完成（Save only）。本地生成独立 encryption key，保存在 ignored、0600 的 `backend/.env.strava-staging`；剩余 encryption key / callback URL / enabled 配置已给出，等待用户确认已保存到 Render。Secret/key 不记入验收文档。
+用户已确认使用自己的 Strava 账户作为 test athlete。2026-09-14 已创建 API application，截图确认 public Client ID 为 `229012`；用户已确认 callback domain 与 Render `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` 填写完成（Save only）。本地生成独立 encryption key，保存在 ignored、0600 的 `backend/.env.strava-staging`；用户已确认 encryption key / callback URL / enabled 配置保存并部署。Secret/key 不记入验收文档。
 
-现有 Render staging API 正常；当前所缺的是剩余 Strava 环境配置与本 Step 部署。2026-09-14 配置确认后重新检查，未登录 Strava status 仍为 HTTP 404，不能开始真实 OAuth fixture 验收。
+Render staging 已完成本 Step 部署和配置；未登录 status 为 HTTP 401，授权、刷新、撤销和清理已在真实服务验证。此前 HTTP 404 是部署前记录。
 
 | Render Environment variable | 值 / 来源 |
 |---|---|
@@ -88,15 +119,15 @@ private journal 在 `connected` 或 `expire` 时保留旧 access token 的**加�
 
 | 操作 | 通过证据 | 状态 |
 |---|---|---|
-| Connect → 查看摘要 | 实际授予 read + activity:read，name/最近 20 条摘要正确，无 token/路线/坐标 | 待配置后验收 |
+| Connect → 查看摘要 | 实际授予 read + activity:read，name/最近 20 条摘要正确，无 token/路线/坐标 | 已通过；用户确认真机摘要、刷新及 Profile 列表正常 |
 | 拒绝授权/取消活动权限 | 明确取消/缺少 scope 提示，状态不为 connected，失败可重新开始 | 待验收 |
-| 缺失/过期/重复 state | 真实 callback 拒绝，不能重新交换旧 code | 待验收 |
-| 强制过期后 Refresh | 仅测试用户 expires_at 置为过去，真实 refresh 后新 encrypted credentials 持久化，摘要可刷新 | 待验收 |
-| 同一活动重复 Refresh | 同一 user/activity ID 只有一行，没有 raw payload | 待验收 |
-| Disconnect | revoke 确认成功，status disconnected，connection/activities/state 清空；旧 provider token 401 | 待验收 |
+| 缺失/过期/重复 state | 真实 callback 拒绝，不能重新交换旧 code | 已通过真实 staging callback；缺失、未知、过期及 consumed state 均 HTTP 400 |
+| 强制过期后 Refresh | 仅测试用户 expires_at 置为过去，真实 refresh 后新 encrypted credentials 持久化，摘要可刷新 | 已通过标准 staging verifier |
+| 同一活动重复 Refresh | 同一 user/activity ID 只有一行，没有 raw payload | 已通过真实 sync 响应及 SQL 核对 |
+| Disconnect | revoke 确认成功，status disconnected，connection/activities/state 清空；旧 provider token 401 | 已通过，用户确认真机断开与 Profile 摘要移除；旧 token 401 |
 | 断网与 provider 失败恢复 | App 显示失败或 pending，不误报完成；恢复后可刷新/撤销 | 待验收 |
 | iPhone 与 archive secret scan | 系统安全认证会话与返回 App 正常，archive 不包含任何已配置 secret/真实 provider token | 待验收 |
-| 精确清理 fixture | 先完成 Strava revoke，再删除独立账户/依赖/私人凭据；保留安全清理证据 | 待验收 |
+| 精确清理 fixture | 先完成 Strava revoke，再删除独立账户/依赖/私人凭据；保留安全清理证据 | 已通过，删除后 session 401，private journal 已删除 |
 
 官方协议依据：[Strava Authentication](https://developers.strava.com/docs/authentication/)、[List Athlete Activities](https://developers.strava.com/docs/reference/#api-Activities-getLoggedInAthleteActivities)。2026-06-01 起推荐 `/oauth/revoke`，refresh token 撤销同时撤销关联 access tokens。
 

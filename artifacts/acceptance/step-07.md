@@ -1,6 +1,6 @@
 # Step 07 — Block 与 Profile Report 安全基础
 
-日期：2026-09-13。状态：✅ 验收通过。本地 Backend、既有完整云端 CI 与 staging 实际 API 34/34 通过；真机完成举报、双向拉黑/解除、Report and Block、断网恢复及过期刷新。session 竞态修复后 XCTest 88/88、相关 UI 4/4 通过并已安装真机。独立手机 run 的 3 个账号、3 条举报、6 条审计及关联数据已清理，残留为 0。
+日期：2026-09-13。状态：✅ 验收通过，完整 CI 已闭环。本地 Backend 与 staging 实际 API 34/34 通过；真机完成举报、双向拉黑/解除、Report and Block、断网恢复及过期刷新。session 竞态修复已安装真机，最终源码 `33aaf3f` 的完整云端 CI 全部通过：Backend unit 129/129、PostgreSQL integration 37/37、XCTest 88/88、完整 UI 14/14、guardrails 及 staging/production 构建配置检查。独立手机 run 的 3 个账号、3 条举报、6 条审计及关联数据已清理，残留为 0。
 
 ## 实现与范围
 
@@ -53,7 +53,7 @@
 
 ## 真机问题修复进度
 
-用户补充错误发生在返回 Discover／下拉刷新时，而非确认拉黑时。手机出现 invalid/expired session 错误且保留 B/C 旧列表，request ID `6da83306-c7c3-499f-866b-14b907707ca0`。只读核对 A 手机 session 刷新约 2 秒后被置为 revoked/compromised，当时没有 block。独立 feature service 的并发刷新存在复用旧 refresh token 的竞态；已修复共享刷新状态、迟到 401、退出/账号切换保护与运行中失效返回登录。截图与进度见 [手机清单](step-07-device-checklist.md)。修复后本地 XCTest **88/88** 通过，已在同一 iPhone 构建并安装新版，相关 Simulator UI **4/4** 通过且新版真机正常启动；证据 [修复日志](step-07-session-fix-20260913.log)。用户已确认修复版重新登录后拉黑三项行为通过；过期后 A 手机 session 已在 `2026-09-13T14:20:12.417Z` 完成 rotation 且未撤销，但用户反馈 Discover 纯 loading；同期 readyz 200、独立 B fixture Discover 200 / 830ms，用户随后确认页面恢复，过期后刷新路径通过。原生修复已提交并推送为 `05ee272`；其云端 CI XCTest **88/88**、已完成 UI **12/12** 通过，但总 watchdog 在 900 秒中断第 13 项，未完成全套，未见断言失败。构建/Simulator 启动约占 5 分钟；CI 总测试预算改为 1200 秒、job 25 分钟，单项超时/全部用例/断言保持，完整重跑待完成。证据 [最新 CI 日志](step-07-ci-20260913.log)。
+用户补充错误发生在返回 Discover／下拉刷新时，而非确认拉黑时。手机出现 invalid/expired session 错误且保留 B/C 旧列表，request ID `6da83306-c7c3-499f-866b-14b907707ca0`。只读核对 A 手机 session 刷新约 2 秒后被置为 revoked/compromised，当时没有 block。独立 feature service 的并发刷新存在复用旧 refresh token 的竞态；已修复共享刷新状态、迟到 401、退出/账号切换保护与运行中失效返回登录。截图与进度见 [手机清单](step-07-device-checklist.md)。修复后本地 XCTest **88/88** 通过，已在同一 iPhone 构建并安装新版，相关 Simulator UI **4/4** 通过且新版真机正常启动；证据 [修复日志](step-07-session-fix-20260913.log)。用户已确认修复版重新登录后拉黑三项行为通过；过期后 A 手机 session 已在 `2026-09-13T14:20:12.417Z` 完成 rotation 且未撤销，但用户反馈 Discover 纯 loading；同期 readyz 200、独立 B fixture Discover 200 / 830ms，用户随后确认页面恢复，过期后刷新路径通过。原生修复已提交并推送为 `05ee272`；其首次云端 CI 在 900 秒中断，XCTest 88/88 和已完成 UI 12 项通过不代表全套通过。CI 总测试预算改为 1200 秒、job 25 分钟，并随 `d38c9a5`、`33aaf3f` 修复自动化点击位置和页面切换等待；单项超时、全部 14 用例及最终行为断言保留。最终源码 `33aaf3f` 的 [完整云端 CI](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34765002713) 已全部 **success**：XCTest **88/88**、完整 UI **14/14**、Backend、guardrails 与 staging/production 构建配置检查通过，`TEST SUCCEEDED`。前一修复提交 `d38c9a5` 的完整 CI 也全部通过，旧中断记录保留为历史。证据 [最新 CI 日志](step-07-ci-20260913.log)。
 
 ## 配置与数据政策
 
@@ -63,3 +63,10 @@
 ## 最终结论
 
 Step 07 功能验收通过：Block 是后端双向强制策略，直接 Profile API 不能绕过；Profile 举报形成不可变、带 reference 与审计的 open queue，普通举报和 Report and Block 行为明确。手机操作、staging 数据核对、session 竞态修复与精确清理形成完整证据。Stream 聊天和 Admin Dashboard 分别按 Step 10、13 实现，逐页视觉签收仍按 Step 14A 执行。
+
+## 2026-09-14 继续验收复核
+
+- 通过 GitHub REST API 重新读取 run `34765002713`：`status=completed`、`conclusion=success`，`head_sha=33aaf3fc81646585dc53014f463609dfec4e5b6f`，与当前实现 HEAD 一致。
+- 重新检查归档原始 CI 日志 `/tmp/lauver-step07-final-regression-ci-logs.zip`：XCTest 88/88、完整 UI 14/14、`TEST SUCCEEDED`、staging/production 配置检查通过，production dependency audit 为 0 vulnerabilities。完整云端回归已完成，原有中断结果不再构成待办。
+- 本次本地重新执行 Step 07 structure、MVP scope、secret scan、Backend lint/typecheck、unit 129/129、production build 与 `git diff --check`，全部通过。
+- 本次没有重跑真机、staging fixtures 或 PostgreSQL integration；这些项沿用上方已完成的实际验收及清理证据。Step 07 功能验收无剩余项，页面视觉签收继续按 Step 14A 执行。

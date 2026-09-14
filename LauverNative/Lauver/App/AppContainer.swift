@@ -34,6 +34,11 @@ struct AppContainer {
         }
 
         let sessionConfiguration = URLSessionConfiguration.ephemeral
+        // Interactive requests must return control to the user on a stalled
+        // connection, including when intermittent bytes reset the idle timer.
+        sessionConfiguration.timeoutIntervalForRequest = 15
+        sessionConfiguration.timeoutIntervalForResource = 30
+        sessionConfiguration.waitsForConnectivity = false
         if arguments.contains("-ui-testing-offline") {
             configuration = configuration.overridingAPIBaseURL(URL(string: "https://127.0.0.1:1")!)
             sessionConfiguration.timeoutIntervalForRequest = 1

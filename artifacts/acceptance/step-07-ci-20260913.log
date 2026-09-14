@@ -9,5 +9,49 @@ XCUITest: 12 passed, 0 failed among completed cases; 13th registration/login cas
 Build/Simulator startup consumed about five minutes before XCTest; serial UI tests continued progressing.
 Interruption: iOS tests exceeded 900s; terminating xcodebuild; exit 143 / BUILD INTERRUPTED.
 Fix: CI watchdog 1200 seconds; iOS job budget 25 minutes including final configuration checks. Per-case 180/300-second limits, serial execution, all test cases and assertions retained.
-Next complete cloud run: pending.
+Next complete cloud run: completed; follow-up results below.
 Logs: /tmp/lauver-step07-ci-34762944211-backend.log, /tmp/lauver-step07-ci-34762944211-ios.log
+
+Final complete cloud regression (2026-09-13):
+Source: 33aaf3fc81646585dc53014f463609dfec4e5b6f
+Run: https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34765002713
+Conclusion: success. Backend, guardrails and iOS jobs all passed.
+
+Backend unit:
+2026-09-13T15:15:22.2661427Z       Tests  129 passed (129)
+
+PostgreSQL integration:
+2026-09-13T15:15:34.7720867Z       Tests  37 passed (37)
+
+Production dependency audit:
+2026-09-13T15:16:07.5285504Z found 0 vulnerabilities
+
+iOS complete tests:
+2026-09-13T15:19:01.7690730Z 	 Executed 88 tests, with 0 failures (0 unexpected) in 5.280 (6.523) seconds
+2026-09-13T15:19:01.7692710Z 	 Executed 88 tests, with 0 failures (0 unexpected) in 5.280 (6.525) seconds
+2026-09-13T15:19:39.8658470Z Test Case '-[LauverUITests.LauverUITests testAppLaunchesWithStagingConfigurationAndAuthEntry]' passed (19.605 seconds).
+2026-09-13T15:19:59.6389160Z Test Case '-[LauverUITests.LauverUITests testAuthenticatedShellContainsOnlyFourApprovedTabs]' passed (19.742 seconds).
+2026-09-13T15:22:10.6335650Z Test Case '-[LauverUITests.LauverUITests testDeletedKeychainSessionReturnsToLogin]' passed (131.027 seconds).
+2026-09-13T15:23:32.0842580Z Test Case '-[LauverUITests.LauverUITests testDiscoverListOpensProfileAndAppliesFilters]' passed (81.437 seconds).
+2026-09-13T15:23:47.3119310Z Test Case '-[LauverUITests.LauverUITests testEventsTabNavigation]' passed (15.180 seconds).
+2026-09-13T15:25:15.1756430Z Test Case '-[LauverUITests.LauverUITests testForgotPasswordToResetResultFlow]' passed (87.894 seconds).
+2026-09-13T15:25:31.4944020Z Test Case '-[LauverUITests.LauverUITests testMessagesTabNavigation]' passed (16.263 seconds).
+2026-09-13T15:26:01.0983320Z Test Case '-[LauverUITests.LauverUITests testProfileBlockRequiresConfirmation]' passed (29.677 seconds).
+2026-09-13T15:26:27.8106100Z Test Case '-[LauverUITests.LauverUITests testProfileCanOpenEditorAndShowsPersistedWorkoutFields]' passed (26.702 seconds).
+2026-09-13T15:27:22.8792020Z Test Case '-[LauverUITests.LauverUITests testProfileReportAndBlockCanBeUnblockedFromSettings]' passed (55.089 seconds).
+2026-09-13T15:27:40.3274580Z Test Case '-[LauverUITests.LauverUITests testProfileTabNavigation]' passed (17.437 seconds).
+2026-09-13T15:27:48.1284450Z Test Case '-[LauverUITests.LauverUITests testPublicProfileShowsTheCityWithoutCoordinates]' passed (7.799 seconds).
+2026-09-13T15:28:46.9576230Z Test Case '-[LauverUITests.LauverUITests testRegisterSignOutAndLoginFlow]' passed (58.828 seconds).
+2026-09-13T15:28:56.4255160Z Test Case '-[LauverUITests.LauverUITests testUnreachableAPIShowsErrorAndRetry]' passed (9.436 seconds).
+2026-09-13T15:28:56.4484510Z 	 Executed 14 tests, with 0 failures (0 unexpected) in 576.115 (576.130) seconds
+2026-09-13T15:28:56.4717520Z 	 Executed 14 tests, with 0 failures (0 unexpected) in 576.115 (576.130) seconds
+2026-09-13T15:28:56.4943440Z 	 Executed 14 tests, with 0 failures (0 unexpected) in 576.115 (576.131) seconds
+2026-09-13T15:28:59.0185390Z ** TEST SUCCEEDED **
+
+Built staging and production configuration:
+2026-09-13T15:30:54.6498310Z iOS built configuration tests passed.
+
+Previous complete follow-up: d38c9a5f1aed5e55aead7c64e5601c0b5e112f1e; run https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34764545875; all jobs success, XCTest 88/88, XCUITest 14/14 and both built configurations passed.
+Historical budget-fix run 6e7f0ef / 34763769335: XCTest 88/88, XCUITest 13/14; registration/login could not open Profile because accessibility tap computed {-1, -1}; exit 65, no watchdog interruption.
+Fixes d38c9a5 and 33aaf3f tap visible control centres, confirm registration/reset screen transitions and Cycling speed heading, and scroll Edit Profile above the floating tab bar. All 14 cases, final behavior assertions and original per-case timeouts retained.
+Archived full final cloud logs: /tmp/lauver-step07-final-regression-ci-logs.zip

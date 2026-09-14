@@ -72,6 +72,28 @@ final class AppViewModelTests: XCTestCase {
         XCTAssertTrue(model.authMessage?.contains("sign in again") == true)
     }
 
+    func testLoginTimeoutStopsSubmittingAndAllowsSuccessfulRetry() async {
+        let authService = TestAuthService()
+        authService.loginResult = .failure(.transport(.timedOut))
+        let sessionStore = TestAuthSessionStore()
+        let model = makeViewModel(authService: authService, authSessionStore: sessionStore)
+
+        await model.login(email: "runner@example.com", password: "CorrectHorse9")
+
+        XCTAssertFalse(model.isAuthSubmitting)
+        XCTAssertEqual(model.authenticationState, .signedOut)
+        XCTAssertNil(sessionStore.tokens)
+        XCTAssertEqual(model.authMessage, APIError.transport(.timedOut).userMessage)
+
+        authService.loginResult = .success(TestAuthService.session)
+        await model.login(email: "runner@example.com", password: "CorrectHorse9")
+
+        XCTAssertFalse(model.isAuthSubmitting)
+        XCTAssertEqual(model.authenticationState, .authenticated)
+        XCTAssertEqual(sessionStore.savedSession, TestAuthService.session)
+        XCTAssertNil(model.authMessage)
+    }
+
     func testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken() async {
         let authService = TestAuthService()
         authService.restoreResult = .failure(.unauthorized(
@@ -216,7 +238,8 @@ private final class TestAuthService: AuthServicing {
     var appleCredential: AppleSignInCredential?
 
     func register(email: String, password: String) async throws -> AuthSession { Self.session }
-    func login(email: String, password: String) async throws -> AuthSession { Self.session }
+    var loginResult: Result<AuthSession, APIError> = .success(TestAuthService.session)
+    func login(email: String, password: String) async throws -> AuthSession { try loginResult.get() }
     func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
         appleCredential = credential
         return Self.session

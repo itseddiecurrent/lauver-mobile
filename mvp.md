@@ -941,7 +941,7 @@ xcodebuild test \
 
 ### Step 08：Strava OAuth 2.0 只读集成
 
-**状态：🟡 已实现，后端本地与真机 XCTest 验收通过（2026-09-14）。** 已实现一次性 state、只读 OAuth、加密 token、自动轮换、最近 20 条摘要、推荐 revoke 与失败重试，以及原生 Connected Apps / Profile 活动列表；backend unit 142/142、隔离 PostgreSQL integration 54/54、iPhone XCTest 99/99（Strava 9/9）通过。用户自己的 Strava API application 已创建（Client ID `229012`），callback domain、Render Client ID/Secret 已确认保存，剩余 encryption key/callback URL/enabled 配置待确认；真实授权/刷新/撤销、完整 UI 与真实 secret/IPA 验收尚未完成，不能标记 Step 通过。Staging/production 构建与未签名 staging archive 已通过，新版 staging App 已签名安装；实现已推送 main 并运行 CI，Render 部署后再开始真实验收。证据及配置步骤见 `artifacts/acceptance/step-08.md`。
+**状态：🟢 功能验收完成（2026-09-14）；发布加固待完成。** 已实现一次性 state、只读 OAuth、加密 token、自动轮换、最近 20 条摘要、推荐 revoke 与失败重试，以及原生 Connected Apps / Profile 活动列表。Backend unit 142/142、隔离 PostgreSQL integration 54/54、iPhone XCTest 100/100（含 Strava 用例）通过。用户的 Strava staging application 和全部 Render 配置已确认部署；线上 healthz/readyz 200。真实 iPhone 授权、两次同步（20 条摘要、仅 `read,activity:read`）、强制过期刷新、SQL 幂等、真机撤销（旧 token 401）、OAuth state 拒绝和测试账户清理均已通过；用户确认 Connected Apps 与 Profile 页面显示正常。Staging/Production 构建、未签名 staging archive、原生目录/archive/Git history 的真实 token/key 扫描通过。Step 08 剩余事项归入发布加固：正式签名 IPA 与 Render-only Client Secret 扫描、最新改动云端 iOS CI（提交 `e0a5797` 曾 exit 65）以及 Step 14A 完整逐页 UI 证据。测试账户和私人登录文件已清理。证据见 `artifacts/acceptance/step-08.md` 和 `artifacts/acceptance/step-08-real-connect-20260914.log`。
 
 **依赖：** Step 03、Step 05；Strava staging application。
 

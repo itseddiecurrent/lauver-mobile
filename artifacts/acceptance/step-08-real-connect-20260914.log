@@ -1,0 +1,22 @@
+PASS real sync 1: HTTP 200 / connected; read-only scopes; 20 unique bounded summaries; exact allowed summary fields
+PASS real sync 2: HTTP 200 / connected; read-only scopes; 20 unique bounded summaries; exact allowed summary fields
+NOT VERIFIED database deduplication, forced expiry/refresh-token persistence, revoke, old token 401
+Verification session logout HTTP 204
+PASS exact old/current Strava token and encryption-key scan: ../LauverNative (42 files)
+PASS exact old/current Strava token and encryption-key scan: /tmp/lauver-step08-resume-staging.xcarchive/Products/Applications/Lauver.app (4 files)
+PASS exact real Strava tokens/encryption key absent from Git text history
+NOT VERIFIED exact Strava Client Secret (Render-only) or signed IPA
+PASS standard connected verifier: exact fixture owner, session, actual read-only scopes, bounded summaries
+PASS standard expire verifier: expired only owned fixture access token
+PASS standard refresh verifier: real provider refresh/sync, newest encrypted credentials persisted, repeat sync, SQL idempotent summary window
+PASS callback checks exact fixture owner
+PASS missing OAuth state rejected
+PASS unknown OAuth state rejected
+PASS cancellation callback returns cancelled
+PASS consumed OAuth state replay rejected
+PASS expired fixture OAuth state rejected
+PASS fixture OAuth state cleared after callback checks
+PASS sync after disconnect rejected
+PASS user confirmed iPhone Disconnect and Profile activity removal
+PASS standard disconnect verifier: connection/activity/state tables cleared, old provider access token HTTP 401
+PASS standard cleanup verifier: revoke confirmed, tables cleared, old provider access token HTTP 401, deleted account session HTTP 401, fixture and private journal removed
