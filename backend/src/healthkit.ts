@@ -7,7 +7,7 @@ import { authenticated } from './profile-routes.js';
 const workoutSchema = z.object({
   id: z.uuid(), sport: z.string().trim().min(1).max(80),
   startedAt: z.iso.datetime({ offset: true }), endedAt: z.iso.datetime({ offset: true }),
-  durationSeconds: z.number().int().min(0).max(31_536_000), distanceMeters: z.number().finite().nonnegative().nullable(),
+  durationSeconds: z.number().int().min(0).max(31_536_000), distanceMeters: z.number().finite().nonnegative().nullable().optional(),
 }).strict();
 const importSchema = z.object({ workouts: z.array(workoutSchema).max(100) }).strict();
 
@@ -16,8 +16,8 @@ export class HealthKitService {
   async import(userId: string, workouts: z.infer<typeof workoutSchema>[]): Promise<number> {
     for (const workout of workouts) await this.client.healthWorkout.upsert({
       where: { userId_workoutUUID: { userId, workoutUUID: workout.id } },
-      create: { userId, workoutUUID: workout.id, sport: workout.sport, startedAt: workout.startedAt, endedAt: workout.endedAt, durationSeconds: workout.durationSeconds, distanceMeters: workout.distanceMeters },
-      update: { sport: workout.sport, startedAt: workout.startedAt, endedAt: workout.endedAt, durationSeconds: workout.durationSeconds, distanceMeters: workout.distanceMeters },
+      create: { userId, workoutUUID: workout.id, sport: workout.sport, startedAt: workout.startedAt, endedAt: workout.endedAt, durationSeconds: workout.durationSeconds, distanceMeters: workout.distanceMeters ?? null },
+      update: { sport: workout.sport, startedAt: workout.startedAt, endedAt: workout.endedAt, durationSeconds: workout.durationSeconds, distanceMeters: workout.distanceMeters ?? null },
     });
     return workouts.length;
   }
