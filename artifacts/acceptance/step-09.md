@@ -1,6 +1,6 @@
 # Step 09 — HealthKit Workout Import
 
-日期：2026-09-14。状态：🟡 已实现，待真实 iPhone 权限和 staging migration 验收。
+日期：2026-09-14。状态：✅ 真机验收通过。
 
 ## 已实现
 
@@ -15,9 +15,10 @@
 
 - Backend `npm run lint` 通过，`npm test` **142/142** 通过，`npm run typecheck` 与 production build 通过。
 - iOS Staging Simulator build **成功**，HealthKit SDK 编译通过；未在模拟器请求系统权限。
+- 真机已完成 Enable Apple Health 与 Import Workouts；此前的无距离字段、列表响应字段和连接中断问题均已修复，导入成功。
 - `git diff --check` 通过；未运行真实 iPhone HealthKit 授权、staging migration deploy 或健康数据网络检查。
 
-## 待验收
+## 后续验收
 
 - 在真实 iPhone 主动 Enable Apple Health，验证允许、拒绝、部分授权和空样本。
 - 执行真实 Import 两次并核对 `(user_id, workout_uuid)` 只保留一条。
