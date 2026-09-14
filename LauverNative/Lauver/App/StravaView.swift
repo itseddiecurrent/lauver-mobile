@@ -413,7 +413,7 @@ final class HealthKitViewModel: ObservableObject {
     func enable() async {
         guard !isWorking else { return }; isWorking = true; errorMessage = nil; notice = nil; defer { isWorking = false }
         do { availability = store.availability(); try await store.requestReadAuthorization(); try await importNow() }
-        catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Apple Health could not be enabled." }
+        catch { errorMessage = (error as? APIError)?.userMessage ?? (error as? LocalizedError)?.errorDescription ?? "Apple Health could not be enabled." }
     }
     func importNow() async throws {
         let imported = try await store.importWorkouts()
@@ -422,12 +422,12 @@ final class HealthKitViewModel: ObservableObject {
     }
     func importManually() async {
         guard !isWorking else { return }; isWorking = true; errorMessage = nil; defer { isWorking = false }
-        do { try await importNow() } catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Apple Health workouts could not be imported." }
+        do { try await importNow() } catch { errorMessage = (error as? APIError)?.userMessage ?? (error as? LocalizedError)?.errorDescription ?? "Apple Health workouts could not be imported." }
     }
     func deleteImportedData() async {
         guard !isWorking, let uploader else { return }; isWorking = true; errorMessage = nil; defer { isWorking = false }
         do { try await uploader.deleteHealthWorkouts(); workouts = []; notice = "Imported workout summaries deleted from Lauver." }
-        catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Imported workout data could not be deleted." }
+        catch { errorMessage = (error as? APIError)?.userMessage ?? (error as? LocalizedError)?.errorDescription ?? "Imported workout data could not be deleted." }
     }
 }
 
