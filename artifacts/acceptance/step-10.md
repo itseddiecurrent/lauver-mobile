@@ -18,6 +18,7 @@
 - Xcode 工程已加入官方 `StreamChatSwiftUI` Swift Package（最低版本 5.10.0），依赖解析和 Staging Simulator build 通过；提交 `1290e2d` 已推送。
 - iOS 已接入 `ChatClient`、短期 token 自动续期、Conversations 列表、Direct Chat、文本输入和发送失败重试；Profile 详情增加 Message 入口。
 - 发送请求通过 Lauver API 服务端校验 channel 成员和双向 Block，使用客户端生成的 UUID 保证重试不会重复发送；后端新增 7 项 Stream 测试，测试总数 149/149。
+- 最新 Stream SDK 版本已完成 iPhone 14 Plus 真机构建、安装和启动；Backend 149/149 测试复验通过。两用户实时收发、第三用户隔离和真机断网场景仍需在手机上操作确认。
 
 ## 实施顺序
 
