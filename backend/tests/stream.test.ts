@@ -4,19 +4,20 @@ import express from 'express';
 import request from 'supertest';
 import { createAuthServiceStub } from './helpers/test-app.js';
 
-const sdk = vi.hoisted(() => ({ upsertUsers: vi.fn(), createToken: vi.fn(), channel: vi.fn(), create: vi.fn(), addMembers: vi.fn(), updateAppSettings: vi.fn(), updateChannelType: vi.fn(), queryMembers: vi.fn(), sendMessage: vi.fn() }));
+const sdk = vi.hoisted(() => ({ upsertUsers: vi.fn(), createToken: vi.fn(), channel: vi.fn(), create: vi.fn(), addMembers: vi.fn(), updateAppSettings: vi.fn(), updateChannelType: vi.fn(), queryMembers: vi.fn(), sendMessage: vi.fn(), getMessage: vi.fn() }));
 vi.mock('stream-chat', () => ({ StreamChat: class {
   upsertUsers = sdk.upsertUsers;
   createToken = sdk.createToken;
   channel = sdk.channel;
   updateAppSettings = sdk.updateAppSettings;
   updateChannelType = sdk.updateChannelType;
+  getMessage = sdk.getMessage;
 } }));
 import { StreamService, installStreamRoutes } from '../src/stream.js';
 const a = 'e1800000-0000-4000-8000-000000000001';
 const b = 'e1800000-0000-4000-8000-000000000002';
 function fixture(blocked = false) {
-  const database = { $queryRaw: vi.fn(), $transaction: vi.fn(), user: { count: vi.fn().mockResolvedValue(2), findMany: vi.fn().mockResolvedValue([{ id: a, profile: { displayName: 'A' } }, { id: b, profile: null }]) },
+  const database = { $executeRaw: vi.fn(), $queryRaw: vi.fn(), $transaction: vi.fn(), user: { count: vi.fn().mockResolvedValue(2), findMany: vi.fn().mockResolvedValue([{ id: a, profile: { displayName: 'A' } }, { id: b, profile: null }]) },
     profile: { findUnique: vi.fn().mockResolvedValue({ displayName: 'A' }) },
     block: { findFirst: vi.fn().mockResolvedValue(blocked ? { blockerId: b } : null) } };
   database.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(database));
@@ -71,6 +72,17 @@ describe('Stream chat ownership and canonical channels', () => {
     expect(sdk.createToken).toHaveBeenCalledWith(a, expect.any(Number));
     expect(Date.parse(result.expiresAt) / 1000).toBeGreaterThanOrEqual(now + 900);
     expect(Date.parse(result.expiresAt) / 1000).toBeLessThanOrEqual(now + 901);
+  });
+  it('only creates message evidence for a member message in the canonical channel', async () => {
+    const { service } = fixture();
+    const channelId = (await service.direct(a, b)).channelId;
+    sdk.queryMembers.mockResolvedValue({ members: [{ user_id: a }, { user_id: b }] });
+    sdk.getMessage.mockResolvedValue({ message: { cid: `messaging:${channelId}`, user: { id: b }, text: 'unsafe text' } });
+    await expect(service.messageEvidence(a, channelId, 'message-1')).resolves.toEqual({
+      targetUserId: b, messageId: 'message-1', messageText: 'unsafe text', messageSenderId: b,
+    });
+    sdk.getMessage.mockResolvedValue({ message: { cid: 'messaging:other', user: { id: b }, text: 'spoof' } });
+    await expect(service.messageEvidence(a, channelId, 'message-2')).rejects.toMatchObject({ statusCode: 404 });
   });
   it('refuses token owner injection and disables token response caching', async () => {
     const { service } = fixture(); const app = express(); app.use(express.json());

@@ -30,7 +30,7 @@ export class SafetyService implements SafetyServicing {
 
   private async lockChat(tx: Prisma.TransactionClient, actorId: string, targetId: string) {
     if (this.onBlocking) {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(actorId, targetId)}, 0))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(actorId, targetId)}, 0))`;
       await this.onBlocking(actorId, targetId);
     }
   }

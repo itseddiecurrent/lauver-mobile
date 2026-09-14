@@ -48,7 +48,7 @@ export class StreamService {
     await this.ensurePermissions();
     if (userId === targetUserId) throw new ProfileError(422, 'invalid_chat_target', 'You cannot message yourself.');
     return this.database.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, targetUserId)}, 0))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, targetUserId)}, 0))`;
       await this.checkPair(tx, userId, targetUserId);
       const users = await tx.user.findMany({ where: { id: { in: [userId, targetUserId] }, status: 'ACTIVE' }, select: { id: true, profile: { select: { displayName: true } } } });
       const members = [userId, targetUserId].sort();
@@ -81,7 +81,7 @@ export class StreamService {
     const target = ids.find(id => id !== userId)!;
     if (chatChannelId(userId, target) !== channelId) throw new ProfileError(403, 'chat_forbidden', 'This conversation is unavailable.');
     return this.database.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, target)}, 0))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, target)}, 0))`;
       await this.checkPair(tx, userId, target);
       const id = createHash('sha256').update(`${userId}:${channelId}:${input.id}`).digest('hex');
       await channel.sendMessage({ id, text: input.text, user_id: userId });
