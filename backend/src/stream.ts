@@ -6,11 +6,13 @@ import type { AuthServicing } from './auth.js';
 import { authenticated } from './profile-routes.js';
 import { ProfileError } from './profile.js';
 import type { Prisma, PrismaClient } from '@prisma/client';
+import type { SafetyServicing } from './safety.js';
 
 export const chatPairKey = (a: string, b: string) => [a, b].sort().join(':');
 export const chatChannelId = (a: string, b: string) => `dm-${createHash('sha256').update(chatPairKey(a, b)).digest('hex').slice(0, 40)}`;
 const sendSchema = z.object({ id: z.uuid(), text: z.string().trim().min(1).max(2000) }).strict();
 const targetSchema = z.object({ targetUserId: z.uuid().transform(id => id.toLowerCase()) }).strict();
+const messageReportSchema = z.object({ reason: z.enum(['spam', 'harassment', 'hate_abuse', 'unsafe_event', 'impersonation', 'other']), details: z.string().trim().max(2000).optional() }).strict();
 
 export class StreamService {
   private readonly client: ReturnType<typeof StreamChat.getInstance>;
@@ -51,7 +53,6 @@ export class StreamService {
       const channelId = chatChannelId(userId, targetUserId);
       const channel = this.client.channel('messaging', channelId, { members, created_by_id: userId });
       await channel.create();
-      await channel.addMembers(members);
       return { channelType: 'messaging' as const, channelId, members };
     }, { timeout: 15000 });
   }
@@ -81,6 +82,21 @@ export class StreamService {
     }, { timeout: 15000 });
   }
 
+  async messageEvidence(userId: string, channelId: string, messageId: string) {
+    await this.ensurePermissions();
+    const channel = this.client.channel('messaging', channelId);
+    const { members } = await channel.queryMembers({}, {}, { limit: 3 });
+    const ids = members.map(member => member.user_id ?? member.user?.id ?? '');
+    if (ids.length !== 2 || !ids.includes(userId) || chatChannelId(ids[0]!, ids[1]!) !== channelId) {
+      throw new ProfileError(403, 'chat_forbidden', 'This conversation is unavailable.');
+    }
+    const message = await this.client.getMessage(messageId);
+    if (message.message.cid !== `messaging:${channelId}` || !message.message.user?.id || message.message.user.id === userId) {
+      throw new ProfileError(404, 'message_not_found', 'Message not found.');
+    }
+    return { targetUserId: message.message.user.id, messageId, messageText: message.message.text ?? '', messageSenderId: message.message.user.id };
+  }
+
   async blockPair(userId: string, target: string) {
     const id = chatChannelId(userId, target);
     const channels = await this.client.queryChannels({ cid: `messaging:${id}` }, [], { limit: 1 });
@@ -89,7 +105,7 @@ export class StreamService {
 
 }
 
-export function installStreamRoutes(app: Express, dependencies: { authService: AuthServicing; service: StreamService }): void {
+export function installStreamRoutes(app: Express, dependencies: { authService: AuthServicing; service: StreamService; safetyService?: SafetyServicing }): void {
   app.post('/v1/chat/token', authenticated(dependencies.authService, async (user, request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     if (Object.keys(request.query).length || !z.object({}).strict().safeParse(request.body ?? {}).success) {
@@ -107,5 +123,16 @@ export function installStreamRoutes(app: Express, dependencies: { authService: A
     const parsed = targetSchema.safeParse(request.body);
     if (!parsed.success) throw new ProfileError(422, 'validation_failed', 'Choose a valid chat participant.');
     response.status(200).json(await dependencies.service.direct(user.id, parsed.data.targetUserId));
+  }));
+  app.post('/v1/chat/channels/:channelId/messages/:messageId/report', authenticated(dependencies.authService, async (user, request, response) => {
+    const channelId = z.string().regex(/^dm-[a-f0-9]{40}$/).safeParse(request.params.channelId);
+    const messageId = z.string().min(1).max(128).safeParse(request.params.messageId);
+    const input = messageReportSchema.safeParse(request.body);
+    if (!channelId.success || !messageId.success || !input.success) throw new ProfileError(422, 'validation_failed', 'Choose a valid message report and note.');
+    if (!dependencies.safetyService?.reportChatMessage) throw new ProfileError(503, 'chat_unavailable', 'Chat reporting is unavailable.');
+    const evidence = await dependencies.service.messageEvidence(user.id, channelId.data, messageId.data);
+    response.status(201).json(await dependencies.safetyService.reportChatMessage(user.id, evidence.targetUserId, channelId.data,
+      evidence.messageId, evidence.messageText, evidence.messageSenderId, input.data.reason, input.data.details,
+      String(response.getHeader('x-request-id'))));
   }));
 }
