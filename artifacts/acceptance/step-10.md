@@ -14,6 +14,7 @@
 - 新增认证后的 `POST /v1/chat/token`，只为当前 Lauver 用户签发短期 Stream token。
 - 新增认证后的 `POST /v1/chat/direct`，按双方排序后的 UUID SHA-256 生成唯一 channel ID；创建前检查双方用户状态和双向 Block。
 - `npm run lint`、`npm run typecheck` 和 `npm test`（142/142）通过；提交 `453644a` 已推送。
+- Render staging 已配置 Stream credentials；线上 `POST /v1/chat/token` 和 `POST /v1/chat/direct` 在未认证请求下均返回 401，确认路由已部署且仍受 Lauver 登录保护。
 
 ## 实施顺序
 
