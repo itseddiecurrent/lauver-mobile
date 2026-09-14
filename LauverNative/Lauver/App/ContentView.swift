@@ -511,7 +511,7 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
 
             NavigationStack {
-                OwnProfileView(service: profileService, safetyService: safetyService, stravaService: stravaService) {
+                OwnProfileView(service: profileService, safetyService: safetyService, stravaService: stravaService, healthUploader: profileService as? any HealthWorkoutUploading) {
                     Task { await viewModel.signOut() }
                 }
             }

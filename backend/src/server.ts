@@ -16,6 +16,7 @@ import { DiscoverService } from './discover.js';
 import { ProfileService } from './profile.js';
 import { StravaService } from './strava.js';
 import { StravaProvider, StravaTokenCipher } from './strava-provider.js';
+import { HealthKitService } from './healthkit.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -92,6 +93,7 @@ const server = createServer(
     discoverService: new DiscoverService(database.discoverRepository, photoStorage, config.authAccessTokenSecret),
     profileService,
     stravaService,
+    healthKitService: new HealthKitService(database.client),
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(

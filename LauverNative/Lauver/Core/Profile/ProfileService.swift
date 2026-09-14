@@ -278,7 +278,13 @@ protocol ProfileServicing {
     func deletePhoto() async throws
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing {
+protocol HealthWorkoutUploading {
+    func uploadHealthWorkouts(_ workouts: [HealthWorkoutSummary]) async throws
+    func healthWorkouts() async throws -> [HealthWorkoutSummary]
+    func deleteHealthWorkouts() async throws
+}
+
+final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -420,6 +426,27 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
 
     func disconnectStrava() async throws -> StravaStatus {
         try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/integrations/strava/disconnect", headers: Self.authorization(token)) }
+    }
+
+    func uploadHealthWorkouts(_ workouts: [HealthWorkoutSummary]) async throws {
+        struct Payload: Encodable { let workouts: [HealthWorkoutSummary] }
+        let body = try encoder.encode(Payload(workouts: workouts))
+        let _: HealthImportResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/integrations/healthkit/workouts", body: body, headers: Self.jsonAuthorization(token))
+        }
+    }
+
+    func healthWorkouts() async throws -> [HealthWorkoutSummary] {
+        let response: HealthWorkoutsResponse = try await authenticatedRequest { token in
+            APIRequest(path: "/v1/integrations/healthkit/workouts", headers: Self.authorization(token))
+        }
+        return response.workouts
+    }
+
+    func deleteHealthWorkouts() async throws {
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .delete, path: "/v1/integrations/healthkit/workouts", headers: Self.authorization(token))
+        }
     }
 
     @MainActor

@@ -1,5 +1,8 @@
 import AuthenticationServices
 import SwiftUI
+#if canImport(HealthKit)
+import HealthKit
+#endif
 
 struct StravaActivity: Decodable, Equatable, Identifiable {
     let id: String
@@ -197,6 +200,8 @@ final class StravaViewModel: ObservableObject {
 
 struct ConnectedAppsView: View {
     let service: any StravaServicing
+    let healthUploader: (any HealthWorkoutUploading)?
+    init(service: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil) { self.service = service; self.healthUploader = healthUploader }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
@@ -205,6 +210,9 @@ struct ConnectedAppsView: View {
                     NavigationLink { StravaConnectionView(service: service) } label: {
                         Label("Strava", systemImage: "figure.run").frame(maxWidth: .infinity, alignment: .leading)
                     }.accessibilityIdentifier("connected-apps-strava")
+                    NavigationLink { AppleHealthView(uploader: healthUploader) } label: {
+                        Label("Apple Health", systemImage: "heart.text.square").frame(maxWidth: .infinity, alignment: .leading)
+                    }.accessibilityIdentifier("connected-apps-healthkit")
                 }
             }.padding(LauverDesign.Spacing.large)
         }.background(LauverDesign.ColorToken.background).navigationTitle("Connected Apps")
@@ -301,5 +309,150 @@ struct OwnStravaActivitiesView: View {
             }
         }.task { await model.load() }
         .onReceive(NotificationCenter.default.publisher(for: .stravaConnectionChanged)) { _ in Task { await model.load() } }
+    }
+}
+
+// HealthKit is deliberately opt-in. No initializer, app-shell task, or login
+// path creates a store or requests authorization.
+struct HealthWorkoutSummary: Codable, Equatable, Identifiable {
+    let id: String
+    let sport: String
+    let startedAt: String
+    let endedAt: String
+    let durationSeconds: Int
+    let distanceMeters: Double?
+}
+struct HealthImportResponse: Decodable { let imported: Int }
+struct HealthWorkoutsResponse: Decodable { let workouts: [HealthWorkoutSummary] }
+
+enum HealthKitAvailability: Equatable { case available, unavailable(String) }
+
+protocol HealthWorkoutStoring {
+    func availability() -> HealthKitAvailability
+    func requestReadAuthorization() async throws
+    func importWorkouts() async throws -> [HealthWorkoutSummary]
+}
+
+enum HealthKitError: LocalizedError {
+    case unavailable, authorizationDenied, queryFailed
+    var errorDescription: String? {
+        switch self {
+        case .unavailable: "Apple Health is unavailable on this device."
+        case .authorizationDenied: "Apple Health workout access was not granted. You can manage it in Settings."
+        case .queryFailed: "Apple Health workouts could not be imported. Please try again."
+        }
+    }
+}
+
+#if canImport(HealthKit)
+final class AppleHealthWorkoutStore: HealthWorkoutStoring {
+    private let healthStore = HKHealthStore()
+    private var workoutType: HKSampleType { HKObjectType.workoutType() }
+
+    func availability() -> HealthKitAvailability {
+        guard HKHealthStore.isHealthDataAvailable() else { return .unavailable("Health data is not available on this device.") }
+        return .available
+    }
+
+    func requestReadAuthorization() async throws {
+        guard case .available = availability() else { throw HealthKitError.unavailable }
+        let status = await withCheckedContinuation { continuation in
+            healthStore.getRequestStatusForAuthorization(toShare: [], read: [workoutType]) { value, _ in continuation.resume(returning: value) }
+        }
+        if status == .shouldRequest {
+            try await healthStore.requestAuthorization(toShare: [], read: [workoutType])
+        }
+        // A read-only request cannot be confirmed with authorizationStatus(for:);
+        // query failure/empty data is handled as a normal state below.
+    }
+
+    func importWorkouts() async throws -> [HealthWorkoutSummary] {
+        guard case .available = availability() else { throw HealthKitError.unavailable }
+        let predicate = HKQuery.predicateForSamples(withStart: nil, end: Date(), options: .strictEndDate)
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(sampleType: workoutType, predicate: predicate, limit: 100,
+                sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)]) { _, samples, error in
+                if error != nil { continuation.resume(throwing: HealthKitError.queryFailed); return }
+                let values = (samples as? [HKWorkout] ?? []).compactMap(Self.map)
+                continuation.resume(returning: values)
+            }
+            healthStore.execute(query)
+        }
+    }
+
+    private static func map(_ workout: HKWorkout) -> HealthWorkoutSummary? {
+        guard workout.uuid.uuidString.isEmpty == false else { return nil }
+        return HealthWorkoutSummary(id: workout.uuid.uuidString, sport: sportName(workout.workoutActivityType),
+            startedAt: workout.startDate.ISO8601Format(), endedAt: workout.endDate.ISO8601Format(),
+            durationSeconds: max(0, Int(workout.duration.rounded())), distanceMeters: workout.totalDistance?.doubleValue(for: .meter()))
+    }
+
+    private static func sportName(_ type: HKWorkoutActivityType) -> String {
+        switch type { case .running: "running"; case .cycling: "cycling"; case .swimming: "swimming"; case .walking: "walking"; case .hiking: "hiking"; case .rowing: "rowing"; default: "workout" }
+    }
+}
+#else
+final class AppleHealthWorkoutStore: HealthWorkoutStoring {
+    func availability() -> HealthKitAvailability { .unavailable("HealthKit is unavailable in this build.") }
+    func requestReadAuthorization() async throws { throw HealthKitError.unavailable }
+    func importWorkouts() async throws -> [HealthWorkoutSummary] { throw HealthKitError.unavailable }
+}
+#endif
+
+@MainActor
+final class HealthKitViewModel: ObservableObject {
+    @Published private(set) var availability: HealthKitAvailability = .unavailable("Apple Health has not been enabled.")
+    @Published private(set) var workouts: [HealthWorkoutSummary] = []
+    @Published private(set) var isWorking = false
+    @Published private(set) var errorMessage: String?
+    @Published private(set) var notice: String?
+    private let store: any HealthWorkoutStoring
+    private let uploader: (any HealthWorkoutUploading)?
+    var uploaderAvailable: Bool { uploader != nil }
+    init(store: any HealthWorkoutStoring, uploader: (any HealthWorkoutUploading)? = nil) { self.store = store; self.uploader = uploader }
+    func enable() async {
+        guard !isWorking else { return }; isWorking = true; errorMessage = nil; notice = nil; defer { isWorking = false }
+        do { availability = store.availability(); try await store.requestReadAuthorization(); try await importNow() }
+        catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Apple Health could not be enabled." }
+    }
+    func importNow() async throws {
+        let imported = try await store.importWorkouts()
+        if let uploader { try await uploader.uploadHealthWorkouts(imported); workouts = try await uploader.healthWorkouts() } else { workouts = imported }
+        notice = workouts.isEmpty ? "No workouts are available with the granted read access." : "Imported \(workouts.count) workout summaries."
+    }
+    func importManually() async {
+        guard !isWorking else { return }; isWorking = true; errorMessage = nil; defer { isWorking = false }
+        do { try await importNow() } catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Apple Health workouts could not be imported." }
+    }
+    func deleteImportedData() async {
+        guard !isWorking, let uploader else { return }; isWorking = true; errorMessage = nil; defer { isWorking = false }
+        do { try await uploader.deleteHealthWorkouts(); workouts = []; notice = "Imported workout summaries deleted from Lauver." }
+        catch { errorMessage = (error as? LocalizedError)?.errorDescription ?? "Imported workout data could not be deleted." }
+    }
+}
+
+struct AppleHealthView: View {
+    @StateObject private var model: HealthKitViewModel
+    init(store: any HealthWorkoutStoring = AppleHealthWorkoutStore(), uploader: (any HealthWorkoutUploading)? = nil) { _model = StateObject(wrappedValue: HealthKitViewModel(store: store, uploader: uploader)) }
+    var body: some View {
+        ScrollView { VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
+            Text("Read-only workout summaries").font(.title2.bold())
+            Text("Apple Health is optional. Lauver reads workout type, dates, duration and distance only. Heart rate, routes, sleep and medical data are never read.").foregroundStyle(.secondary)
+            safetyCard {
+                if case .unavailable(let message) = model.availability { Text(message).foregroundStyle(.secondary) }
+                Button("Enable Apple Health") { Task { await model.enable() } }.buttonStyle(SafetyPrimaryButtonStyle()).disabled(model.isWorking).accessibilityIdentifier("healthkit-enable")
+                if model.availability == .available { Button("Import Workouts") { Task { await model.importManually() } }.disabled(model.isWorking).accessibilityIdentifier("healthkit-import") }
+            }
+            if model.isWorking { ProgressView("Reading Apple Health") }
+            if let notice = model.notice { Text(notice).foregroundStyle(.secondary) }
+            if let error = model.errorMessage { Text(error).foregroundStyle(LauverDesign.ColorToken.danger).accessibilityIdentifier("healthkit-error") }
+            if model.availability == .available, model.workouts.isEmpty == false, model.uploaderAvailable {
+                Button("Delete Imported Data", role: .destructive) { Task { await model.deleteImportedData() } }.disabled(model.isWorking).accessibilityIdentifier("healthkit-delete")
+                Text("System Health permission is managed in iOS Settings.").font(.footnote).foregroundStyle(.secondary)
+            }
+            ForEach(model.workouts) { workout in
+                safetyCard { Text(workout.sport.capitalized).font(.headline); Text("\(workout.durationSeconds / 60) min").font(.subheadline); Text(workout.startedAt).font(.caption).foregroundStyle(.secondary) }
+            }
+        }.padding(LauverDesign.Spacing.large) }.background(LauverDesign.ColorToken.background).navigationTitle("Apple Health")
     }
 }

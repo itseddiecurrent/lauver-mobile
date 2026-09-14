@@ -26,6 +26,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Lauver reads workout summaries you choose to import. It does not read heart rate, routes, sleep, or medical data.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

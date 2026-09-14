@@ -52,6 +52,7 @@ model User {
   safetyTargets SafetyAuditEvent[] @relation("SafetyTarget")
   stravaConnection StravaConnection?
   stravaOAuthState StravaOAuthState?
+  healthWorkouts HealthWorkout[]
 
   @@map("users")
 }
@@ -277,4 +278,20 @@ model Block {
   @@id([blockerId, blockedId])
   @@index([blockedId, blockerId])
   @@map("blocks")
+}
+
+model HealthWorkout {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  workoutUUID     String   @map("workout_uuid") @db.Uuid
+  sport           String   @db.VarChar(80)
+  startedAt       DateTime @map("started_at") @db.Timestamptz(3)
+  endedAt         DateTime @map("ended_at") @db.Timestamptz(3)
+  durationSeconds Int      @map("duration_seconds")
+  distanceMeters  Float?   @map("distance_meters")
+  importedAt      DateTime @default(now()) @map("imported_at") @db.Timestamptz(3)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, workoutUUID])
+  @@index([userId, startedAt])
+  @@map("health_workouts")
 }

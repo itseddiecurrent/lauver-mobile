@@ -17,6 +17,8 @@ import { installProfileRoutes } from './profile-routes.js';
 import { installSafetyRoutes, type SafetyServicing } from './safety.js';
 import { installStravaRoutes, type StravaServicing } from './strava.js';
 import { StravaError } from './strava-provider.js';
+import { installHealthKitRoutes } from './healthkit.js';
+import type { HealthKitService } from './healthkit.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -48,6 +50,7 @@ export type AppDependencies = {
   safetyService: SafetyServicing;
   safetyRateLimiter: InMemoryRateLimiter;
   stravaService?: StravaServicing;
+  healthKitService?: HealthKitService;
 };
 
 class CorsOriginError extends Error {
@@ -139,6 +142,7 @@ export function createApp(dependencies: AppDependencies): Express {
   installDiscoverRoutes(app, dependencies);
   installSafetyRoutes(app, dependencies);
   if (dependencies.stravaService) installStravaRoutes(app, { authService: dependencies.authService, stravaService: dependencies.stravaService });
+  if (dependencies.healthKitService) installHealthKitRoutes(app, { authService: dependencies.authService, service: dependencies.healthKitService });
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,

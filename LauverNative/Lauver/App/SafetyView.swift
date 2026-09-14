@@ -215,13 +215,15 @@ struct BlockedUsersView: View {
 struct SafetySettingsView: View {
     let service: any SafetyServicing
     let stravaService: any StravaServicing
+    let healthUploader: (any HealthWorkoutUploading)?
     let signOut: () -> Void
+    init(service: any SafetyServicing, stravaService: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) { self.service = service; self.stravaService = stravaService; self.healthUploader = healthUploader; self.signOut = signOut }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
                 Text("CONNECTIONS").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
                 safetyCard {
-                    NavigationLink { ConnectedAppsView(service: stravaService) } label: {
+                    NavigationLink { ConnectedAppsView(service: stravaService, healthUploader: healthUploader) } label: {
                         Label("Connected Apps", systemImage: "link").frame(maxWidth: .infinity, alignment: .leading)
                     }.accessibilityIdentifier("settings-connected-apps")
                 }

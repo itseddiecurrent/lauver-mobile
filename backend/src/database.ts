@@ -13,7 +13,7 @@ export interface Database {
 }
 
 export class PrismaDatabase implements Database {
-  readonly #client: PrismaClient;
+  readonly client: PrismaClient;
   readonly authRepository: AuthRepository;
   readonly profileRepository: ProfileRepository;
   readonly discoverRepository: PrismaDiscoverRepository;
@@ -27,21 +27,21 @@ export class PrismaDatabase implements Database {
       max: 10,
     });
 
-    this.#client = new PrismaClient({ adapter });
-    this.authRepository = new PrismaAuthRepository(this.#client);
-    this.profileRepository = new PrismaProfileRepository(this.#client);
-    this.discoverRepository = new PrismaDiscoverRepository(this.#client);
-    this.safetyService = new SafetyService(this.#client);
+    this.client = new PrismaClient({ adapter });
+    this.authRepository = new PrismaAuthRepository(this.client);
+    this.profileRepository = new PrismaProfileRepository(this.client);
+    this.discoverRepository = new PrismaDiscoverRepository(this.client);
+    this.safetyService = new SafetyService(this.client);
     this.stravaRepository = new PgStravaRepository(databaseURL);
   }
 
   async checkHealth(): Promise<void> {
-    await this.#client.$queryRaw`SELECT 1`;
+    await this.client.$queryRaw`SELECT 1`;
   }
 
   async disconnect(): Promise<void> {
     await this.stravaRepository.close();
-    await this.#client.$disconnect();
+    await this.client.$disconnect();
   }
 }
 
