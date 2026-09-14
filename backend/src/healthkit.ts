@@ -30,7 +30,11 @@ export function installHealthKitRoutes(app: Express, deps: { authService: AuthSe
   app.get(`${base}/workouts`, authenticated(deps.authService, async (user, _request, response) => { response.status(200).json({ workouts: await deps.service.list(user.id) }); }));
   app.post(`${base}/workouts`, authenticated(deps.authService, async (user, request, response) => {
     const parsed = importSchema.safeParse(request.body);
-    if (!parsed.success) { response.status(422).json({ code: 'validation_failed', message: 'Workout summaries are invalid.' }); return; }
+    if (!parsed.success) {
+      const fields = parsed.error.issues.map(issue => `${issue.path.join('.') || 'workouts'}: ${issue.message}`).join('; ');
+      response.status(422).json({ code: 'validation_failed', message: `Workout summaries are invalid (${fields}).` });
+      return;
+    }
     const imported = await deps.service.import(user.id, parsed.data.workouts);
     response.status(200).json({ imported });
   }));
