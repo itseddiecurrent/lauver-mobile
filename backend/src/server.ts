@@ -81,6 +81,8 @@ const photoCleanupInterval = setInterval(() => {
   });
 }, 5 * 60 * 1_000);
 photoCleanupInterval.unref();
+const streamService = config.stream ? new StreamService(database.client, config.stream.apiKey, config.stream.apiSecret, config.stream.tokenTTLSeconds) : undefined;
+if (streamService) database.safetyService.onBlocking = (actor, target) => streamService.blockPair(actor, target);
 const server = createServer(
   createApp({
     database,
@@ -95,7 +97,7 @@ const server = createServer(
     profileService,
     stravaService,
     healthKitService: new HealthKitService(database.client),
-    streamService: config.stream ? new StreamService(database.client, config.stream.apiKey, config.stream.apiSecret, config.stream.tokenTTLSeconds) : undefined,
+    streamService,
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(

@@ -512,6 +512,8 @@ private final class OtherProfileViewModel: ObservableObject {
 }
 
 struct OtherProfileScreen: View {
+    @EnvironmentObject private var chat: ChatConnection
+    private let chatService: (any ChatServicing)?
     @StateObject private var viewModel: OtherProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -530,6 +532,7 @@ struct OtherProfileScreen: View {
     init(userID: String, service: any ProfileServicing, safetyService: any SafetyServicing) {
         _viewModel = StateObject(wrappedValue: OtherProfileViewModel(userID: userID, service: service))
         self.userID = userID
+        self.chatService = service as? any ChatServicing
         self.safetyService = safetyService
     }
 
@@ -554,6 +557,12 @@ struct OtherProfileScreen: View {
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await viewModel.load() } } }
         .toolbar {
             if viewModel.profile != nil {
+                if let chatService {
+                    NavigationLink {
+                        DirectConversationView(service: chatService, targetUserID: userID)
+                    } label: { Label("Message", systemImage: "message") }
+                    .accessibilityIdentifier("profile-message")
+                }
                 Menu {
                     Button("Report User", systemImage: "flag") { reportMode = .report }.accessibilityIdentifier("profile-report")
                     Button("Report and Block", systemImage: "shield") { reportMode = .reportAndBlock }.accessibilityIdentifier("profile-report-block")

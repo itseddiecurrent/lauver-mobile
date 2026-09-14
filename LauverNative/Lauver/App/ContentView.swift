@@ -6,37 +6,6 @@ enum AuthenticationState: Equatable {
     case authenticated
 }
 
-@MainActor
-final class MessagesViewModel: ObservableObject {
-    @Published private(set) var token: ChatToken?
-    @Published private(set) var isLoading = false
-    @Published private(set) var errorMessage: String?
-    private let service: any ChatServicing
-    init(service: any ChatServicing) { self.service = service }
-    func load() async {
-        guard !isLoading else { return }
-        isLoading = true; errorMessage = nil; defer { isLoading = false }
-        do { token = try await service.chatToken() }
-        catch let error as APIError { errorMessage = error.userMessage }
-        catch { errorMessage = "Conversations could not be loaded." }
-    }
-}
-
-struct MessagesView: View {
-    @StateObject private var model: MessagesViewModel
-    init(service: any ChatServicing) { _model = StateObject(wrappedValue: MessagesViewModel(service: service)) }
-    var body: some View {
-        Group {
-            if model.isLoading { ProgressView("Loading conversations") }
-            else if let error = model.errorMessage {
-                VStack(spacing: LauverDesign.Spacing.medium) { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }.padding()
-            } else {
-                ContentUnavailableView("No conversations yet", systemImage: "message", description: Text("Start a conversation from a workout partner's profile."))
-            }
-        }.navigationTitle("Messages").accessibilityIdentifier("screen-messages").task { await model.load() }
-    }
-}
-
 enum AuthScreenMode: Equatable {
     case login
     case register
@@ -524,6 +493,8 @@ private struct AuthenticatedShellView: View {
     let safetyService: any SafetyServicing
     let stravaService: any StravaServicing
     let chatService: (any ChatServicing)?
+    @StateObject private var chat = ChatConnection()
+
 
     var body: some View {
         TabView {
@@ -554,6 +525,8 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
         }
         .tint(LauverDesign.ColorToken.accent)
+        .environmentObject(chat)
+        .onDisappear { chat.stop() }
     }
 }
 

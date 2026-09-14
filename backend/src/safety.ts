@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 import type { Express } from 'express';
 import { z } from 'zod';
 import type { AuthServicing } from './auth.js';
+import { chatPairKey } from './stream.js';
 import { ProfileError } from './profile.js';
 import { type InMemoryRateLimiter, RateLimitExceededError } from './rate-limiter.js';
 
@@ -21,7 +22,15 @@ export interface SafetyServicing {
 }
 
 export class SafetyService implements SafetyServicing {
+  onBlocking?: (actorId: string, targetId: string) => Promise<void>;
   constructor(private readonly client: PrismaClient) {}
+
+  private async lockChat(tx: Prisma.TransactionClient, actorId: string, targetId: string) {
+    if (this.onBlocking) {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(actorId, targetId)}, 0))`;
+      await this.onBlocking(actorId, targetId);
+    }
+  }
 
   private validatePair(actorId: string, targetId: string): void {
     if (actorId.toLowerCase() === targetId.toLowerCase()) throw new ProfileError(422, 'invalid_safety_target', 'You cannot report or block yourself.');
@@ -30,6 +39,7 @@ export class SafetyService implements SafetyServicing {
   async block(actorId: string, targetId: string, requestId: string): Promise<void> {
     this.validatePair(actorId, targetId);
     await this.client.$transaction(async (tx) => {
+      await this.lockChat(tx, actorId, targetId);
       if (!await tx.user.findFirst({ where: { id: targetId, status: 'ACTIVE' }, select: { id: true } })) {
         throw new ProfileError(404, 'user_not_found', 'User not found.');
       }
@@ -61,6 +71,7 @@ export class SafetyService implements SafetyServicing {
   async report(actorId: string, input: ReportInput, requestId: string): Promise<{ referenceId: string; blockedUser: boolean }> {
     this.validatePair(actorId, input.targetId);
     return this.client.$transaction(async tx => {
+      if (input.blockUser) await this.lockChat(tx, actorId, input.targetId);
       const profile = await tx.profile.findFirst({ where: { userId: input.targetId, isComplete: true, user: { status: 'ACTIVE' } },
         select: { userId: true, displayName: true, bio: true, cityName: true, countryCode: true,
           user: { select: { sports: { select: { sport: true, paceValue: true, paceUnit: true }, orderBy: { sport: 'asc' } } } } } });

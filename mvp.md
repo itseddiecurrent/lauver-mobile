@@ -1011,7 +1011,7 @@ xcodebuild test \
 
 ### Step 10：Stream 一对一私聊
 
-**状态：🟡 进行中（2026-09-14）。** 已建立 Stream 一对一私聊的实施记录；当前仓库尚未接入 Stream server SDK、token provider 或 iOS Chat SDK。下一阶段先完成 staging 配置与后端授权边界，再实现 Conversations、Direct Chat、未读数、Block/Report 和断网重试。证据见 `artifacts/acceptance/step-10.md`。
+**状态：🟡 进行中（2026-09-14）。** Stream server SDK、短期 token provider、canonical direct channel、Block 发送策略和官方 iOS `StreamChatSwiftUI` SDK 已接入；Conversations、Direct Chat、文本发送和失败重试已完成。未完成项是两用户真机实时收发、第三方 channel 隔离、Chat 内 Block/Report 和断网恢复验收。证据见 `artifacts/acceptance/step-10.md`。
 
 **依赖：** Step 07；Stream staging application（API key、API secret 和 iOS SDK 配置）。
 

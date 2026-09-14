@@ -16,6 +16,8 @@
 - `npm run lint`、`npm run typecheck` 和 `npm test`（142/142）通过；提交 `453644a` 已推送。
 - Render staging 已配置 Stream credentials；线上 `POST /v1/chat/token` 和 `POST /v1/chat/direct` 在未认证请求下均返回 401，确认路由已部署且仍受 Lauver 登录保护。
 - Xcode 工程已加入官方 `StreamChatSwiftUI` Swift Package（最低版本 5.10.0），依赖解析和 Staging Simulator build 通过；提交 `1290e2d` 已推送。
+- iOS 已接入 `ChatClient`、短期 token 自动续期、Conversations 列表、Direct Chat、文本输入和发送失败重试；Profile 详情增加 Message 入口。
+- 发送请求通过 Lauver API 服务端校验 channel 成员和双向 Block，使用客户端生成的 UUID 保证重试不会重复发送；后端新增 7 项 Stream 测试，测试总数 149/149。
 
 ## 实施顺序
 

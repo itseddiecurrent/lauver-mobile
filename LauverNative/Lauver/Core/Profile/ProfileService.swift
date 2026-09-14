@@ -300,6 +300,7 @@ struct DirectChatChannel: Decodable, Equatable, Identifiable {
 
 protocol ChatServicing {
     func chatToken() async throws -> ChatToken
+    func sendChatMessage(channelID: String, id: UUID, text: String) async throws
     func directChat(targetUserID: String) async throws -> DirectChatChannel
 }
 
@@ -473,6 +474,16 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
     func chatToken() async throws -> ChatToken {
         try await authenticatedRequest { token in
             APIRequest(method: .post, path: "/v1/chat/token", headers: Self.authorization(token))
+        }
+    }
+
+    func sendChatMessage(channelID: String, id: UUID, text: String) async throws {
+        guard channelID.hasPrefix("dm-"), channelID.count == 43,
+              channelID.dropFirst(3).allSatisfy({ $0.isHexDigit }) else { throw APIError.invalidRequest }
+        struct Payload: Encodable { let id: UUID; let text: String }
+        let body = try encoder.encode(Payload(id: id, text: text))
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/chat/channels/\(channelID)/messages", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
         }
     }
 
