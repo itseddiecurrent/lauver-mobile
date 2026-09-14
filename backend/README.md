@@ -39,3 +39,20 @@ iPhone acceptance uses a separate disposable run and retains its exact cleanup j
 until manual testing ends. Local UI tests and successful installation do not establish
 that the deployed API passed acceptance.
 See [Step 07 evidence](../artifacts/acceptance/step-07.md) and the repository README for the contract.
+
+## Step 08 acceptance
+
+The staging Strava application is created with public Client ID `229012` and callback
+domain `lauver-api-staging.onrender.com`. Store its client secret and dedicated token
+encryption key directly in the Render service's Environment settings. Add the fixed
+`STRAVA_CALLBACK_URL` and set `STRAVA_ENABLED=true` only with all required settings.
+The Blueprint leaves the enabled flag under manual control (`sync: false`) so later
+Blueprint updates preserve the selected value; a missing flag defaults to disabled
+in the backend. Deploy the code and migration together after CI passes.
+
+Run `npm run verify:step-08:staging -- --action prepare` only after the new authenticated
+Strava status route is live. The staged verifier creates one private disposable Lauver
+account; the owner authorizes their own Strava athlete on iPhone. See
+[Step 08 evidence](../artifacts/acceptance/step-08.md) for the connect/expire/refresh/revoke
+commands and exact fixture cleanup. An unsigned archive or fake provider does not
+establish real OAuth or provider revocation acceptance.

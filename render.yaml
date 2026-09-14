@@ -49,7 +49,7 @@ services:
       - key: APPLE_TOKEN_ENCRYPTION_KEY
         sync: false
       - key: STRAVA_ENABLED
-        value: false
+        sync: false
       - key: STRAVA_CLIENT_ID
         sync: false
       - key: STRAVA_CLIENT_SECRET

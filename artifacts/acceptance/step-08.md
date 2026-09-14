@@ -1,6 +1,6 @@
 # Step 08 — Strava OAuth 2.0 只读集成
 
-日期：2026-09-14。状态：🟡 实现与本地验收进行中；真实 Strava staging athlete 授权、刷新、撤销与真机验收待完成。不能以 provider fake / Simulator 结果代替真实服务验收。
+日期：2026-09-14。状态：🟡 实现、后端本地验收与真机 XCTest 已通过；真实 Strava staging athlete 授权、刷新、撤销与完整 UI 验收待完成。不能以 provider fake / XCTest 结果代替真实服务验收。
 
 ## 实现范围
 
@@ -23,11 +23,21 @@
 - 验收工具按严格字段结构检查活动摘要，标题中的 `latitude` 等文字不被误判；`connected` 即保存旧 access token 的加密值，无需先强制过期。原生断开/刷新丢失响应后的状态恢复同时通知 Profile 重新读取状态，避免保留已清除摘要。
 - 此前原生 staging build-for-testing：`TEST BUILD SUCCEEDED`，日志 `/tmp/lauver-step08-ios-build.log`。本轮最终源码的 App/XCTest/UI 编译阶段未报告编译错误，但 XCTest/完整 UI 未开始执行：iOS 26.5 Simulator 停在系统启动转圈画面，`simctl bootstatus` 持续 `Waiting on System App`。已尝试设备重启、CoreSimulatorService 重启和另一台现有测试模拟器，仍不能完成启动；已停止等待中的测试。不能记录为原生测试通过。
 - App 构建与 archive 恢复后再次运行原生全套测试（`/tmp/lauver-step08-resume-recovered-tests.log`），仍在 System App 启动阶段等待且没有 Test Case 开始执行，已停止并关闭本轮测试模拟器。下一轮需在正常启动的 Simulator / CI 补跑最终 XCTest / UI，再进行真实 iPhone OAuth 验收。
+- 改用已连接的 iPhone 14 Plus（iOS 18.7.8），同一最终功能源码 `2adf300` 的全部 XCTest **99/99 通过**，其中 Strava **9/9**，`TEST SUCCEEDED`。结果 bundle `/tmp/lauver-step08-device-unit.xcresult`；新版 staging App 已完成开发签名并安装。Simulator 中断属于历史未完成尝试；真机单元测试成功不代表 OAuth/完整 UI 已通过。
+- 真机 Connected Apps / Strava 的单项 XCUITest 尝试在 runner 初始化阶段失败（`Timed out while enabling automation mode`，exit 65），**没有 Test Case 执行**，不是页面断言通过或失败的证据。日志 `/tmp/lauver-step08-device-ui.log`、bundle `/tmp/lauver-step08-device-ui.xcresult`。完整 UI 交由云端 CI 补跑；真实系统认证会话仍需用户手动授权验收。
 - 冷构建的标准配置脚本最初受 `actool` 等待影响并被停止；恢复后最终源码的 Staging / Production Simulator build 均 `BUILD SUCCEEDED`，实际构建 Info.plist 的 environment / API URL / bundle ID / `lauver` OAuth return scheme 检查通过。日志 `/tmp/lauver-step08-resume-staging-build.log`、`/tmp/lauver-step08-resume-production-build.log`。
 - Staging unsigned device archive `ARCHIVE SUCCEEDED`，位置 `/tmp/lauver-step08-resume-staging.xcarchive`，日志 `/tmp/lauver-step08-resume-archive.log`。archive environment / API URL 检查通过，archive 文件和 executable strings 通过现有高置信度 secret scan。当前尚未配置真实 Strava secret/token，因此真实配置值的精确扫描、Git history 扫描和正式签名 IPA 验收仍待完成；不能用未签名 archive 代替这些检查。
 - 当前 Render `/healthz` 实测 HTTP 200，未登录 Strava status 为 HTTP 404，说明本 Step 路由尚未部署。本轮未注册远端账户、修改 staging schema 或连接用户的真实 Strava。
 
 构建与基础配置/secret 扫描结果汇总：`step-08-local-build-20260914.log`；完整后端集成日志：`step-08-local-integration-20260914.log`。
+
+真机 XCTest 原始结果汇总：`step-08-device-unit-20260914.json`。专用生成 key 的 native source / signed device app / native Git history 精确扫描见 `step-08-known-key-scan-20260914.log`；provider Client Secret 与真实 token 尚不可在本地检查，不记为通过。
+
+## 部署进度
+
+- 功能源码 `2adf3001953c6e1905f39c8616bbf37b625c9e3d` 已推送 `main`；GitHub [CI run 34802025321](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/34802025321) 的 backend / guardrails 已通过，iOS 仍在执行。
+- `mvp-step08-strava` 分支也已上传。当前 GitHub credential 的 PR creation 返回 HTTP 403；未创建 PR，沿用项目已有 main / CI / Render staging 流程。
+- Blueprint enabled flag 保留手动值的配置修正与真机验收记录会随后提交；完整 CI、线上 migration/status 与真实 OAuth 的结果需据实际部署续记。
 
 ## Staging 配置
 
@@ -47,6 +57,8 @@
 | `STRAVA_TOKEN_ENCRYPTION_KEY` | 用 `openssl rand -base64 32` 生成独立密钥，仅存 Render secret |
 | `STRAVA_CALLBACK_URL` | `https://lauver-api-staging.onrender.com/v1/integrations/strava/callback` |
 | `STRAVA_ENABLED` | 全部配置就绪并部署后设置为 `true` |
+
+`STRAVA_ENABLED` 与 provider secret 一样使用 Blueprint `sync: false`，保留 Render 手动配置值，避免 Blueprint sync 将用户已启用的开关覆盖回 false；缺省仍由 backend config 默认 disabled。[Render Blueprint 环境变量说明](https://render.com/docs/blueprint-spec#prompting-for-secret-values)
 
 不使用 Strava Dashboard 的预生成 access/refresh token 代替 App OAuth；验收必须从 App 的 Connect Strava 开始。`activity:read` 不包含 visibility 为 Only You 的活动；没有可读活动时空列表是合法结果，不要求修改已有活动的隐私设置。协议依据见 [Strava Authentication](https://developers.strava.com/docs/authentication/)。
 

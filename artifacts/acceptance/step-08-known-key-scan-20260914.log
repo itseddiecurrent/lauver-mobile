@@ -1,0 +1,4 @@
+PASS generated staging encryption key absent from native source (42 files)
+PASS generated staging encryption key absent from signed device app (44 files)
+PASS generated staging encryption key absent from native Git history
+NOT VERIFIED exact real Strava Client Secret/token values; these are not available locally.

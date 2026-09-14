@@ -941,7 +941,7 @@ xcodebuild test \
 
 ### Step 08：Strava OAuth 2.0 只读集成
 
-**状态：🟡 已实现，后端本地验收通过（2026-09-14）。** 已实现一次性 state、只读 OAuth、加密 token、自动轮换、最近 20 条摘要、推荐 revoke 与失败重试，以及原生 Connected Apps / Profile 活动列表；backend unit 142/142、隔离 PostgreSQL integration 54/54 通过。用户自己的 Strava API application 已创建（Client ID `229012`），callback domain、Render Client ID/Secret 已确认保存，剩余 encryption key/callback URL/enabled 配置待确认；真实授权/刷新/撤销、原生完整测试、真机和真实 secret/IPA 验收尚未完成，不能标记 Step 通过。Staging/production 构建与未签名 staging archive 已通过；现有 Render API healthz 返回 200，Strava status 仍为 404，需要部署本 Step。证据及配置步骤见 `artifacts/acceptance/step-08.md`。
+**状态：🟡 已实现，后端本地与真机 XCTest 验收通过（2026-09-14）。** 已实现一次性 state、只读 OAuth、加密 token、自动轮换、最近 20 条摘要、推荐 revoke 与失败重试，以及原生 Connected Apps / Profile 活动列表；backend unit 142/142、隔离 PostgreSQL integration 54/54、iPhone XCTest 99/99（Strava 9/9）通过。用户自己的 Strava API application 已创建（Client ID `229012`），callback domain、Render Client ID/Secret 已确认保存，剩余 encryption key/callback URL/enabled 配置待确认；真实授权/刷新/撤销、完整 UI 与真实 secret/IPA 验收尚未完成，不能标记 Step 通过。Staging/production 构建与未签名 staging archive 已通过，新版 staging App 已签名安装；实现已推送 main 并运行 CI，Render 部署后再开始真实验收。证据及配置步骤见 `artifacts/acceptance/step-08.md`。
 
 **依赖：** Step 03、Step 05；Strava staging application。
 
