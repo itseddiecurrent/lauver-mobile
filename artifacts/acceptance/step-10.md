@@ -15,6 +15,7 @@
 - 新增认证后的 `POST /v1/chat/direct`，按双方排序后的 UUID SHA-256 生成唯一 channel ID；创建前检查双方用户状态和双向 Block。
 - `npm run lint`、`npm run typecheck` 和 `npm test`（142/142）通过；提交 `453644a` 已推送。
 - Render staging 已配置 Stream credentials；线上 `POST /v1/chat/token` 和 `POST /v1/chat/direct` 在未认证请求下均返回 401，确认路由已部署且仍受 Lauver 登录保护。
+- Xcode 工程已加入官方 `StreamChatSwiftUI` Swift Package（最低版本 5.10.0），依赖解析和 Staging Simulator build 通过；提交 `1290e2d` 已推送。
 
 ## 实施顺序
 
