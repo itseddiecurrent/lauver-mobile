@@ -284,7 +284,26 @@ protocol HealthWorkoutUploading {
     func deleteHealthWorkouts() async throws
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading {
+struct ChatToken: Decodable, Equatable {
+    let apiKey: String
+    let userId: String
+    let token: String
+    let expiresAt: String
+}
+
+struct DirectChatChannel: Decodable, Equatable, Identifiable {
+    let channelType: String
+    let channelId: String
+    let members: [String]
+    var id: String { "\(channelType):\(channelId)" }
+}
+
+protocol ChatServicing {
+    func chatToken() async throws -> ChatToken
+    func directChat(targetUserID: String) async throws -> DirectChatChannel
+}
+
+final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -448,6 +467,21 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
     func deleteHealthWorkouts() async throws {
         let _: EmptyResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/integrations/healthkit/workouts", headers: Self.authorization(token))
+        }
+    }
+
+    func chatToken() async throws -> ChatToken {
+        try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/chat/token", headers: Self.authorization(token))
+        }
+    }
+
+    func directChat(targetUserID: String) async throws -> DirectChatChannel {
+        guard UUID(uuidString: targetUserID) != nil else { throw APIError.invalidRequest }
+        struct Payload: Encodable { let targetUserId: String }
+        let body = try encoder.encode(Payload(targetUserId: targetUserID))
+        return try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/chat/direct", body: body, headers: Self.jsonAuthorization(token))
         }
     }
 
