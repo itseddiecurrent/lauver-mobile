@@ -29,7 +29,10 @@ export class StreamService {
         commands: [], reactions: false, replies: false, quotes: false, uploads: false, polls: false,
         typing_events: false, read_events: true, max_message_length: 2000,
       });
-    })().catch(error => { this.ready = undefined; throw error; });
+    })().catch(error => {
+      this.ready = undefined;
+      throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.');
+    });
     return this.ready;
   }
 
@@ -48,11 +51,15 @@ export class StreamService {
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, targetUserId)}, 0))`;
       await this.checkPair(tx, userId, targetUserId);
       const users = await tx.user.findMany({ where: { id: { in: [userId, targetUserId] }, status: 'ACTIVE' }, select: { id: true, profile: { select: { displayName: true } } } });
-      await this.client.upsertUsers(users.map(user => ({ id: user.id, name: user.profile?.displayName ?? 'Lauver member', role: 'user' })));
       const members = [userId, targetUserId].sort();
       const channelId = chatChannelId(userId, targetUserId);
-      const channel = this.client.channel('messaging', channelId, { members, created_by_id: userId });
-      await channel.create();
+      try {
+        await this.client.upsertUsers(users.map(user => ({ id: user.id, name: user.profile?.displayName ?? 'Lauver member', role: 'user' })));
+        const channel = this.client.channel('messaging', channelId, { members, created_by_id: userId });
+        await channel.create();
+      } catch (error) {
+        throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.');
+      }
       return { channelType: 'messaging' as const, channelId, members };
     }, { timeout: 15000 });
   }
