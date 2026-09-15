@@ -29,7 +29,7 @@ export class StreamService {
         commands: [], reactions: false, replies: false, quotes: false, uploads: false, polls: false,
         typing_events: false, read_events: true, max_message_length: 2000,
       });
-    })().catch(error => {
+    })().catch(() => {
       this.ready = undefined;
       throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.');
     });
@@ -57,7 +57,7 @@ export class StreamService {
         await this.client.upsertUsers(users.map(user => ({ id: user.id, name: user.profile?.displayName ?? 'Lauver member', role: 'user' })));
         const channel = this.client.channel('messaging', channelId, { members, created_by_id: userId });
         await channel.create();
-      } catch (error) {
+      } catch {
         throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.');
       }
       return { channelType: 'messaging' as const, channelId, members };
