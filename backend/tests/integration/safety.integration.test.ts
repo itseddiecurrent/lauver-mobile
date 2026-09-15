@@ -39,6 +39,27 @@ afterAll(async () => {
 const report = (targetId = b, blockUser = false) => ({ targetType: 'user', targetId, reason: 'harassment', details: 'Evidence note', blockUser });
 
 describe('PostgreSQL safety policy and immutable evidence', () => {
+  it('commits chat evidence and its message audit together', async () => {
+    const receipt = await database.safetyService.reportChatMessage(a, b, 'dm-test', 'message-test', 'x'.repeat(600), b,
+      'other', 'Chat acceptance', id(101));
+    const saved = (await sql.query<ReportRow>('SELECT * FROM reports WHERE id=$1', [receipt.referenceId])).rows[0]!;
+    expect(saved).toMatchObject({ reporter_id: a, target_user_id: b, source: 'chat', status: 'open',
+      snapshot: { channelId: 'dm-test', messageId: 'message-test', senderId: b, text: 'x'.repeat(500) } });
+    expect((await sql.query("SELECT 1 FROM safety_audit_events WHERE report_id=$1 AND action='report_message' AND request_id=$2", [receipt.referenceId, id(101)])).rowCount).toBe(1);
+    await expect(sql.query(`UPDATE reports SET snapshot='{}'::jsonb WHERE id=$1`, [receipt.referenceId])).rejects.toMatchObject({ code: '23514' });
+  });
+  it('rolls back chat reports when their audit cannot be written', async () => {
+    const before = (await sql.query<{count:number}>('SELECT count(*)::int AS count FROM reports')).rows[0]!.count;
+    await sql.query(`CREATE FUNCTION reject_chat_test_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Test audit failure'; END $$`);
+    await sql.query('CREATE TRIGGER reject_chat_test_audit BEFORE INSERT ON safety_audit_events FOR EACH ROW EXECUTE FUNCTION reject_chat_test_audit()');
+    try {
+      await expect(database.safetyService.reportChatMessage(a, b, 'dm-test', 'message-rollback', 'text', b, 'other', undefined, id(102))).rejects.toThrow();
+    } finally {
+      await sql.query('DROP TRIGGER reject_chat_test_audit ON safety_audit_events');
+      await sql.query('DROP FUNCTION reject_chat_test_audit()');
+    }
+    expect((await sql.query<{count:number}>('SELECT count(*)::int AS count FROM reports')).rows[0]!.count).toBe(before);
+  });
   it('blocks both Discover and direct Profile reads; repeats are idempotent and unblock only affects the owner', async () => {
     actorId = a;
     await request(app).get(`/v1/users/${b}`).expect(200);

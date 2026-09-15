@@ -25,7 +25,7 @@ export class StreamService {
     if (!this.ready) this.ready = (async () => {
       await this.client.updateAppSettings({ disable_auth_checks: false, disable_permissions_checks: false });
       await this.client.updateChannelType('messaging', {
-        grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members', 'send-message'] },
+        grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members'] },
         commands: [], reactions: false, replies: false, quotes: false, uploads: false, polls: false,
         typing_events: false, read_events: true, max_message_length: 2000,
       });
@@ -84,7 +84,18 @@ export class StreamService {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chatPairKey(userId, target)}, 0))`;
       await this.checkPair(tx, userId, target);
       const id = createHash('sha256').update(`${userId}:${channelId}:${input.id}`).digest('hex');
-      await channel.sendMessage({ id, text: input.text, user_id: userId });
+      try {
+        await channel.sendMessage({ id, text: input.text, user_id: userId });
+      } catch {
+        // Stream rejects duplicate IDs. An earlier attempt may have succeeded
+        // even if its response was lost; verify ownership and content first.
+        let existing;
+        try { existing = (await this.client.getMessage(id)).message; }
+        catch { throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.'); }
+        if (existing.cid !== `messaging:${channelId}` || existing.user?.id !== userId || existing.text !== input.text || existing.deleted_at) {
+          throw new ProfileError(409, 'message_id_conflict', 'This message ID has already been used.');
+        }
+      }
       return { id };
     }, { timeout: 15000 });
   }

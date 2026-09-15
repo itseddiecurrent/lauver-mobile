@@ -97,15 +97,17 @@ export class SafetyService implements SafetyServicing {
     requestId: string): Promise<{ referenceId: string; blockedUser: boolean }> {
     this.validatePair(actorId, targetUserId);
     if (messageSenderId !== targetUserId) throw new ProfileError(422, 'invalid_report_target', 'The message sender is not the reported user.');
-    const profile = await this.client.profile.findFirst({ where: { userId: targetUserId, isComplete: true, user: { status: 'ACTIVE' } }, select: { userId: true } });
-    if (!profile) throw new ProfileError(404, 'user_not_found', 'User not found.');
-    const snapshot: Prisma.InputJsonObject = { channelId, messageId, senderId: messageSenderId, text: messageText.slice(0, 500) };
-    const report = await this.client.report.create({ data: {
-      reporterId: actorId, targetUserId, targetType: 'user', source: 'chat', reason,
-      details: details ?? null, snapshot, requestId,
-    } });
-    await this.client.safetyAuditEvent.create({ data: { actorId, targetId: targetUserId, action: 'report_message', requestId, reportId: report.id } });
-    return { referenceId: report.id, blockedUser: false };
+    return this.client.$transaction(async tx => {
+      const profile = await tx.profile.findFirst({ where: { userId: targetUserId, isComplete: true, user: { status: 'ACTIVE' } }, select: { userId: true } });
+      if (!profile) throw new ProfileError(404, 'user_not_found', 'User not found.');
+      const snapshot: Prisma.InputJsonObject = { channelId, messageId, senderId: messageSenderId, text: messageText.slice(0, 500) };
+      const report = await tx.report.create({ data: {
+        reporterId: actorId, targetUserId, targetType: 'user', source: 'chat', reason,
+        details: details ?? null, snapshot, requestId,
+      } });
+      await tx.safetyAuditEvent.create({ data: { actorId, targetId: targetUserId, action: 'report_message', requestId, reportId: report.id } });
+      return { referenceId: report.id, blockedUser: false };
+    });
   }
 }
 

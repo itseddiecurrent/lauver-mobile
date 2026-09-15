@@ -45,7 +45,7 @@ describe('Stream chat ownership and canonical channels', () => {
     const { service } = fixture();
     await service.token(a);
     expect(sdk.updateAppSettings).toHaveBeenCalledWith({ disable_auth_checks: false, disable_permissions_checks: false });
-    expect(sdk.updateChannelType).toHaveBeenCalledWith('messaging', expect.objectContaining({ grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members', 'send-message'] } }));
+    expect(sdk.updateChannelType).toHaveBeenCalledWith('messaging', expect.objectContaining({ grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members'] } }));
     sdk.queryMembers.mockResolvedValue({ members: [{ user_id: b }] });
     await expect(service.send(a, 'dm-' + 'a'.repeat(40), { id: a, text: 'hello' })).rejects.toMatchObject({ statusCode: 403 });
     expect(sdk.sendMessage).not.toHaveBeenCalled();
@@ -65,6 +65,29 @@ describe('Stream chat ownership and canonical channels', () => {
     const { service, database } = fixture(); database.user.count.mockResolvedValue(1);
     await expect(service.direct(a, b)).rejects.toMatchObject({ statusCode: 404 });
     expect(sdk.create).not.toHaveBeenCalled();
+  });
+  it('recovers a duplicate send only when the stored message matches and still checks blocks', async () => {
+    const { service, database } = fixture();
+    const { channelId } = await service.direct(a, b);
+    sdk.queryMembers.mockResolvedValue({ members: [{ user_id: a }, { user_id: b }] });
+    sdk.sendMessage.mockRejectedValue(new Error('Message already exists'));
+    sdk.getMessage.mockResolvedValue({ message: { cid: `messaging:${channelId}`, user: { id: a }, text: 'hello' } });
+    const result = await service.send(a, channelId, { id: a, text: 'hello' });
+    expect(sdk.getMessage).toHaveBeenCalledWith(result.id);
+    await expect(service.send(a, channelId, { id: a, text: 'changed' })).rejects.toMatchObject({ statusCode: 409 });
+    database.block.findFirst.mockResolvedValue({ blockerId: b });
+    await expect(service.send(a, channelId, { id: a, text: 'hello' })).rejects.toMatchObject({ statusCode: 403 });
+    expect(sdk.sendMessage).toHaveBeenCalledTimes(2);
+    sdk.sendMessage.mockResolvedValue({});
+  });
+  it('returns a retryable error when a failed send cannot be verified in Stream', async () => {
+    const { service } = fixture();
+    const { channelId } = await service.direct(a, b);
+    sdk.queryMembers.mockResolvedValue({ members: [{ user_id: a }, { user_id: b }] });
+    sdk.sendMessage.mockRejectedValue(new Error('Provider unavailable'));
+    sdk.getMessage.mockRejectedValue(new Error('Message not found'));
+    await expect(service.send(a, channelId, { id: a, text: 'hello' })).rejects.toMatchObject({ statusCode: 503 });
+    sdk.sendMessage.mockResolvedValue({});
   });
   it('signs an expiring token for the authenticated identity', async () => {
     const { service } = fixture(); const now = Math.floor(Date.now() / 1000);
