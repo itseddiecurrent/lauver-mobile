@@ -510,7 +510,7 @@ private struct AuthenticatedShellView: View {
 
             NavigationStack {
                 if let chatService {
-                    MessagesView(service: chatService)
+                    MessagesView(service: chatService, discoverService: discoverService, safetyService: safetyService)
                 } else {
                     PlaceholderScreen(tab: .messages, message: "Your conversations will appear here.")
                 }

@@ -5,6 +5,7 @@ import StreamChatSwiftUI
 @MainActor
 final class ChatConnection: ObservableObject {
     @Published private(set) var client: ChatClient?
+    @Published var reportMessage: ChatMessage?
     private var context: StreamChatSwiftUI.StreamChat?
     private var connecting: Task<ChatClient, Error>?
     private var generation = UUID()
@@ -29,7 +30,25 @@ final class ChatConnection: ObservableObject {
                 })
                 try Task.checkCancellation()
                 guard generation == self.generation else { throw CancellationError() }
-                self.context = StreamChatSwiftUI.StreamChat(chatClient: client, utils: Utils(composerConfig: ComposerConfig(isVoiceRecordingEnabled: false)))
+                let messageListConfig = MessageListConfig(supportedMessageActions: { [weak self] options in
+                    var actions = MessageAction.defaultActions(for: options)
+                    guard let self, options.message.author.id != identity.userId else { return actions }
+
+                    actions.append(MessageAction(
+                        id: "lauver-report-message",
+                        title: "Report Message",
+                        iconName: "flag",
+                        action: { self.reportMessage = options.message },
+                        confirmationPopup: nil,
+                        isDestructive: false
+                    ))
+                    return actions
+                })
+                let utils = Utils(
+                    messageListConfig: messageListConfig,
+                    composerConfig: ComposerConfig(isVoiceRecordingEnabled: false)
+                )
+                self.context = StreamChatSwiftUI.StreamChat(chatClient: client, utils: utils)
                 self.client = client
                 return client
             } catch {
@@ -68,6 +87,8 @@ final class LauverChatFactory: ViewFactory {
 struct MessagesView: View {
     @EnvironmentObject private var chat: ChatConnection
     let service: any ChatServicing
+    let discoverService: any DiscoverServicing
+    let safetyService: any SafetyServicing
     @State private var errorMessage: String?
     @State private var attempt = 0
 
@@ -79,18 +100,77 @@ struct MessagesView: View {
                 VStack { ErrorStateView(message: errorMessage, requestID: nil); RetryButton { attempt += 1 } }.padding()
             } else { ProgressView("Connecting to messages") }
         }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    NewMessageView(chatService: service, discoverService: discoverService, safetyService: safetyService)
+                } label: {
+                    Label("New message", systemImage: "square.and.pencil")
+                }
+                .accessibilityIdentifier("messages-new-message")
+            }
+        }
         .accessibilityIdentifier("screen-messages")
         .task(id: attempt) {
             errorMessage = nil
             do { _ = try await chat.connect(service: service) }
             catch { if !Task.isCancelled { errorMessage = (error as? APIError)?.userMessage ?? "Messages could not connect. Please try again." } }
         }
+        .sheet(isPresented: Binding(get: { chat.reportMessage != nil }, set: { if !$0 { chat.reportMessage = nil } })) {
+            if let message = chat.reportMessage {
+                ReportMessageView(service: service, message: message) { chat.reportMessage = nil }
+            }
+        }
+    }
+}
+
+struct NewMessageView: View {
+    let chatService: any ChatServicing
+    let discoverService: any DiscoverServicing
+    let safetyService: any SafetyServicing
+    @State private var users: [DiscoverUser] = []
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
+    var body: some View {
+        Group {
+            if isLoading { ProgressView("Finding workout partners") }
+            else if let errorMessage { VStack { ErrorStateView(message: errorMessage, requestID: nil); RetryButton { Task { await load() } } }.padding() }
+            else if users.isEmpty { EmptyStateView(systemImage: "person.2", title: "No contacts available", message: "Complete a profile to appear here.") }
+            else {
+                List(users) { user in
+                    NavigationLink {
+                        DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: user.id)
+                    } label: {
+                        HStack(spacing: LauverDesign.Spacing.medium) {
+                            ProfileAvatar(photoURL: user.photoURL, size: 48)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(user.displayName).font(.headline)
+                                Text("\(user.city.name) · \(user.commonSports.map(\.title).joined(separator: ", "))")
+                                    .font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("new-message-user-\(user.id)")
+                }
+            }
+        }
+        .navigationTitle("New message")
+        .task { await load() }
+    }
+
+    @MainActor private func load() async {
+        isLoading = true; errorMessage = nil
+        do { users = try await discoverService.discover(filters: DiscoverFilters(sport: nil, radius: nil), cursor: nil).users }
+        catch { errorMessage = (error as? APIError)?.userMessage ?? "Contacts could not be loaded." }
+        isLoading = false
     }
 }
 
 struct DirectConversationView: View {
     @EnvironmentObject private var chat: ChatConnection
     let service: any ChatServicing
+    let safetyService: (any SafetyServicing)?
     let targetUserID: String
     @State private var controller: ChatChannelController?
     @State private var errorMessage: String?
@@ -99,7 +179,10 @@ struct DirectConversationView: View {
     var body: some View {
         Group {
             if let controller, let client = chat.client {
-                ChatChannelView(viewFactory: LauverChatFactory(client: client, service: service), channelController: controller)
+                VStack(spacing: 0) {
+                    ChatSafetyBar(service: safetyService, targetUserID: targetUserID)
+                    ChatChannelView(viewFactory: LauverChatFactory(client: client, service: service), channelController: controller)
+                }
             } else if let errorMessage {
                 VStack { ErrorStateView(message: errorMessage, requestID: nil); RetryButton { attempt += 1 } }.padding()
             } else { ProgressView("Opening conversation") }
@@ -112,6 +195,54 @@ struct DirectConversationView: View {
                 try Task.checkCancellation()
                 controller = client.channelController(for: try ChannelId(cid: channel.id))
             } catch { if !Task.isCancelled { errorMessage = (error as? APIError)?.userMessage ?? "This conversation could not be opened." } }
+        }
+        .toolbar(.hidden, for: .tabBar)
+        .sheet(isPresented: Binding(get: { chat.reportMessage != nil }, set: { if !$0 { chat.reportMessage = nil } })) {
+            if let message = chat.reportMessage {
+                ReportMessageView(service: service, message: message) { chat.reportMessage = nil }
+            }
+        }
+    }
+}
+
+struct ChatSafetyBar: View {
+    let service: (any SafetyServicing)?
+    let targetUserID: String
+    @State private var confirmBlock = false
+    @State private var reportPresented = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        if let service {
+            HStack {
+                Spacer()
+                Menu {
+                    Button("Report User", systemImage: "flag") { reportPresented = true }
+                        .accessibilityIdentifier("chat-report-user")
+                    Button("Block User", systemImage: "person.crop.circle.badge.xmark", role: .destructive) { confirmBlock = true }
+                        .accessibilityIdentifier("chat-block-user")
+                } label: { Label("Safety", systemImage: "ellipsis.circle") }
+                    .accessibilityIdentifier("chat-safety-menu")
+            }
+            .padding(.horizontal).padding(.vertical, 6)
+            .background(LauverDesign.ColorToken.surface)
+            .alert("Block this user?", isPresented: $confirmBlock) {
+                Button("Block User", role: .destructive) {
+                    Task {
+                        do {
+                            try await service.block(userID: targetUserID)
+                            NotificationCenter.default.post(name: .safetyPolicyChanged, object: nil, userInfo: ["blockedUserID": targetUserID])
+                        } catch { errorMessage = (error as? APIError)?.userMessage ?? "This user could not be blocked. Please try again." }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("Your profiles and conversation will be hidden from each other.") }
+            .alert("Unable to block", isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(errorMessage ?? "Please try again.") }
+            .sheet(isPresented: $reportPresented) {
+                ReportUserView(userID: targetUserID, displayName: "this user", blockUser: false, service: service) { _ in }
+            }
         }
     }
 }
