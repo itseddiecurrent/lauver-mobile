@@ -23,6 +23,15 @@ fi
 
 echo "Testing Lauver-Staging on iOS Simulator $SIMULATOR_UDID"
 
+skip_external_ui=()
+if [ "${IOS_SKIP_EXTERNAL_UI:-false}" = "true" ]; then
+  skip_external_ui=(
+    -skip-testing:LauverUITests/LauverUITests/testProfileReportAndBlockCanBeUnblockedFromSettings
+    -skip-testing:LauverUITests/LauverUITests/testConnectedAppsShowsStravaSummariesAndConfirmsDisconnect
+  )
+  echo "Skipping staging-dependent external UI tests"
+fi
+
 xcodebuild test \
   -project "$project" \
   -scheme Lauver-Staging \
@@ -31,7 +40,8 @@ xcodebuild test \
   -parallel-testing-enabled NO \
   -test-timeouts-enabled YES \
   -default-test-execution-time-allowance 180 \
-  -maximum-test-execution-time-allowance 300 &
+  -maximum-test-execution-time-allowance 300 \
+  "${skip_external_ui[@]}" &
 test_pid=$!
 
 watchdog_pid=''
