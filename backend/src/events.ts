@@ -74,6 +74,15 @@ export class EventService {
 
   async leave(userId: string, id: string) { const event = await this.client.event.findUnique({ where: { id } }); if (!event) throw new EventError(404, 'event_not_found', 'Event not found'); if (event.creatorId === userId) throw new EventError(409, 'creator_cannot_leave', 'The event creator cannot leave their event'); await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } }); return this.get(id, userId); }
 
+  async report(userId: string, id: string, reason: string, details: string | undefined, requestId: string) {
+    const event = await this.client.event.findUnique({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
+    if (!event) throw new EventError(404, 'event_not_found', 'Event not found');
+    const snapshot = { id: event.id, title: event.title, sport: event.sport, startsAt: event.startsAt.toISOString(), endsAt: event.endsAt.toISOString(), capacity: event.capacity, venue: { name: event.venueName, address: event.venueAddress, latitude: Number(event.venueLatitude), longitude: Number(event.venueLongitude) }, creator: { id: event.creatorId, displayName: event.creator.profile?.displayName ?? 'Lauver member' } } satisfies Prisma.InputJsonObject;
+    const report = await this.client.report.create({ data: { reporterId: userId, targetUserId: event.creatorId, targetType: 'event', source: 'event', reason, details: details ?? null, snapshot, requestId } });
+    await this.client.safetyAuditEvent.create({ data: { actorId: userId, targetId: event.creatorId, action: 'report_event', requestId, reportId: report.id } });
+    return { referenceId: report.id };
+  }
+
   private validateTimes(input: Input) { const starts = new Date(input.startsAt), ends = new Date(input.endsAt); if (starts <= new Date() || ends <= starts) throw new EventError(422, 'invalid_event_time', 'Event times are invalid'); }
   private response(row: EventRow, viewerId?: string) { return { id: row.id, title: row.title, description: row.description, sport: row.sport, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), capacity: row.capacity, attendeeCount: row.attendees.length, venue: { name: row.venueName, address: row.venueAddress, latitude: Number(row.venueLatitude), longitude: Number(row.venueLongitude) }, status: row.status.toLowerCase(), creator: { id: row.creatorId, displayName: row.creator.profile?.displayName ?? 'Lauver member' }, isAttendee: viewerId === undefined ? undefined : row.attendees.some((item) => item.userId === viewerId) }; }
 }
@@ -86,4 +95,9 @@ export function installEventRoutes(app: Express, authService: AuthServicing, ser
   app.post('/v1/events/:eventId/cancel', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.cancel(user.id, idSchema.parse(request.params.eventId)) }); }));
   app.post('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.join(user.id, idSchema.parse(request.params.eventId)) }); }));
   app.delete('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.leave(user.id, idSchema.parse(request.params.eventId)) }); }));
+  app.post('/v1/events/:eventId/report', authenticated(authService, async (user, request, response) => {
+    const id = idSchema.parse(request.params.eventId);
+    const body = z.object({ reason: z.string().trim().min(1).max(30), details: z.string().trim().max(2000).optional() }).strict().parse(request.body);
+    response.status(201).json(await service.report(user.id, id, body.reason, body.details, String(response.getHeader('x-request-id'))));
+  }));
 }
