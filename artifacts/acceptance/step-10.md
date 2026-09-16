@@ -63,4 +63,11 @@ npx tsx scripts/verify-step-10-staging.ts /tmp/step10-login.json /tmp/lauver-ste
 
 - 数据库连接恢复后，第一用户消息举报的 reference、举报双方、channel/message 快照和 `report_message` 审计均核对通过。
 - 临时第三用户无法向既有 channel 发送消息，只能获得自己的 canonical channel；第一用户 Block 第二用户后，已打开会话发送返回 403，随后已解除 Block。第三用户 fixture 已清理。
-- 剩余一项是手机手动断网发送、恢复后重试且不重复；真机连接测试已通过。
+- 2026-09-16 两台真机手动断网验收完成：断网发送显示失败状态，恢复网络后可重试，消息只产生一条；Step 10 全部验收项完成。
+
+## 2026-09-16 Step 10 完成验收
+
+- 两台真机使用两个不同 staging 账号完成实时互发；Messages 列表显示会话和未读状态。
+- 第三用户无法读取、发送既有 direct channel；Block 后已打开会话发送被服务端拒绝。
+- Report Message 成功保存 channel/message ID、发送者和文本快照，并写入 `report_message` 审计事件。
+- 断网发送、恢复后重试和幂等行为已在真机手动验证，无重复消息。
