@@ -1061,8 +1061,8 @@ xcodebuild test \
 
 **可测试 Deliverable：**
 
-- 🟡 后端用户可创建、浏览、编辑、取消、加入和退出公开活动；iOS 目前支持浏览、加入和退出；
-- ⏳ Apple Maps 搜索结果与 Event pin 一致；
+- ✅ 后端和 iOS 用户可创建、浏览、编辑、取消、加入和退出公开活动；
+- 🟡 Apple Maps 搜索结果已回填 venue 名称和坐标，真机地图一致性仍待手动确认；
 - ✅ 并发安全的 capacity 单元测试与事务锁；
 - Event Profile/Chat 尚未完成的部分不显示假入口。
 
@@ -1073,9 +1073,9 @@ xcodebuild test \
 3. 重复 Join/Leave 幂等，creator 不能意外退出自己仍在举办的活动；
 4. 非 creator 不能 edit/cancel；
 5. 取消活动从 Upcoming 消失，已有 attendee 能看到 cancelled 状态；
-6. ✅ Report Event 进入 reports 表并保留活动快照；iOS 入口仍待补齐。
+6. ✅ Report Event 进入 reports 表并保留活动快照；Report Event/Organizer iOS 入口已接入。
 
-**当前完成范围：** Events 的后端 CRUD、筛选、人数、Join/Leave 和事务容量保护由真实后端驱动，没有客户端自增人数。地图、iOS 活动管理界面和举报仍未完成。
+**当前完成范围：** Events 的后端 CRUD、筛选、人数、Join/Leave、事务容量保护、活动举报和 iOS 活动管理界面均已实现，由真实后端驱动且没有客户端自增人数。剩余工作是连接 staging 后在真机上逐项执行创建、编辑、取消、加入/退出、地图选择和举报验收。
 
 ### Step 12：Event Attendee Group Chat
 
