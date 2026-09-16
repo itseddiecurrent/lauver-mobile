@@ -611,14 +611,16 @@ final class EventsViewModel: ObservableObject {
 
 struct EventsView: View {
     @StateObject private var model: EventsViewModel
-    init(service: any EventsServicing) { _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
+    let service: any EventsServicing
+    @State private var showCreate = false
+    init(service: any EventsServicing) { self.service = service; _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
     var body: some View {
         List {
             if model.loading && model.events.isEmpty { LoadingStateView(title: "Loading events") }
             if let error = model.error { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }
             if !model.loading && model.events.isEmpty && model.error == nil { EmptyStateView(systemImage: "calendar", title: "No upcoming events", message: "Check back soon for public workouts.") }
             ForEach(model.events) { event in
-                NavigationLink { EventDetailView(event: event, model: model) } label: {
+                NavigationLink { EventDetailView(event: event, model: model, service: service) } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(event.title).font(.headline)
                         Text("\(event.sport.replacingOccurrences(of: "_", with: " ").capitalized) · \(event.venue.name)").font(.subheadline).foregroundStyle(.secondary)
@@ -629,6 +631,8 @@ struct EventsView: View {
             }
         }
         .navigationTitle("Events")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
+        .sheet(isPresented: $showCreate) { CreateEventView(service: service) { showCreate = false; Task { await model.load() } } }
         .task { await model.load() }
         .refreshable { await model.load() }
         .accessibilityIdentifier("screen-events")
@@ -638,6 +642,7 @@ struct EventsView: View {
 private struct EventDetailView: View {
     let event: PublicEvent
     @ObservedObject var model: EventsViewModel
+    let service: any EventsServicing
     var body: some View {
         List {
             Section { Text(event.title).font(.title2.bold()); Text(event.description ?? "No description") }
@@ -647,7 +652,36 @@ private struct EventDetailView: View {
                 if event.isAttendee == true { Button("Leave Event", role: .destructive) { Task { await model.leave(event) } } }
                 else if event.status == "upcoming" { Button("Join Event") { Task { await model.join(event) } }.buttonStyle(.borderedProminent) }
             }
+            Section("Safety") { Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "unsafe_event", details: nil) } } }
         }
         .navigationTitle("Event Details")
+    }
+}
+
+private struct CreateEventView: View {
+    let service: any EventsServicing
+    let done: () -> Void
+    @State private var title = ""
+    @State private var venue = ""
+    @State private var description = ""
+    @State private var capacity = 10
+    @State private var starts = Date().addingTimeInterval(3600)
+    @State private var ends = Date().addingTimeInterval(7200)
+    @State private var error: String?
+    var body: some View {
+        NavigationStack { Form {
+            TextField("Title", text: $title)
+            TextField("Venue", text: $venue)
+            TextField("Description", text: $description)
+            Stepper("Capacity: \(capacity)", value: $capacity, in: 2...1000)
+            DatePicker("Starts", selection: $starts, in: Date()...)
+            DatePicker("Ends", selection: $ends, in: starts...)
+            if let error { Text(error).foregroundStyle(.red) }
+            Button("Create Event") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
+        }.navigationTitle("Create Event").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel", action: done) } } }
+    }
+    private func create() async {
+        do { _ = try await service.createEvent(EventDraft(title: title, description: description.isEmpty ? nil : description, sport: "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: 31.2304, venueLongitude: 121.4737)); done() }
+        catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not create event." }
     }
 }

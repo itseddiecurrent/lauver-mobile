@@ -122,6 +122,10 @@ private struct UITestEventsService: EventsServicing {
     func event(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
     func joinEvent(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
     func leaveEvent(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func createEvent(_ draft: EventDraft) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func cancelEvent(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func reportEvent(id: String, reason: String, details: String?) async throws -> String { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
 }
 
 private final class UITestStravaService: StravaServicing {

@@ -330,12 +330,17 @@ struct PublicEvent: Codable, Identifiable, Equatable {
 struct EventCreator: Codable, Equatable { let id: String; let displayName: String }
 struct EventPage: Codable, Equatable { let events: [PublicEvent]; let nextCursor: String? }
 private struct EventEnvelope: Decodable { let event: PublicEvent }
+struct EventDraft: Encodable { let title: String; let description: String?; let sport: String; let startsAt: String; let endsAt: String; let capacity: Int; let venueName: String; let venueAddress: String?; let venueLatitude: Double; let venueLongitude: Double }
 
 protocol EventsServicing {
     func events(sport: String?, city: String?, cursor: String?) async throws -> EventPage
     func event(id: String) async throws -> PublicEvent
     func joinEvent(id: String) async throws -> PublicEvent
     func leaveEvent(id: String) async throws -> PublicEvent
+    func createEvent(_ draft: EventDraft) async throws -> PublicEvent
+    func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent
+    func cancelEvent(id: String) async throws -> PublicEvent
+    func reportEvent(id: String, reason: String, details: String?) async throws -> String
 }
 
 final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
@@ -566,6 +571,31 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
         let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .delete, path: "/v1/events/\(id)/join", headers: Self.authorization(token)) }
         return envelope.event
+    }
+
+    func createEvent(_ draft: EventDraft) async throws -> PublicEvent {
+        let body = try encoder.encode(draft)
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true) }
+        return envelope.event
+    }
+    func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        let body = try encoder.encode(draft)
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .patch, path: "/v1/events/\(id)", body: body, headers: Self.jsonAuthorization(token)) }
+        return envelope.event
+    }
+    func cancelEvent(id: String) async throws -> PublicEvent {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events/\(id)/cancel", headers: Self.jsonAuthorization(token)) }
+        return envelope.event
+    }
+    func reportEvent(id: String, reason: String, details: String?) async throws -> String {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        struct Payload: Encodable { let reason: String; let details: String? }
+        let body = try encoder.encode(Payload(reason: reason, details: details))
+        struct Receipt: Decodable { let referenceId: String }
+        let receipt: Receipt = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events/\(id)/report", body: body, headers: Self.jsonAuthorization(token)) }
+        return receipt.referenceId
     }
 
     @MainActor
