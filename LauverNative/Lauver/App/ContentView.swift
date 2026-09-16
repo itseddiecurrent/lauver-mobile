@@ -629,6 +629,7 @@ struct EventsView: View {
                 NavigationLink { EventDetailView(event: event, model: model, service: service) } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(event.title).font(.headline)
+                        Text("Created by \(event.creator.displayName)").font(.caption).foregroundStyle(.secondary)
                         Text("\(event.sport.replacingOccurrences(of: "_", with: " ").capitalized) · \(event.venue.name)").font(.subheadline).foregroundStyle(.secondary)
                         Text(event.startsAt).font(.footnote).foregroundStyle(.secondary)
                         Text("\(event.attendeeCount)/\(event.capacity) attendees").font(.footnote)

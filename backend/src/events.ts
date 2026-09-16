@@ -52,7 +52,7 @@ export class EventService {
       await tx.eventAttendee.create({ data: { eventId: event.id, userId } });
       return tx.event.findUniqueOrThrow({ where: { id: event.id }, include: { attendees: true, creator: { include: { profile: true } } } });
     });
-    return this.response(row);
+    return this.response(row, userId);
   }
 
   async update(userId: string, id: string, input: z.infer<typeof patchSchema>) {
@@ -64,10 +64,10 @@ export class EventService {
     const endsAt = input.endsAt ? new Date(input.endsAt) : existing.endsAt;
     if (startsAt <= new Date() || endsAt <= startsAt) throw new EventError(422, 'invalid_event_time', 'Event times are invalid');
     const row = await this.client.event.update({ where: { id }, data: { ...input, startsAt, endsAt, description: input.description === undefined ? undefined : input.description, venueAddress: input.venueAddress === undefined ? undefined : input.venueAddress }, include: { attendees: true, creator: { include: { profile: true } } } });
-    return this.response(row);
+    return this.response(row, userId);
   }
 
-  async cancel(userId: string, id: string) { const existing = await this.client.event.findUnique({ where: { id } }); if (!existing) throw new EventError(404, 'event_not_found', 'Event not found'); if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can cancel this event'); const row = await this.client.event.update({ where: { id }, data: { status: 'CANCELLED' }, include: { attendees: true, creator: { include: { profile: true } } } }); return this.response(row); }
+  async cancel(userId: string, id: string) { const existing = await this.client.event.findUnique({ where: { id } }); if (!existing) throw new EventError(404, 'event_not_found', 'Event not found'); if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can cancel this event'); const row = await this.client.event.update({ where: { id }, data: { status: 'CANCELLED' }, include: { attendees: true, creator: { include: { profile: true } } } }); return this.response(row, userId); }
 
   async join(userId: string, id: string) {
     const row = await this.client.$transaction(async (tx) => {
@@ -80,7 +80,7 @@ export class EventService {
       await tx.eventAttendee.create({ data: { eventId: id, userId } });
       return tx.event.findUniqueOrThrow({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
     });
-    return this.response(row);
+    return this.response(row, userId);
   }
 
   async leave(userId: string, id: string) { const event = await this.client.event.findUnique({ where: { id } }); if (!event) throw new EventError(404, 'event_not_found', 'Event not found'); if (event.creatorId === userId) throw new EventError(409, 'creator_cannot_leave', 'The event creator cannot leave their event'); await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } }); return this.get(id, userId); }
