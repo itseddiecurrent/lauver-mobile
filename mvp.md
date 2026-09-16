@@ -1045,7 +1045,7 @@ xcodebuild test \
 
 ### Step 11：Public Events 与 Apple Maps
 
-**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、sport/date/city/radius 筛选、分页、Join/Leave、容量事务保护、事件举报和 iOS Events 列表/详情、创建、编辑、取消、Apple Maps venue 搜索及当前位置选择已完成。设备 A 创建的活动已在设备 B 的 Upcoming 列表中真实显示；仍需在真机上完成编辑、取消、Join/Leave、地图和举报的逐项操作验收。
+**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、sport/date/city/radius 筛选、分页、Join/Leave、容量事务保护、事件举报和 iOS Events 列表/详情、创建、编辑、取消、Apple Maps venue 搜索及当前位置选择已完成。设备 A 创建的活动已在设备 B 的 Upcoming 列表中真实显示，真机地图名称、位置和活动地点坐标一致性已确认；仍需在真机上完成编辑、取消、Join/Leave 和举报的逐项操作验收。
 
 **依赖：** Step 05、Step 07。
 
@@ -1062,7 +1062,7 @@ xcodebuild test \
 **可测试 Deliverable：**
 
 - ✅ 后端和 iOS 用户可创建、浏览、编辑、取消、加入和退出公开活动；
-- 🟡 Apple Maps 搜索结果已回填 venue 名称和坐标，真机地图一致性仍待手动确认；
+- ✅ Apple Maps 搜索结果已回填 venue 名称和坐标，真机地图一致性已手动确认；
 - ✅ 并发安全的 capacity 单元测试与事务锁；
 - Event Profile/Chat 尚未完成的部分不显示假入口。
 
