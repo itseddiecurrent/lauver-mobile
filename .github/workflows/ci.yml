@@ -48,7 +48,15 @@ jobs:
       - name: Check working tree for secrets
         run: ./scripts/check-secrets.sh
       - name: Scan Git history with Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        # The hosted action now requires a commercial license and performs an
+        # unauthenticated GitHub API lookup. Run the open-source scanner
+        # directly so guardrails remain deterministic and offline from GitHub's
+        # rate-limited API.
+        run: >-
+          docker run --rm
+          -v "$PWD:/repo:ro"
+          zricethezav/gitleaks:latest
+          detect --source=/repo --no-banner --redact --exit-code 1
 
   backend:
     runs-on: ubuntu-latest
