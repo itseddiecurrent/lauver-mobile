@@ -606,8 +606,8 @@ final class EventsViewModel: ObservableObject {
         do { events = try await service.events(sport: nil, city: nil, cursor: nil).events }
         catch let caught { error = (caught as? APIError)?.userMessage ?? "Events could not be loaded." }
     }
-    func join(_ event: PublicEvent) async { do { let updated = try await service.joinEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event." } }
-    func leave(_ event: PublicEvent) async { do { let updated = try await service.leaveEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event." } }
+    func join(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.joinEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event."; return event } }
+    func leave(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.leaveEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event."; return event } }
     fileprivate func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
 }
 
@@ -658,22 +658,28 @@ private struct EventDetailView: View {
     let event: PublicEvent
     @ObservedObject var model: EventsViewModel
     let service: any EventsServicing
+    @State private var currentEvent: PublicEvent
     @State private var showEdit = false
     @State private var showCancelConfirm = false
     @State private var showReport = false
     @State private var error: String?
+    init(event: PublicEvent, model: EventsViewModel, service: any EventsServicing) {
+        self.event = event; self.model = model; self.service = service
+        _currentEvent = State(initialValue: event)
+    }
     var body: some View {
         List {
-            Section { Text(event.title).font(.title2.bold()); Text(event.description ?? "No description") }
-            Section("Venue") { Text(event.venue.name); if let address = event.venue.address { Text(address).foregroundStyle(.secondary) } }
-            Section("Attendees") { Text("\(event.attendeeCount) of \(event.capacity)") }
+            Section { Text(currentEvent.title).font(.title2.bold()); Text(currentEvent.description ?? "No description") }
+            Section("Venue") { Text(currentEvent.venue.name); if let address = currentEvent.venue.address { Text(address).foregroundStyle(.secondary) } }
+            Section("Your status") { Label(currentEvent.isAttendee == true ? "You’re attending this event" : "You’re not attending this event", systemImage: currentEvent.isAttendee == true ? "checkmark.circle.fill" : "circle") }
+            Section("Attendees") { Text("\(currentEvent.attendeeCount) of \(currentEvent.capacity)") }
             Section {
-                if event.isAttendee == true { Button("Leave Event", role: .destructive) { Task { await model.leave(event) } } }
-                else if event.status == "upcoming" { Button("Join Event") { Task { await model.join(event) } }.buttonStyle(.borderedProminent) }
+                if currentEvent.isAttendee == true { Button("Leave Event", role: .destructive) { Task { currentEvent = await model.leave(currentEvent) } } }
+                else if currentEvent.status == "upcoming" { Button("Join Event") { Task { currentEvent = await model.join(currentEvent) } }.buttonStyle(.borderedProminent) }
             }
             Section("Safety") {
-                Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "unsafe_event", details: nil) } }
-                Button("Report Organizer", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "harassment", details: "Report organizer from event detail") } }
+                Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "unsafe_event", details: nil) } }
+                Button("Report Organizer", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "harassment", details: "Report organizer from event detail") } }
             }
             Section("Manage") {
                 Button("Edit Event") { showEdit = true }
@@ -683,7 +689,8 @@ private struct EventDetailView: View {
         .navigationTitle("Event Details")
         .alert("Cancel this event?", isPresented: $showCancelConfirm) { Button("Cancel Event", role: .destructive) { Task { do { let updated = try await service.cancelEvent(id: event.id); model.replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not cancel event." } } }; Button("Keep Event", role: .cancel) {} }
         .alert("Unable to update event", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "Please try again.") }
-        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: event) { showEdit = false } }
+        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: currentEvent) { showEdit = false } }
+        .task { if let refreshed = try? await service.event(id: event.id) { currentEvent = refreshed } }
     }
 }
 
