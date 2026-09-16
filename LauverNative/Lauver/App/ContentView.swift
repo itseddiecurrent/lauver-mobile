@@ -1,5 +1,6 @@
 import AuthenticationServices
 import SwiftUI
+import MapKit
 
 enum AuthenticationState: Equatable {
     case signedOut
@@ -606,7 +607,7 @@ final class EventsViewModel: ObservableObject {
     }
     func join(_ event: PublicEvent) async { do { let updated = try await service.joinEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event." } }
     func leave(_ event: PublicEvent) async { do { let updated = try await service.leaveEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event." } }
-    private func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
+    fileprivate func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
 }
 
 struct EventsView: View {
@@ -643,6 +644,10 @@ private struct EventDetailView: View {
     let event: PublicEvent
     @ObservedObject var model: EventsViewModel
     let service: any EventsServicing
+    @State private var showEdit = false
+    @State private var showCancelConfirm = false
+    @State private var showReport = false
+    @State private var error: String?
     var body: some View {
         List {
             Section { Text(event.title).font(.title2.bold()); Text(event.description ?? "No description") }
@@ -653,14 +658,22 @@ private struct EventDetailView: View {
                 else if event.status == "upcoming" { Button("Join Event") { Task { await model.join(event) } }.buttonStyle(.borderedProminent) }
             }
             Section("Safety") { Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "unsafe_event", details: nil) } } }
+            Section("Manage") {
+                Button("Edit Event") { showEdit = true }
+                Button("Cancel Event", role: .destructive) { showCancelConfirm = true }
+            }
         }
         .navigationTitle("Event Details")
+        .alert("Cancel this event?", isPresented: $showCancelConfirm) { Button("Cancel Event", role: .destructive) { Task { do { let updated = try await service.cancelEvent(id: event.id); model.replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not cancel event." } } }; Button("Keep Event", role: .cancel) {} }
+        .alert("Unable to update event", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "Please try again.") }
+        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: event) { showEdit = false } }
     }
 }
 
 private struct CreateEventView: View {
     let service: any EventsServicing
     let done: () -> Void
+    let existing: PublicEvent?
     @State private var title = ""
     @State private var venue = ""
     @State private var description = ""
@@ -668,20 +681,55 @@ private struct CreateEventView: View {
     @State private var starts = Date().addingTimeInterval(3600)
     @State private var ends = Date().addingTimeInterval(7200)
     @State private var error: String?
+    @State private var latitude = 31.2304
+    @State private var longitude = 121.4737
+    @State private var showVenueSearch = false
+    init(service: any EventsServicing, existing: PublicEvent? = nil, done: @escaping () -> Void) {
+        self.service = service; self.existing = existing; self.done = done
+        _title = State(initialValue: existing?.title ?? "")
+        _venue = State(initialValue: existing?.venue.name ?? "")
+        _description = State(initialValue: existing?.description ?? "")
+        _capacity = State(initialValue: existing?.capacity ?? 10)
+        _latitude = State(initialValue: existing?.venue.latitude ?? 31.2304)
+        _longitude = State(initialValue: existing?.venue.longitude ?? 121.4737)
+    }
     var body: some View {
         NavigationStack { Form {
             TextField("Title", text: $title)
-            TextField("Venue", text: $venue)
+            HStack { TextField("Venue", text: $venue); Button("Search") { showVenueSearch = true } }
             TextField("Description", text: $description)
             Stepper("Capacity: \(capacity)", value: $capacity, in: 2...1000)
             DatePicker("Starts", selection: $starts, in: Date()...)
             DatePicker("Ends", selection: $ends, in: starts...)
             if let error { Text(error).foregroundStyle(.red) }
-            Button("Create Event") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
+            Button(existing == nil ? "Create Event" : "Save Changes") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
         }.navigationTitle("Create Event").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel", action: done) } } }
+        .sheet(isPresented: $showVenueSearch) { VenueSearchView { item in venue = item.name; latitude = item.latitude; longitude = item.longitude; showVenueSearch = false } }
     }
     private func create() async {
-        do { _ = try await service.createEvent(EventDraft(title: title, description: description.isEmpty ? nil : description, sport: "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: 31.2304, venueLongitude: 121.4737)); done() }
+        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); if let existing { _ = try await service.updateEvent(id: existing.id, draft: draft) } else { _ = try await service.createEvent(draft) }; done() }
         catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not create event." }
+    }
+}
+
+private struct VenueResult { let name: String; let latitude: Double; let longitude: Double }
+private final class VenueSearchModel: NSObject, ObservableObject, MKLocalSearchCompleterDelegate {
+    @Published var query = ""; @Published var results: [MKLocalSearchCompletion] = []
+    private let completer = MKLocalSearchCompleter()
+    override init() { super.init(); completer.delegate = self; completer.resultTypes = [.address, .pointOfInterest] }
+    func update() { completer.queryFragment = query }
+    func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) { results = completer.results }
+    func completer(_ completer: MKLocalSearchCompleter, didFailWithError error: Error) { results = [] }
+    func resolve(_ completion: MKLocalSearchCompletion) async -> VenueResult? {
+        let request = MKLocalSearch.Request(completion: completion)
+        guard let item = try? await MKLocalSearch(request: request).start().mapItems.first, let coordinate = item.placemark.location?.coordinate else { return nil }
+        return VenueResult(name: item.name ?? completion.title, latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+}
+private struct VenueSearchView: View {
+    let select: (VenueResult) -> Void
+    @StateObject private var model = VenueSearchModel()
+    var body: some View {
+        NavigationStack { List(model.results, id: \.self) { result in Button { Task { if let venue = await model.resolve(result) { select(venue) } } } label: { VStack(alignment: .leading) { Text(result.title); if !result.subtitle.isEmpty { Text(result.subtitle).font(.footnote).foregroundStyle(.secondary) } } } } .searchable(text: $model.query, prompt: "Search Apple Maps") .onChange(of: model.query) { _, _ in model.update() }.navigationTitle("Choose Venue") }
     }
 }
