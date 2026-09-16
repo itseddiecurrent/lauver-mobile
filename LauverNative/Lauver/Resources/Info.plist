@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Lauver reads workout summaries you choose to import. It does not read heart rate, routes, sleep, or medical data.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Lauver uses your location to show your position on the map and find nearby public events. Your location is not stored.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

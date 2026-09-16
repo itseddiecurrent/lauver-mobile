@@ -1,6 +1,7 @@
 import AuthenticationServices
 import SwiftUI
 import MapKit
+import CoreLocation
 
 enum AuthenticationState: Equatable {
     case signedOut
@@ -614,9 +615,11 @@ struct EventsView: View {
     @StateObject private var model: EventsViewModel
     let service: any EventsServicing
     @State private var showCreate = false
+    @StateObject private var location = UserLocationModel()
     init(service: any EventsServicing) { self.service = service; _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
     var body: some View {
         List {
+            Section { Map(initialPosition: .userLocation(fallback: .automatic)) { UserAnnotation() }.frame(height: 220).clipShape(RoundedRectangle(cornerRadius: 12)) }
             if model.loading && model.events.isEmpty { LoadingStateView(title: "Loading events") }
             if let error = model.error { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }
             if !model.loading && model.events.isEmpty && model.error == nil { EmptyStateView(systemImage: "calendar", title: "No upcoming events", message: "Check back soon for public workouts.") }
@@ -635,8 +638,19 @@ struct EventsView: View {
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
         .sheet(isPresented: $showCreate) { CreateEventView(service: service) { showCreate = false; Task { await model.load() } } }
         .task { await model.load() }
+        .task { location.request() }
         .refreshable { await model.load() }
         .accessibilityIdentifier("screen-events")
+    }
+}
+
+@MainActor
+private final class UserLocationModel: NSObject, ObservableObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    override init() { super.init(); manager.delegate = self; manager.desiredAccuracy = kCLLocationAccuracyHundredMeters }
+    func request() { manager.requestWhenInUseAuthorization(); manager.startUpdatingLocation() }
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways { manager.startUpdatingLocation() }
     }
 }
 
