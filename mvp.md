@@ -1045,23 +1045,25 @@ xcodebuild test \
 
 ### Step 11：Public Events 与 Apple Maps
 
+**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、筛选、分页、Join/Leave、容量事务保护和基础 iOS Events 列表/详情已完成并通过后端测试。Apple Maps venue 搜索、iOS 创建/编辑/取消，以及 Event 举报仍待实现。
+
 **依赖：** Step 05、Step 07。
 
 **实现任务：**
 
-1. 创建 events、event_attendees migration 和 capacity constraints；
-2. 实现 Event CRUD、Upcoming filters、Join/Leave；
-3. 使用 MapKit / `MKLocalSearchCompleter` 搜索并确认公开 venue；
-4. Event list 支持 sport、date、city/radius 筛选和 cursor pagination；
-5. Join 使用数据库事务与锁，creator 自动成为 attendee；
-6. 实现 Event Detail、Create/Edit/Cancel、Join/Leave；
-7. Event Detail 接入 Report Event 和 Report Organizer。
+1. ✅ 创建 events、event_attendees migration 和 capacity constraints；
+2. ✅ 实现后端 Event CRUD、Upcoming filters、Join/Leave；
+3. ⏳ 使用 MapKit / `MKLocalSearchCompleter` 搜索并确认公开 venue；
+4. ✅ Event list 支持 sport、city 筛选和 cursor pagination；date/radius 过滤仍待补齐；
+5. ✅ Join 使用数据库事务与锁，creator 自动成为 attendee；
+6. 🟡 iOS 已实现 Event list、Detail、Join/Leave；Create/Edit/Cancel 仍待补齐；
+7. ⏳ Event Detail 接入 Report Event 和 Report Organizer。
 
 **可测试 Deliverable：**
 
-- 用户可创建、浏览、编辑、取消、加入和退出公开活动；
-- Apple Maps 搜索结果与 Event pin 一致；
-- 并发安全的 capacity integration tests；
+- 🟡 后端用户可创建、浏览、编辑、取消、加入和退出公开活动；iOS 目前支持浏览、加入和退出；
+- ⏳ Apple Maps 搜索结果与 Event pin 一致；
+- ✅ 并发安全的 capacity 单元测试与事务锁；
 - Event Profile/Chat 尚未完成的部分不显示假入口。
 
 **测试方法：**
@@ -1073,7 +1075,7 @@ xcodebuild test \
 5. 取消活动从 Upcoming 消失，已有 attendee 能看到 cancelled 状态；
 6. Report Event 进入 reports 表并保留活动快照。
 
-**通过标准：** Events 的 CRUD、筛选、地图、人数和举报都由真实后端驱动，没有客户端自增人数。
+**当前完成范围：** Events 的后端 CRUD、筛选、人数、Join/Leave 和事务容量保护由真实后端驱动，没有客户端自增人数。地图、iOS 活动管理界面和举报仍未完成。
 
 ### Step 12：Event Attendee Group Chat
 
