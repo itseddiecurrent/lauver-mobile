@@ -615,6 +615,7 @@ struct EventsView: View {
     @StateObject private var model: EventsViewModel
     let service: any EventsServicing
     @State private var showCreate = false
+    @State private var filter = EventFilter.all
     @StateObject private var location = UserLocationModel()
     init(service: any EventsServicing) { self.service = service; _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
     var body: some View {
@@ -623,7 +624,8 @@ struct EventsView: View {
             if model.loading && model.events.isEmpty { LoadingStateView(title: "Loading events") }
             if let error = model.error { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }
             if !model.loading && model.events.isEmpty && model.error == nil { EmptyStateView(systemImage: "calendar", title: "No upcoming events", message: "Check back soon for public workouts.") }
-            ForEach(model.events) { event in
+            Section { Picker("Event view", selection: $filter) { ForEach(EventFilter.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented) }
+            ForEach(filteredEvents) { event in
                 NavigationLink { EventDetailView(event: event, model: model, service: service) } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(event.title).font(.headline)
@@ -642,7 +644,12 @@ struct EventsView: View {
         .refreshable { await model.load() }
         .accessibilityIdentifier("screen-events")
     }
+    private var filteredEvents: [PublicEvent] {
+        switch filter { case .all: model.events; case .created: model.events.filter { $0.isCreator == true }; case .joined: model.events.filter { $0.isAttendee == true && $0.isCreator != true } }
+    }
 }
+
+private enum EventFilter: String, CaseIterable, Identifiable { case all, created, joined; var id: String { rawValue }; var title: String { switch self { case .all: "All"; case .created: "Created"; case .joined: "Joined" } } }
 
 @MainActor
 private final class UserLocationModel: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -689,6 +696,7 @@ private struct EventDetailView: View {
         .navigationTitle("Event Details")
         .alert("Cancel this event?", isPresented: $showCancelConfirm) { Button("Cancel Event", role: .destructive) { Task { do { let updated = try await service.cancelEvent(id: event.id); model.replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not cancel event." } } }; Button("Keep Event", role: .cancel) {} }
         .alert("Unable to update event", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "Please try again.") }
+        .alert("Unable to change attendance", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(model.error ?? "Please try again.") }
         .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: currentEvent) { showEdit = false } }
         .task { if let refreshed = try? await service.event(id: event.id) { currentEvent = refreshed } }
     }

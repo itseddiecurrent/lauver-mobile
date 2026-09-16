@@ -325,6 +325,7 @@ struct PublicEvent: Codable, Identifiable, Equatable {
     let status: String
     let creator: EventCreator
     let isAttendee: Bool?
+    let isCreator: Bool?
 }
 
 struct EventCreator: Codable, Equatable { let id: String; let displayName: String }

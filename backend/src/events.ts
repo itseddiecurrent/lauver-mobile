@@ -95,7 +95,7 @@ export class EventService {
   }
 
   private validateTimes(input: Input) { const starts = new Date(input.startsAt), ends = new Date(input.endsAt); if (starts <= new Date() || ends <= starts) throw new EventError(422, 'invalid_event_time', 'Event times are invalid'); }
-  private response(row: EventRow, viewerId?: string) { return { id: row.id, title: row.title, description: row.description, sport: row.sport, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), capacity: row.capacity, attendeeCount: row.attendees.length, venue: { name: row.venueName, address: row.venueAddress, latitude: Number(row.venueLatitude), longitude: Number(row.venueLongitude) }, status: row.status.toLowerCase(), creator: { id: row.creatorId, displayName: row.creator.profile?.displayName ?? 'Lauver member' }, isAttendee: viewerId === undefined ? undefined : row.attendees.some((item) => item.userId === viewerId) }; }
+  private response(row: EventRow, viewerId?: string) { return { id: row.id, title: row.title, description: row.description, sport: row.sport, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), capacity: row.capacity, venue: { name: row.venueName, address: row.venueAddress, latitude: Number(row.venueLatitude), longitude: Number(row.venueLongitude) }, status: row.status.toLowerCase(), creator: { id: row.creatorId, displayName: row.creator.profile?.displayName ?? 'Lauver member' }, attendeeCount: row.attendees.length, isAttendee: viewerId === undefined ? undefined : row.attendees.some((item) => item.userId === viewerId), isCreator: viewerId === undefined ? undefined : row.creatorId === viewerId }; }
 }
 
 export function installEventRoutes(app: Express, authService: AuthServicing, service: EventService): void {
