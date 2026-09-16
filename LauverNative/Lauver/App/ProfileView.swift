@@ -559,7 +559,7 @@ struct OtherProfileScreen: View {
             if viewModel.profile != nil {
                 if let chatService {
                     NavigationLink {
-                        DirectConversationView(service: chatService, targetUserID: userID)
+                        DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: userID)
                     } label: { Label("Message", systemImage: "message") }
                     .accessibilityIdentifier("profile-message")
                 }

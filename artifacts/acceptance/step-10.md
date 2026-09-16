@@ -58,3 +58,9 @@
 ```sh
 npx tsx scripts/verify-step-10-staging.ts /tmp/step10-login.json /tmp/lauver-step10-chain-state.json
 ```
+
+## 2026-09-15 剩余链路复验
+
+- 数据库连接恢复后，第一用户消息举报的 reference、举报双方、channel/message 快照和 `report_message` 审计均核对通过。
+- 临时第三用户无法向既有 channel 发送消息，只能获得自己的 canonical channel；第一用户 Block 第二用户后，已打开会话发送返回 403，随后已解除 Block。第三用户 fixture 已清理。
+- 剩余一项是手机手动断网发送、恢复后重试且不重复；真机连接测试已通过。

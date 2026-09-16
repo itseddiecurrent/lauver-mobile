@@ -1011,7 +1011,7 @@ xcodebuild test \
 
 ### Step 10：Stream 一对一私聊
 
-**状态：🟡 进行中（2026-09-14）。** Stream server SDK、短期 token provider、canonical direct channel、Block 发送策略和官方 iOS `StreamChatSwiftUI` SDK 已接入；Conversations、Direct Chat、文本发送和失败重试已完成。未完成项是两用户真机实时收发、第三方 channel 隔离、Chat 内 Block/Report 和断网恢复验收。证据见 `artifacts/acceptance/step-10.md`。
+**状态：🟡 进行中（2026-09-14）。** Stream server SDK、短期 token provider、canonical direct channel、Block 发送策略和官方 iOS `StreamChatSwiftUI` SDK 已接入；Conversations、Direct Chat、文本发送、失败重试和 Chat 内按消息举报入口已完成。用户 Block/Report、安全举报证据和服务端消息成员校验已完成。未完成项是两用户真机实时收发、第三方 channel 隔离、Block 后已打开会话和断网恢复验收；本次 staging 已完成第二用户注册、资料补齐及双方聊天认证，但 direct channel 仍返回 HTTP 500：线上为旧版 `2366fcb`，advisory lock 修复 `4536b3e` 的 Backend CI 失败，尚未自动部署；本地已修复 lint，待发布后继续发送和举报链路。证据见 `artifacts/acceptance/step-10.md`。
 
 **依赖：** Step 07；Stream staging application（API key、API secret 和 iOS SDK 配置）。
 

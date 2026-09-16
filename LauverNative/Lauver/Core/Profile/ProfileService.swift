@@ -302,9 +302,43 @@ protocol ChatServicing {
     func chatToken() async throws -> ChatToken
     func sendChatMessage(channelID: String, id: UUID, text: String) async throws
     func directChat(targetUserID: String) async throws -> DirectChatChannel
+    func reportChatMessage(channelID: String, messageID: String, reason: ReportReason, details: String) async throws -> ReportReceipt
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing {
+struct EventVenue: Codable, Equatable {
+    let name: String
+    let address: String?
+    let latitude: Double
+    let longitude: Double
+}
+
+struct PublicEvent: Codable, Identifiable, Equatable {
+    let id: String
+    let title: String
+    let description: String?
+    let sport: String
+    let startsAt: String
+    let endsAt: String
+    let capacity: Int
+    let attendeeCount: Int
+    let venue: EventVenue
+    let status: String
+    let creator: EventCreator
+    let isAttendee: Bool?
+}
+
+struct EventCreator: Codable, Equatable { let id: String; let displayName: String }
+struct EventPage: Codable, Equatable { let events: [PublicEvent]; let nextCursor: String? }
+private struct EventEnvelope: Decodable { let event: PublicEvent }
+
+protocol EventsServicing {
+    func events(sport: String?, city: String?, cursor: String?) async throws -> EventPage
+    func event(id: String) async throws -> PublicEvent
+    func joinEvent(id: String) async throws -> PublicEvent
+    func leaveEvent(id: String) async throws -> PublicEvent
+}
+
+final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -494,6 +528,44 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         return try await authenticatedRequest { token in
             APIRequest(method: .post, path: "/v1/chat/direct", body: body, headers: Self.jsonAuthorization(token))
         }
+    }
+
+    func reportChatMessage(channelID: String, messageID: String, reason: ReportReason, details: String) async throws -> ReportReceipt {
+        guard channelID.range(of: #"^dm-[a-f0-9]{40}$"#, options: .regularExpression) != nil,
+              !messageID.isEmpty, messageID.count <= 128 else { throw APIError.invalidRequest }
+        struct Payload: Encodable { let reason: ReportReason; let details: String }
+        let body = try encoder.encode(Payload(reason: reason, details: details))
+        return try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/chat/channels/\(channelID)/messages/\(messageID)/report", body: body, headers: Self.jsonAuthorization(token))
+        }
+    }
+
+    func events(sport: String?, city: String?, cursor: String?) async throws -> EventPage {
+        var components = URLComponents(); components.path = "/v1/events"
+        var query: [URLQueryItem] = []
+        if let sport { query.append(URLQueryItem(name: "sport", value: sport)) }
+        if let city { query.append(URLQueryItem(name: "city", value: city)) }
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        components.queryItems = query.isEmpty ? nil : query
+        return try await authenticatedRequest { token in APIRequest(path: components.string!, headers: Self.authorization(token)) }
+    }
+
+    func event(id: String) async throws -> PublicEvent {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(path: "/v1/events/\(id)", headers: Self.authorization(token)) }
+        return envelope.event
+    }
+
+    func joinEvent(id: String) async throws -> PublicEvent {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events/\(id)/join", headers: Self.authorization(token), allowsConnectionRetry: true) }
+        return envelope.event
+    }
+
+    func leaveEvent(id: String) async throws -> PublicEvent {
+        guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .delete, path: "/v1/events/\(id)/join", headers: Self.authorization(token)) }
+        return envelope.event
     }
 
     @MainActor

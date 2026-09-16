@@ -5,10 +5,12 @@ import StreamChatSwiftUI
 @MainActor
 final class ChatConnection: ObservableObject {
     @Published private(set) var client: ChatClient?
+    @Published private(set) var unreadMessages = 0
     @Published var reportMessage: ChatMessage?
     private var context: StreamChatSwiftUI.StreamChat?
     private var connecting: Task<ChatClient, Error>?
     private var generation = UUID()
+    private var currentUserController: CurrentChatUserController?
 
     func connect(service: any ChatServicing) async throws -> ChatClient {
         if let client { return client }
@@ -49,6 +51,10 @@ final class ChatConnection: ObservableObject {
                     composerConfig: ComposerConfig(isVoiceRecordingEnabled: false)
                 )
                 self.context = StreamChatSwiftUI.StreamChat(chatClient: client, utils: utils)
+                let userController = client.currentUserController()
+                userController.delegate = self
+                self.currentUserController = userController
+                self.unreadMessages = userController.unreadCount.messages
                 self.client = client
                 return client
             } catch {
@@ -68,7 +74,19 @@ final class ChatConnection: ObservableObject {
         let previous = client
         client = nil
         context = nil
+        currentUserController?.delegate = nil
+        currentUserController = nil
+        unreadMessages = 0
         Task { await previous?.logout() }
+    }
+}
+
+extension ChatConnection: CurrentChatUserControllerDelegate {
+    func currentUserController(
+        _ controller: CurrentChatUserController,
+        didChangeCurrentUserUnreadCount unreadCount: UnreadCount
+    ) {
+        unreadMessages = unreadCount.messages
     }
 }
 

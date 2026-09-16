@@ -1,4 +1,5 @@
 import SwiftUI
+import StreamChat
 
 enum ReportReason: String, CaseIterable, Identifiable, Encodable {
     case spam, harassment, hateAbuse = "hate_abuse", unsafeEvent = "unsafe_event", impersonation, other
@@ -131,6 +132,99 @@ struct ReportUserView: View {
             }
             .interactiveDismissDisabled(viewModel.isSubmitting || viewModel.receipt != nil)
         }.tint(LauverDesign.ColorToken.accent)
+    }
+}
+
+@MainActor
+final class ReportMessageViewModel: ObservableObject {
+    @Published private(set) var isSubmitting = false
+    @Published private(set) var receipt: ReportReceipt?
+    @Published private(set) var errorMessage: String?
+    private let service: any ChatServicing
+
+    init(service: any ChatServicing) { self.service = service }
+
+    func submit(channelID: String, messageID: String, reason: ReportReason, details: String) async {
+        guard !isSubmitting, receipt == nil else { return }
+        isSubmitting = true
+        errorMessage = nil
+        defer { isSubmitting = false }
+        do {
+            receipt = try await service.reportChatMessage(
+                channelID: channelID,
+                messageID: messageID,
+                reason: reason,
+                details: details
+            )
+        } catch {
+            errorMessage = (error as? APIError)?.userMessage ?? "Your message report could not be submitted. Please try again."
+        }
+    }
+}
+
+struct ReportMessageView: View {
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel: ReportMessageViewModel
+    @State private var reason: ReportReason = .harassment
+    @State private var details = ""
+    let message: ChatMessage
+    let finished: () -> Void
+
+    init(service: any ChatServicing, message: ChatMessage, finished: @escaping () -> Void) {
+        _viewModel = StateObject(wrappedValue: ReportMessageViewModel(service: service))
+        self.message = message
+        self.finished = finished
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Message") {
+                    Text(message.text.isEmpty ? "Attachment or unsupported content" : message.text)
+                        .lineLimit(4)
+                }
+                Section("Reason") {
+                    Picker("Reason", selection: $reason) {
+                        ForEach(ReportReason.allCases) { Text($0.title).tag($0) }
+                    }
+                    .accessibilityIdentifier("message-report-reason")
+                    TextField("Additional details (optional)", text: $details, axis: .vertical)
+                        .lineLimit(3...6)
+                        .accessibilityIdentifier("message-report-details")
+                }
+                if let errorMessage = viewModel.errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(.red).accessibilityIdentifier("message-report-error") }
+                }
+                if let receipt = viewModel.receipt {
+                    Section {
+                        Label("Report submitted", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                            .accessibilityIdentifier("message-report-success")
+                        Text("Reference: \(receipt.referenceId)")
+                            .accessibilityIdentifier("message-report-reference")
+                        Button("Done") { finished(); dismiss() }
+                            .accessibilityIdentifier("message-report-done")
+                    }
+                } else {
+                    Section {
+                        Button(viewModel.isSubmitting ? "Submitting…" : "Submit Report") {
+                            Task {
+                                guard let channelID = message.cid?.id else { return }
+                                await viewModel.submit(channelID: channelID, messageID: message.id, reason: reason, details: details)
+                            }
+                        }
+                        .disabled(viewModel.isSubmitting || details.count > 2000)
+                        .accessibilityIdentifier("message-report-submit")
+                    }
+                }
+            }
+            .navigationTitle("Report Message")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { finished(); dismiss() }
+                }
+            }
+        }
     }
 }
 

@@ -18,6 +18,19 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["api-online"].waitForExistence(timeout: 60))
     }
 
+    func testLiveStreamChatConnectsOnDevice() {
+        let app = XCUIApplication()
+        app.launch()
+        if app.buttons["auth-login"].waitForExistence(timeout: 8) {
+            enterCredentials(in: app)
+            app.buttons["auth-login"].tap()
+        }
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 20))
+        app.tabBars.firstMatch.buttons["Messages"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["screen-messages"].waitForExistence(timeout: 30))
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
+    }
+
     func testAuthenticatedShellContainsOnlyFourApprovedTabs() {
         let app = launchAuthenticatedShell()
         let tabBar = app.tabBars.firstMatch

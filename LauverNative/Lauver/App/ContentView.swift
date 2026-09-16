@@ -244,12 +244,14 @@ struct ContentView: View {
     private let discoverService: any DiscoverServicing
     private let profileService: any ProfileServicing
     private let safetyService: any SafetyServicing
+    private let eventsService: any EventsServicing
     private let stravaService: any StravaServicing
 
     init(container: AppContainer) {
         discoverService = container.discoverService
         profileService = container.profileService
         safetyService = container.safetyService
+        eventsService = container.eventsService
         stravaService = container.stravaService
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
@@ -268,7 +270,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
             }
         }
         .task {
@@ -491,6 +493,7 @@ private struct AuthenticatedShellView: View {
     let profileService: any ProfileServicing
     let discoverService: any DiscoverServicing
     let safetyService: any SafetyServicing
+    let eventsService: any EventsServicing
     let stravaService: any StravaServicing
     let chatService: (any ChatServicing)?
     @StateObject private var chat = ChatConnection()
@@ -504,7 +507,7 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
 
             NavigationStack {
-                PlaceholderScreen(tab: .events, message: "Upcoming runs will appear here.")
+                EventsView(service: eventsService)
             }
             .tabItem { Label(AppTab.events.title, systemImage: AppTab.events.systemImage) }
 
@@ -516,6 +519,7 @@ private struct AuthenticatedShellView: View {
                 }
             }
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
+            .badge(chat.unreadMessages > 0 ? min(chat.unreadMessages, 99) : 0)
 
             NavigationStack {
                 OwnProfileView(service: profileService, safetyService: safetyService, stravaService: stravaService, healthUploader: profileService as? any HealthWorkoutUploading) {
@@ -583,5 +587,67 @@ private struct ServiceStatusView: View {
         .padding()
         .frame(maxWidth: .infinity)
         .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.card))
+    }
+}
+import SwiftUI
+
+@MainActor
+final class EventsViewModel: ObservableObject {
+    @Published private(set) var events: [PublicEvent] = []
+    @Published private(set) var loading = false
+    @Published var error: String?
+    private let service: any EventsServicing
+    init(service: any EventsServicing) { self.service = service }
+    func load() async {
+        guard !loading else { return }; loading = true; error = nil
+        defer { loading = false }
+        do { events = try await service.events(sport: nil, city: nil, cursor: nil).events }
+        catch let caught { error = (caught as? APIError)?.userMessage ?? "Events could not be loaded." }
+    }
+    func join(_ event: PublicEvent) async { do { let updated = try await service.joinEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event." } }
+    func leave(_ event: PublicEvent) async { do { let updated = try await service.leaveEvent(id: event.id); replace(updated) } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event." } }
+    private func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
+}
+
+struct EventsView: View {
+    @StateObject private var model: EventsViewModel
+    init(service: any EventsServicing) { _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
+    var body: some View {
+        List {
+            if model.loading && model.events.isEmpty { LoadingStateView(title: "Loading events") }
+            if let error = model.error { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }
+            if !model.loading && model.events.isEmpty && model.error == nil { EmptyStateView(systemImage: "calendar", title: "No upcoming events", message: "Check back soon for public workouts.") }
+            ForEach(model.events) { event in
+                NavigationLink { EventDetailView(event: event, model: model) } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(event.title).font(.headline)
+                        Text("\(event.sport.replacingOccurrences(of: "_", with: " ").capitalized) · \(event.venue.name)").font(.subheadline).foregroundStyle(.secondary)
+                        Text(event.startsAt).font(.footnote).foregroundStyle(.secondary)
+                        Text("\(event.attendeeCount)/\(event.capacity) attendees").font(.footnote)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Events")
+        .task { await model.load() }
+        .refreshable { await model.load() }
+        .accessibilityIdentifier("screen-events")
+    }
+}
+
+private struct EventDetailView: View {
+    let event: PublicEvent
+    @ObservedObject var model: EventsViewModel
+    var body: some View {
+        List {
+            Section { Text(event.title).font(.title2.bold()); Text(event.description ?? "No description") }
+            Section("Venue") { Text(event.venue.name); if let address = event.venue.address { Text(address).foregroundStyle(.secondary) } }
+            Section("Attendees") { Text("\(event.attendeeCount) of \(event.capacity)") }
+            Section {
+                if event.isAttendee == true { Button("Leave Event", role: .destructive) { Task { await model.leave(event) } } }
+                else if event.status == "upcoming" { Button("Join Event") { Task { await model.join(event) } }.buttonStyle(.borderedProminent) }
+            }
+        }
+        .navigationTitle("Event Details")
     }
 }

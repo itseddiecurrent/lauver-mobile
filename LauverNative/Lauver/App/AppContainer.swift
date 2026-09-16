@@ -7,6 +7,7 @@ struct AppContainer {
     let discoverService: any DiscoverServicing
     let profileService: any ProfileServicing
     let safetyService: any SafetyServicing
+    let eventsService: any EventsServicing
     let stravaService: any StravaServicing
     let authSessionStore: any AuthSessionStoring
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
@@ -88,6 +89,7 @@ struct AppContainer {
             ? UITestProfileService()
             : liveProfileService
         let testSafetyService = UITestSafetyService()
+        let testEventsService = UITestEventsService()
 
         return AppContainer(
             configuration: configuration,
@@ -100,6 +102,9 @@ struct AppContainer {
             safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? testSafetyService
                 : liveProfileService,
+            eventsService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? testEventsService
+                : liveProfileService,
             stravaService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? UITestStravaService()
                 : liveProfileService,
@@ -110,6 +115,13 @@ struct AppContainer {
             uiStateStore: uiStateStore
         )
     }
+}
+
+private struct UITestEventsService: EventsServicing {
+    func events(sport: String?, city: String?, cursor: String?) async throws -> EventPage { EventPage(events: [], nextCursor: nil) }
+    func event(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func joinEvent(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
+    func leaveEvent(id: String) async throws -> PublicEvent { throw APIError.notFound(code: "event_not_found", message: "Event not found", requestID: nil) }
 }
 
 private final class UITestStravaService: StravaServicing {

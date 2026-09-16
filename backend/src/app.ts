@@ -21,6 +21,8 @@ import { installHealthKitRoutes } from './healthkit.js';
 import type { HealthKitService } from './healthkit.js';
 import { installStreamRoutes } from './stream.js';
 import type { StreamService } from './stream.js';
+import { EventError, installEventRoutes } from './events.js';
+import type { EventService } from './events.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -54,6 +56,7 @@ export type AppDependencies = {
   stravaService?: StravaServicing;
   healthKitService?: HealthKitService;
   streamService?: StreamService;
+  eventService?: EventService;
 };
 
 class CorsOriginError extends Error {
@@ -147,6 +150,7 @@ export function createApp(dependencies: AppDependencies): Express {
   if (dependencies.stravaService) installStravaRoutes(app, { authService: dependencies.authService, stravaService: dependencies.stravaService });
   if (dependencies.healthKitService) installHealthKitRoutes(app, { authService: dependencies.authService, service: dependencies.healthKitService });
   if (dependencies.streamService) installStreamRoutes(app, { authService: dependencies.authService, service: dependencies.streamService, safetyService: dependencies.safetyService });
+  if (dependencies.eventService) installEventRoutes(app, dependencies.authService, dependencies.eventService);
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,
@@ -197,6 +201,11 @@ export function createApp(dependencies: AppDependencies): Express {
         message: error.publicMessage,
         requestId: requestId(response),
       });
+      return;
+    }
+
+    if (error instanceof EventError) {
+      response.status(error.statusCode).json({ code: error.code, message: error.publicMessage, requestId: requestId(response) });
       return;
     }
 
