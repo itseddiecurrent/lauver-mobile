@@ -14,7 +14,7 @@ const createSchema = z.object({
   venueLatitude: z.number().finite().min(-90).max(90), venueLongitude: z.number().finite().min(-180).max(180),
 }).strict();
 const patchSchema = createSchema.partial().strict();
-const listSchema = z.object({ sport: z.enum(eventSports).optional(), from: z.iso.datetime().optional(), city: z.string().trim().min(1).max(120).optional(), limit: z.coerce.number().int().min(1).max(50).default(20), cursor: z.string().min(1).max(200).optional() }).strict();
+const listSchema = z.object({ sport: z.enum(eventSports).optional(), from: z.iso.datetime().optional(), city: z.string().trim().min(1).max(120).optional(), radius: z.coerce.number().int().min(1).max(500).optional(), limit: z.coerce.number().int().min(1).max(50).default(20), cursor: z.string().min(1).max(200).optional() }).strict();
 
 export class EventError extends Error {
   constructor(readonly statusCode: number, readonly code: string, readonly publicMessage: string) { super(publicMessage); this.name = 'EventError'; }
@@ -27,7 +27,18 @@ export class EventService {
 
   async list(query: z.infer<typeof listSchema>, viewerId?: string) {
     const where: Prisma.EventWhereInput = { status: 'UPCOMING', startsAt: { gte: query.from ? new Date(query.from) : new Date() }, ...(query.sport ? { sport: query.sport } : {}), ...(query.city ? { venueName: { contains: query.city, mode: 'insensitive' } } : {}) };
-    const rows = await this.client.event.findMany({ where, include: { attendees: true, creator: { include: { profile: true } } }, orderBy: [{ startsAt: 'asc' }, { id: 'asc' }], take: query.limit + 1, ...(query.cursor ? { skip: 1, cursor: { id: query.cursor } } : {}) });
+    let rows = await this.client.event.findMany({ where, include: { attendees: true, creator: { include: { profile: true } } }, orderBy: [{ startsAt: 'asc' }, { id: 'asc' }], take: query.radius ? 500 : query.limit + 1, ...(query.cursor ? { skip: 1, cursor: { id: query.cursor } } : {}) });
+    if (query.radius !== undefined && viewerId) {
+      const origin = await this.client.profile.findUnique({ where: { userId: viewerId }, select: { cityLatitude: true, cityLongitude: true } });
+      if (origin?.cityLatitude != null && origin.cityLongitude != null) {
+        const lat = Number(origin.cityLatitude), lon = Number(origin.cityLongitude);
+        rows = rows.filter((event) => {
+          const p = Math.PI / 180, a = 0.5 - Math.cos((Number(event.venueLatitude) - lat) * p) / 2 + Math.cos(lat * p) * Math.cos(Number(event.venueLatitude) * p) * (1 - Math.cos((Number(event.venueLongitude) - lon) * p)) / 2;
+          return 12742 * Math.asin(Math.sqrt(a)) <= query.radius!;
+        });
+      }
+      rows = rows.slice(0, query.limit + 1);
+    }
     const next = rows.length > query.limit ? rows[query.limit - 1]?.id ?? null : null;
     return { events: rows.slice(0, query.limit).map((row) => this.response(row, viewerId)), nextCursor: next };
   }

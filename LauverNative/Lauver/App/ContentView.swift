@@ -657,7 +657,10 @@ private struct EventDetailView: View {
                 if event.isAttendee == true { Button("Leave Event", role: .destructive) { Task { await model.leave(event) } } }
                 else if event.status == "upcoming" { Button("Join Event") { Task { await model.join(event) } }.buttonStyle(.borderedProminent) }
             }
-            Section("Safety") { Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "unsafe_event", details: nil) } } }
+            Section("Safety") {
+                Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "unsafe_event", details: nil) } }
+                Button("Report Organizer", role: .destructive) { Task { _ = try? await service.reportEvent(id: event.id, reason: "harassment", details: "Report organizer from event detail") } }
+            }
             Section("Manage") {
                 Button("Edit Event") { showEdit = true }
                 Button("Cancel Event", role: .destructive) { showCancelConfirm = true }

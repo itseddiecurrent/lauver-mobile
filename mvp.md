@@ -1045,7 +1045,7 @@ xcodebuild test \
 
 ### Step 11：Public Events 与 Apple Maps
 
-**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、筛选、分页、Join/Leave、容量事务保护、事件举报和基础 iOS Events 列表/详情已完成并通过后端测试。Apple Maps venue 搜索、iOS 创建/编辑/取消仍待实现。
+**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、sport/date/city/radius 筛选、分页、Join/Leave、容量事务保护、事件举报和 iOS Events 列表/详情、创建、编辑、取消、Apple Maps venue 搜索已完成并通过后端及真机构建验证。仍需在真机上完成完整事件管理和举报操作验收。
 
 **依赖：** Step 05、Step 07。
 
@@ -1053,11 +1053,11 @@ xcodebuild test \
 
 1. ✅ 创建 events、event_attendees migration 和 capacity constraints；
 2. ✅ 实现后端 Event CRUD、Upcoming filters、Join/Leave；
-3. ⏳ 使用 MapKit / `MKLocalSearchCompleter` 搜索并确认公开 venue；
-4. ✅ Event list 支持 sport、city 筛选和 cursor pagination；date/radius 过滤仍待补齐；
+3. ✅ 使用 MapKit / `MKLocalSearchCompleter` 搜索并确认公开 venue；
+4. ✅ Event list 支持 sport、date、city/radius 筛选和 cursor pagination；
 5. ✅ Join 使用数据库事务与锁，creator 自动成为 attendee；
-6. 🟡 iOS 已实现 Event list、Detail、Join/Leave；Create/Edit/Cancel 仍待补齐；
-7. 🟡 后端已接入 Report Event 并保存活动快照；iOS Report Event/Organizer 入口仍待补齐。
+6. ✅ iOS 已实现 Event list、Detail、Create/Edit/Cancel、Join/Leave；
+7. ✅ 后端及 iOS 已接入 Report Event 和 Report Organizer，并保存活动快照。
 
 **可测试 Deliverable：**
 
