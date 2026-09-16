@@ -746,7 +746,41 @@ private final class VenueSearchModel: NSObject, ObservableObject, MKLocalSearchC
 private struct VenueSearchView: View {
     let select: (VenueResult) -> Void
     @StateObject private var model = VenueSearchModel()
+    @StateObject private var location = VenueLocationModel()
     var body: some View {
-        NavigationStack { List(model.results, id: \.self) { result in Button { Task { if let venue = await model.resolve(result) { select(venue) } } } label: { VStack(alignment: .leading) { Text(result.title); if !result.subtitle.isEmpty { Text(result.subtitle).font(.footnote).foregroundStyle(.secondary) } } } } .searchable(text: $model.query, prompt: "Search Apple Maps") .onChange(of: model.query) { _, _ in model.update() }.navigationTitle("Choose Venue") }
+        NavigationStack { List {
+            Section { Button("Use My Current Location", systemImage: "location.fill") { Task { if let venue = await location.currentVenue() { select(venue) } } }.disabled(location.loading) }
+            Section { ForEach(model.results, id: \.self) { result in Button { Task { if let venue = await model.resolve(result) { select(venue) } } } label: { VStack(alignment: .leading) { Text(result.title); if !result.subtitle.isEmpty { Text(result.subtitle).font(.footnote).foregroundStyle(.secondary) } } } } }
+        } .searchable(text: $model.query, prompt: "Search Apple Maps") .onChange(of: model.query) { _, _ in model.update() }.navigationTitle("Choose Venue") }
     }
+}
+
+@MainActor
+private final class VenueLocationModel: NSObject, ObservableObject, CLLocationManagerDelegate {
+    @Published var loading = false
+    private let manager = CLLocationManager()
+    private var continuation: CheckedContinuation<CLLocationCoordinate2D?, Never>?
+    override init() { super.init(); manager.delegate = self; manager.desiredAccuracy = kCLLocationAccuracyHundredMeters }
+    func currentVenue() async -> VenueResult? {
+        loading = true
+        if manager.authorizationStatus == .notDetermined { manager.requestWhenInUseAuthorization() }
+        guard manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways else { loading = false; return nil }
+        manager.startUpdatingLocation()
+        let coordinate = await withCheckedContinuation { (continuation: CheckedContinuation<CLLocationCoordinate2D?, Never>) in
+            if let coordinate = manager.location?.coordinate { continuation.resume(returning: coordinate) }
+            else { self.continuation = continuation }
+        }
+        manager.stopUpdatingLocation(); loading = false
+        guard let coordinate else { return nil }
+        let placemark = try? await CLGeocoder().reverseGeocodeLocation(CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)).first
+        let name = placemark?.name ?? placemark?.locality ?? "Current location"
+        let address = [placemark?.thoroughfare, placemark?.locality].compactMap { $0 }.joined(separator: ", ")
+        _ = address
+        return VenueResult(name: name, latitude: coordinate.latitude, longitude: coordinate.longitude)
+    }
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let coordinate = locations.last?.coordinate, let continuation else { return }
+        self.continuation = nil; continuation.resume(returning: coordinate)
+    }
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) { if manager.authorizationStatus == .denied { continuation?.resume(returning: nil); continuation = nil } }
 }
