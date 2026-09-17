@@ -41,7 +41,7 @@
 
 Render 已部署 `63793b0`；Report Event 与 Report Organizer 真机验收通过（18.3 秒，`/tmp/lauver-step11-reports-final.xcresult`）。完整 staging API 验收也通过，包括两类 report receipt、self-report 422 与取消后的状态。
 
-当前唯一未完成项是 PostgreSQL 证据查询和临时账号清理：本机经 VPN 出口 `23.165.184.186` 连接 Render 外部数据库仍在 TLS 握手阶段被关闭。待 Render 数据库白名单允许该 `/32` 后执行 `npx tsx scripts/verify-step-11-staging.ts evidence /tmp/lauver-step11-acceptance.json`，随后执行 `cleanup`；在此之前不宣称数据库证据和清理完成。
+PostgreSQL 证据查询已完成：两类举报的快照、`target_type` 与审计记录均核对正确。随后已清理 4 个临时账号及其活动，清理命令退出码为 0。Render 数据库当前允许 `0.0.0.0/0`，本机经 VPN 出口 `23.165.184.186` 已可连接 `lauver_staging`。
 
 ### 并发与 Redis
 

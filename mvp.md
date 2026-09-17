@@ -1045,7 +1045,7 @@ xcodebuild test \
 
 ### Step 11：Public Events 与 Apple Maps
 
-**状态：🟡 收尾验收中（2026-09-17）。** 已修复创建后只刷新前 20 条导致活动不可达的问题：创建响应直接打开详情，列表支持后续页，刷新不覆盖并发写入。真机创建、编辑、Cancel、重启后状态、另一账号 Join/Leave 均已通过；staging 实测创建 399 ms，另一账号立即读取 411 ms，无异步可见性延迟。真实 PostgreSQL 20 人抢最后一个名额、容量编辑竞态、权限、Join/Leave 幂等与举报事务测试通过。举报修复已推送（`186e40f`，CI 全通过），等待 Render 部署及最终举报真机验收；证据见 `artifacts/acceptance/step-11.md`。
+**状态：✅ 已完成（2026-09-17）。** 已修复创建后只刷新前 20 条导致活动不可达的问题：创建响应直接打开详情，列表支持后续页，刷新不覆盖并发写入。真机创建、编辑、Cancel、重启后状态、另一账号 Join/Leave、Report Event/Organizer 均已通过；staging 实测创建 399 ms，另一账号立即读取 411 ms，无异步可见性延迟。真实 PostgreSQL 20 人抢最后一个名额、容量编辑竞态、权限、幂等、举报快照与审计均已核对，4 个临时账号已清理。证据见 `artifacts/acceptance/step-11.md`。
 
 **依赖：** Step 05、Step 07。
 
@@ -1075,7 +1075,7 @@ xcodebuild test \
 5. 取消活动从 Upcoming 消失，已有 attendee 能看到 cancelled 状态；
 6. ✅ Report Event 进入 reports 表并保留活动快照；Report Event/Organizer iOS 入口已接入。
 
-**当前完成范围：** 创建、编辑、Cancel、重启后状态、Join/Leave 已通过真实 iPhone + staging 验收；地图一致性沿用 2026-09-16 两设备手动证据。后端 156 tests、PostgreSQL integration 62 tests、iOS 105 XCTest 通过。剩余部署、举报真机与测试数据清理以 `artifacts/acceptance/step-11.md` 为准，不以本地测试替代 staging 结果。
+**当前完成范围：** Events CRUD、分页、并发容量保护、Join/Leave、举报、取消及 Apple Maps 地点选择均已通过真实 iPhone、staging API 和 PostgreSQL 证据核对。后端 156 tests、PostgreSQL integration 62 tests、iOS 105 XCTest 通过。
 
 ### Step 12：Event Attendee Group Chat
 

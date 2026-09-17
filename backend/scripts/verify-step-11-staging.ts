@@ -36,7 +36,7 @@ async function main() {
     check(state.actors.length === 4 && state.actors.every(a => /^step11-[a-f0-9]{16}-[0-3]@example\.com$/.test(a.email)), 'exact disposable identities');
     if (action === 'cleanup') {
       await sql.connect();
-      const ids = (await sql.query<{ id: string }>('SELECT u.id FROM users u JOIN auth_identities a ON a.user_id=u.id WHERE a.email=ANY($1::text[])', [state.actors.map(a => a.email)])).rows.map(r => r.id);
+      const ids = (await sql.query<{ id: string }>('SELECT u.id FROM users u JOIN auth_identities a ON a.user_id=u.id WHERE a.provider_subject=ANY($1::text[])', [state.actors.map(a => a.email)])).rows.map(r => r.id);
       await sql.query('BEGIN');
       await sql.query('DELETE FROM safety_audit_events WHERE actor_id=ANY($1::uuid[])', [ids]);
       await sql.query('DELETE FROM reports WHERE reporter_id=ANY($1::uuid[])', [ids]);
