@@ -163,7 +163,7 @@ struct NewMessageView: View {
                         HStack(spacing: LauverDesign.Spacing.medium) {
                             ProfileAvatar(photoURL: user.photoURL, size: 48)
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(user.displayName).font(.headline)
+                                Text(user.displayName ?? "Lauver member").font(.headline)
                                 Text("\(user.city.name) · \(user.commonSports.map(\.title).joined(separator: ", "))")
                                     .font(.subheadline).foregroundStyle(.secondary)
                             }

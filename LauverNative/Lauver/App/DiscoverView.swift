@@ -33,7 +33,7 @@ struct DiscoverFilters: Equatable {
 
 struct DiscoverUser: Decodable, Identifiable, Equatable {
     let id: String
-    let displayName: String
+    let displayName: String?
     let photoURL: URL?
     let city: ProfileCity
     let approximateDistanceKm: Int
@@ -155,7 +155,7 @@ struct DiscoverView: View {
                     HStack(alignment: .top, spacing: LauverDesign.Spacing.medium) {
                         ProfileAvatar(photoURL: user.photoURL, size: 48)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(user.displayName).font(.headline)
+                            Text(user.displayName ?? "Lauver member").font(.headline)
                             Text("\(user.city.name) · About \(user.approximateDistanceKm) km")
                                 .font(.subheadline).foregroundStyle(.secondary)
                             Text(user.commonSports.isEmpty ? "No shared sports" : "Shared: \(user.commonSports.map(\.title).joined(separator: ", "))")
