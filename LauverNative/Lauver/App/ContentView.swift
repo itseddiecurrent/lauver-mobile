@@ -608,6 +608,7 @@ final class EventsViewModel: ObservableObject {
     }
     func join(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.joinEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event."; return event } }
     func leave(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.leaveEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event."; return event } }
+    fileprivate func insert(_ event: PublicEvent) { events.removeAll { $0.id == event.id }; events.append(event); events.sort { $0.startsAt < $1.startsAt } }
     fileprivate func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
 }
 
@@ -640,7 +641,7 @@ struct EventsView: View {
         .safeAreaPadding(.bottom, 96)
         .navigationTitle("Events")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
-        .sheet(isPresented: $showCreate) { CreateEventView(service: service) { showCreate = false; Task { await model.load() } } }
+        .sheet(isPresented: $showCreate) { CreateEventView(service: service, onSuccess: { created in model.insert(created); showCreate = false; Task { await model.load() } }) { showCreate = false } }
         .task { await model.load() }
         .task { location.request() }
         .refreshable { await model.load() }
@@ -702,7 +703,7 @@ private struct EventDetailView: View {
         .alert("Success", isPresented: Binding(get: { successMessage != nil }, set: { if !$0 { successMessage = nil } })) { Button("OK") { dismiss() } } message: { Text(successMessage ?? "Done.") }
         .alert("Unable to update event", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "Please try again.") }
         .alert("Unable to change attendance", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(model.error ?? "Please try again.") }
-        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: currentEvent, onSuccess: { showEdit = false; successMessage = "Event updated successfully." }) { showEdit = false } }
+        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: currentEvent, onSuccess: { updated in currentEvent = updated; showEdit = false; successMessage = "Event updated successfully." }) { showEdit = false } }
         .task { if let refreshed = try? await service.event(id: event.id) { currentEvent = refreshed } }
     }
 }
@@ -711,7 +712,7 @@ private struct CreateEventView: View {
     let service: any EventsServicing
     let done: () -> Void
     let existing: PublicEvent?
-    let onSuccess: (() -> Void)?
+    let onSuccess: ((PublicEvent) -> Void)?
     @State private var title = ""
     @State private var venue = ""
     @State private var description = ""
@@ -722,7 +723,7 @@ private struct CreateEventView: View {
     @State private var latitude = 31.2304
     @State private var longitude = 121.4737
     @State private var showVenueSearch = false
-    init(service: any EventsServicing, existing: PublicEvent? = nil, onSuccess: (() -> Void)? = nil, done: @escaping () -> Void) {
+    init(service: any EventsServicing, existing: PublicEvent? = nil, onSuccess: ((PublicEvent) -> Void)? = nil, done: @escaping () -> Void) {
         self.service = service; self.existing = existing; self.onSuccess = onSuccess; self.done = done
         _title = State(initialValue: existing?.title ?? "")
         _venue = State(initialValue: existing?.venue.name ?? "")
@@ -745,7 +746,7 @@ private struct CreateEventView: View {
         .sheet(isPresented: $showVenueSearch) { VenueSearchView { item in venue = item.name; latitude = item.latitude; longitude = item.longitude; showVenueSearch = false } }
     }
     private func create() async {
-        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); if let existing { _ = try await service.updateEvent(id: existing.id, draft: draft) } else { _ = try await service.createEvent(draft) }; done(); onSuccess?() }
+        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); let saved: PublicEvent; if let existing { saved = try await service.updateEvent(id: existing.id, draft: draft) } else { saved = try await service.createEvent(draft) }; done(); onSuccess?(saved) }
         catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not create event." }
     }
 }
