@@ -91,6 +91,19 @@ Render staging 已完成本 Step 部署和配置；未登录 status 为 HTTP 401
 
 `STRAVA_ENABLED` 与 provider secret 一样使用 Blueprint `sync: false`，保留 Render 手动配置值，避免 Blueprint sync 将用户已启用的开关覆盖回 false；缺省仍由 backend config 默认 disabled。[Render Blueprint 环境变量说明](https://render.com/docs/blueprint-spec#prompting-for-secret-values)
 
+### 2026-09-17 真机续验收
+
+- 已确认连接设备为 iPhone 14 Plus（iPhone14,8），iOS 18.7.8；最新 Staging App 已签名安装。
+- 使用本轮私有 Email staging fixture 在真机完成真实 Connect Strava。API 核对返回 `connected`、athlete name、最近同步时间和 20 条活动摘要；实际 scope 恰为 `read` 与 `activity:read`。
+- `connected` 验证脚本在一次 staging 数据库瞬断后重跑通过：`exact-fixture-database-owner`、`fixture-session`、`real-strava-connected`、`actual-read-only-scopes`、`bounded-private-summaries`。
+- `expire` 通过：只修改本轮 fixture 的过期时间，并保留旧加密 access/refresh 证据。
+- `refresh` 通过：真实 provider refresh、最新加密 refresh token 持久化、重复 sync 和 SQL 活动去重/20 条窗口全部通过。
+- `disconnect` / `cleanup` 通过：Strava revoke 返回成功而非 pending，`strava_connections`、`strava_activities`、`strava_oauth_states` 均清空，旧 Lauver session 返回 401，临时账户和 private journal 已删除。
+- 本轮 verifier 未在本机执行旧 provider access token 的 401 精确探针，因为 Render-only `STRAVA_TOKEN_ENCRYPTION_KEY` 不在本地环境；该项此前已在 `step-08-real-connect-20260914.log` 的真实撤销验收中通过。
+- 真机发现页同时暴露了历史 `displayName: null` 资料导致整页解码失败的问题；后端修复提交 `fb8116a` 已推送，原生兼容修复提交 `256e69d` 已安装到真机，Discover 已由用户确认恢复正常。
+
+本轮临时 fixture 已完成 provider revoke、数据库清理、session 失效和私有凭据清理，没有遗留可登录账号或 journal。
+
 不使用 Strava Dashboard 的预生成 access/refresh token 代替 App OAuth；验收必须从 App 的 Connect Strava 开始。`activity:read` 不包含 visibility 为 Only You 的活动；没有可读活动时空列表是合法结果，不要求修改已有活动的隐私设置。协议依据见 [Strava Authentication](https://developers.strava.com/docs/authentication/)。
 
 ## 分阶段真实 API 验收工具

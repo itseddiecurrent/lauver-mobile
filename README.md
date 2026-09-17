@@ -267,7 +267,7 @@ For example, a running range of `5:01`–`5:30` sends `paceMin=5.016666666666667
 
 Step 06 has a verifier that creates 34 generated Email test accounts, runs Discover filtering, ordering, pagination, location privacy and bidirectional block checks, then deletes every generated account and its dependent database rows. It uses the real staging API for login, profile writes and queries. Synthetic city centres and fixed timestamps make distance boundaries and sorting repeatable; direct database fixtures supply suspended/deleted states and blocks because those management endpoints are later steps.
 
-The account-deletion API is not implemented yet, so complete removal requires a PostgreSQL connection to the **same** `lauver_staging` database used by the API. Copy the example and enter the staging external connection URL from Render into the ignored file:
+The account-deletion API is now implemented, but complete removal verification still requires a PostgreSQL connection to the **same** `lauver_staging` database used by the API. Copy the example and enter the staging external connection URL from Render into the ignored file:
 
 ```bash
 cp backend/.env.staging.example backend/.env.staging

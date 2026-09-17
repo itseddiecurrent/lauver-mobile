@@ -1145,6 +1145,8 @@ xcodebuild test \
 
 ### Step 14：账户删除全链路
 
+**状态：🟡 本地实现与自动化验收通过，完整验收待完成（2026-09-17）。** 删除编排、幂等 retry、会话立即撤销、外部清理接线、原生设置入口和 Simulator 流程已完成；真实 PostgreSQL/Render Apple + Strava deletion、真机重启验证及敏感操作重新认证仍待完成。证据见 `artifacts/acceptance/step-14.md`。
+
 **依赖：** Step 04、Step 05、Step 08、Step 09、Step 10、Step 12、Step 13。
 
 **实现任务：**
