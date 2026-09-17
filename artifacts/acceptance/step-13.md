@@ -29,8 +29,8 @@ Date: 2026-09-17
 - `GET https://lauver-api-staging.onrender.com/readyz` — passed (`200`, database `ok`).
 - `npm run verify:step-13:staging` — ready to run after staging admin credentials are provisioned; it checks unauthenticated denial, UI shell, admin login, CSRF enforcement, queue access and logout without printing secrets.
 - 2026-09-17 execution — blocked before network login because `ADMIN_EMAIL` and `ADMIN_PASSWORD` are not present in the process environment or ignored env files; no credential was guessed or printed.
-- The currently deployed `/admin` response does not contain the new `Admin sign in` / `Target moderation` UI markers, so the latest backend must be deployed before the verifier can pass.
 - 2026-09-17 rerun — `npm run admin:create` succeeded against `STAGING_DATABASE_URL`; the current source was then run locally against the same staging database and `npm run verify:step-13:staging` passed: unauthenticated denial, UI shell, admin login, CSRF rejection, report queue (`1` report), and logout. No fixture or report mutation was performed.
+- After CI run `35241856935` completed successfully, Render deployed `ac4fc53`. The online `/admin` UI markers were confirmed and `npm run verify:step-13:staging` passed against `https://lauver-api-staging.onrender.com` with the same checks and queue count (`1`).
 
 ## Remaining acceptance
 
