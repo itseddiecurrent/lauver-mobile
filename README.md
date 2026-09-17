@@ -220,6 +220,18 @@ npm run admin:create
 
 The command stores only an Argon2id password hash. Admin login returns a CSRF token and sets an isolated Secure session cookie; browser write requests must send that token in `x-csrf-token`. Keep the admin database URL and password out of shell history where possible, and use a Render one-off shell or trusted local machine with the staging external database URL.
 
+The authenticated dashboard is available at `/admin` and supports report filtering, cursor pagination, evidence snapshots, status transitions, user suspend/restore, event removal and Stream message deletion. Run the non-destructive staging smoke check only after provisioning a staging admin:
+
+```bash
+cd backend
+ADMIN_EMAIL='staging-admin@example.com' \
+ADMIN_PASSWORD='use-the-provisioned-password' \
+STEP13_ADMIN_BASE_URL='https://lauver-api-staging.onrender.com' \
+npm run verify:step-13:staging
+```
+
+The verifier never prints the password, session cookies or database URL. The full Step 13 sign-off still requires disposable reports from Profile, Direct Chat, Event and Event Chat plus real suspend/event/message moderation checks.
+
 Build the production API image from the repository root:
 
 ```bash

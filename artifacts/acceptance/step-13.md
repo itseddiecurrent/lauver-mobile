@@ -17,14 +17,24 @@ Date: 2026-09-17
 - `npm run db:generate` — passed.
 - `npm run typecheck` — passed.
 - `npm run lint` — passed.
-- `npm test -- --pool=forks --poolOptions.forks.singleFork=true` — 158 tests passed.
+- `npm test -- --pool=forks --poolOptions.forks.singleFork=true` — 170 tests passed.
 - `npm run build` — passed.
 - `prisma validate` — passed.
+- `/admin` serves the authenticated report queue/detail dashboard with filters, cursor pagination, evidence snapshots and moderation actions.
+- Admin routes explicitly accept only `ADMIN` and `SUPER_ADMIN` identities; writes remain CSRF-protected.
+
+## Staging preflight evidence — 2026-09-17
+
+- `GET https://lauver-api-staging.onrender.com/healthz` — passed (`200`, service `lauver-api`).
+- `GET https://lauver-api-staging.onrender.com/readyz` — passed (`200`, database `ok`).
+- `npm run verify:step-13:staging` — ready to run after staging admin credentials are provisioned; it checks unauthenticated denial, UI shell, admin login, CSRF enforcement, queue access and logout without printing secrets.
+- 2026-09-17 execution — blocked before network login because `ADMIN_EMAIL` and `ADMIN_PASSWORD` are not present in the process environment or ignored env files; no credential was guessed or printed.
+- The currently deployed `/admin` response does not contain the new `Admin sign in` / `Target moderation` UI markers, so the latest backend must be deployed before the verifier can pass.
+- 2026-09-17 rerun — `npm run admin:create` succeeded against `STAGING_DATABASE_URL`; the current source was then run locally against the same staging database and `npm run verify:step-13:staging` passed: unauthenticated denial, UI shell, admin login, CSRF rejection, report queue (`1` report), and logout. No fixture or report mutation was performed.
 
 ## Remaining acceptance
 
-- Add focused Admin API authorization/CSRF/workflow tests and PostgreSQL integration tests.
-- Apply the migration to Render staging and provision a real staging admin through the one-time command.
+- Provision a real staging admin and run `npm run verify:step-13:staging --prefix backend`.
 - Verify report sources from Profile, Direct Chat, Event, and Event Chat in the queue.
 - Verify suspend invalidates existing sessions and Stream token issuance; verify event removal and message deletion in real staging.
-- Build the authenticated `/admin` report queue/detail UI and complete staging admin E2E.
+- Complete browser/UI evidence and Product Owner sign-off for `/admin`.

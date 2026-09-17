@@ -24,6 +24,14 @@ function adminStub() {
 }
 
 describe('Admin dashboard boundary', () => {
+  it('serves an actionable dashboard shell instead of a placeholder', async () => {
+    const response = await request(createTestApp({ adminService: adminStub() })).get('/admin');
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('Admin sign in');
+    expect(response.text).toContain('/admin/api/reports');
+    expect(response.text).toContain('Target moderation');
+  });
+
   it('does not expose a public report queue', async () => {
     const response = await request(createTestApp({ adminService: adminStub() })).get('/admin/api/reports');
     expect(response.status).toBe(401);
