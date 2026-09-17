@@ -94,7 +94,13 @@ export class StreamService {
         // The creator's first membership also creates the channel. Subsequent
         // joins add a member to the already-created private channel.
         try { await channel.addMembers([userId]); }
-        catch { await channel.create(); }
+        catch {
+          const event = await this.database.event.findUnique({ where: { id: eventId }, include: { attendees: true } });
+          await this.client.channel('messaging', eventChatChannelId(eventId), {
+            members: event?.attendees.map(attendee => attendee.userId) ?? [userId],
+            created_by_id: event?.creatorId ?? userId,
+          }).create();
+        }
       }
       else await channel.removeMembers([userId]);
     } catch {
