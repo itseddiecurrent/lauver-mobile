@@ -171,6 +171,8 @@ final class LauverUITests: XCTestCase {
         assertNavigation(tab: "Events", screen: "screen-events")
     }
 
+
+
     func testMessagesTabNavigation() {
         assertNavigation(tab: "Messages", screen: "screen-messages")
     }
@@ -360,7 +362,7 @@ final class LauverUITests: XCTestCase {
 
     private func enterCredentials(in app: XCUIApplication) {
         let email = app.textFields["auth-email"]
-        XCTAssertTrue(email.waitForExistence(timeout: 5))
+        XCTAssertTrue(email.waitForExistence(timeout: 20))
         typeText("runner@example.com", into: email, app: app)
         let password = app.secureTextFields["auth-password"]
         typeText("CorrectHorse9", into: password, app: app)

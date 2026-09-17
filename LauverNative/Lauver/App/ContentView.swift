@@ -637,6 +637,7 @@ struct EventsView: View {
                 }
             }
         }
+        .safeAreaPadding(.bottom, 96)
         .navigationTitle("Events")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
         .sheet(isPresented: $showCreate) { CreateEventView(service: service) { showCreate = false; Task { await model.load() } } }
