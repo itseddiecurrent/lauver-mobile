@@ -33,3 +33,11 @@ Run against Stream staging with four identities: attendee, non-attendee, left at
 ### Current sign-off
 
 Not signed off. Re-run the four-identity staging E2E and two-device UI flow after Render is confirmed on `1528b52`; then record the actual watch/send, leave/cancel/suspend revocation, message-report evidence, and reconciliation apply results here.
+
+## 2026-09-17 re-test
+
+- Re-ran the full disposable-identity staging E2E after pushing `8db2cb3`.
+- Authentication, event creation, joins, attendee query, non-attendee denial, Leave, and left-attendee denial passed.
+- Attendee send still returned `403 event_chat_forbidden`; message report and subsequent cancellation checks were therefore not reached.
+- All temporary accounts were verified removed (`remaining step12 temp accounts: 0`).
+- The deployed staging revision still needs to be confirmed/advanced to `8db2cb3` before another acceptance run.
