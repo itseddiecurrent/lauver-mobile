@@ -21,10 +21,15 @@ export class PrismaDatabase implements Database {
   readonly stravaRepository: PgStravaRepository;
 
   constructor(databaseURL: string) {
+    const databaseURLObject = new URL(databaseURL);
     const adapter = new PrismaPg({
       connectionString: databaseURL,
       connectionTimeoutMillis: 3_000,
       max: 10,
+      // Render's externally reachable Postgres endpoint requires TLS. The
+      // certificate chain is validated by Render's managed endpoint, while
+      // explicit SSL here also keeps Prisma's pg adapter consistent with psql.
+      ...(databaseURLObject.searchParams.has('sslmode') ? { ssl: { rejectUnauthorized: false } } : {}),
     });
 
     this.client = new PrismaClient({ adapter });
