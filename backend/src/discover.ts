@@ -160,6 +160,7 @@ export class PrismaDiscoverRepository implements DiscoverRepository {
           )))) AS distance
         FROM profiles p JOIN users u ON u.id = p.user_id
         WHERE p.user_id <> ${userId}::uuid AND u.status = 'ACTIVE' AND p.is_complete
+          AND p.display_name IS NOT NULL AND btrim(p.display_name) <> ''
           AND p.city_latitude IS NOT NULL AND p.city_longitude IS NOT NULL
           AND ${noBlockSQL(userId, Prisma.sql`p.user_id`)}
           ${sportFilter}
