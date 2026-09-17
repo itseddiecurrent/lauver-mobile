@@ -694,9 +694,11 @@ private struct EventDetailView: View {
                 Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "unsafe_event", details: nil) } }
                 Button("Report Organizer", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "harassment", details: "Report organizer from event detail") } }
             }
-            Section("Manage") {
-                Button("Edit Event") { showEdit = true }
-                Button("Cancel Event", role: .destructive) { showCancelConfirm = true }
+            if currentEvent.isCreator == true {
+                Section("Manage") {
+                    Button("Edit Event") { showEdit = true }
+                    Button("Cancel Event", role: .destructive) { showCancelConfirm = true }
+                }
             }
         }
         .navigationTitle("Event Details")
