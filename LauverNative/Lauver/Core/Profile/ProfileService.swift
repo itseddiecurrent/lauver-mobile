@@ -341,7 +341,7 @@ protocol EventsServicing {
     func createEvent(_ draft: EventDraft) async throws -> PublicEvent
     func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent
     func cancelEvent(id: String) async throws -> PublicEvent
-    func reportEvent(id: String, reason: String, details: String?) async throws -> String
+    func reportEvent(id: String, reason: String, details: String?, targetType: String) async throws -> String
 }
 
 final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
@@ -576,7 +576,7 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
 
     func createEvent(_ draft: EventDraft) async throws -> PublicEvent {
         let body = try encoder.encode(draft)
-        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true) }
+        let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events", body: body, headers: Self.jsonAuthorization(token)) }
         return envelope.event
     }
     func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent {
@@ -590,10 +590,10 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
         let envelope: EventEnvelope = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events/\(id)/cancel", headers: Self.jsonAuthorization(token)) }
         return envelope.event
     }
-    func reportEvent(id: String, reason: String, details: String?) async throws -> String {
+    func reportEvent(id: String, reason: String, details: String?, targetType: String) async throws -> String {
         guard UUID(uuidString: id) != nil else { throw APIError.invalidRequest }
-        struct Payload: Encodable { let reason: String; let details: String? }
-        let body = try encoder.encode(Payload(reason: reason, details: details))
+        struct Payload: Encodable { let reason: String; let details: String?; let targetType: String }
+        let body = try encoder.encode(Payload(reason: reason, details: details, targetType: targetType))
         struct Receipt: Decodable { let referenceId: String }
         let receipt: Receipt = try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/events/\(id)/report", body: body, headers: Self.jsonAuthorization(token)) }
         return receipt.referenceId

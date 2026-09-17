@@ -73,6 +73,21 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(attempts, 1)
     }
 
+    func testCreateEventDoesNotReplayWhenCommittedResponseIsLost() async {
+        let service = ProfileService(client: APIClient(baseURL: URL(string: "https://api.example.test")!,
+            session: session, retryPolicy: RetryPolicy(maxAttempts: 3)), authService: authService, sessionStore: tokenStore)
+        var attempts = 0
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/events")
+            attempts += 1
+            throw URLError(.networkConnectionLost)
+        }
+        let draft = EventDraft(title: "Run", description: nil, sport: "running", startsAt: "2030-01-01T10:00:00Z",
+            endsAt: "2030-01-01T11:00:00Z", capacity: 10, venueName: "Park", venueAddress: nil, venueLatitude: 31, venueLongitude: 121)
+        do { _ = try await service.createEvent(draft); XCTFail("Expected lost response") } catch {}
+        XCTAssertEqual(attempts, 1)
+    }
+
     func testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates() async throws {
         ProfileURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/discover")

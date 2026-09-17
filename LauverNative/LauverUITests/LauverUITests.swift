@@ -167,6 +167,152 @@ final class LauverUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [cleared], timeout: 5), .completed, file: file, line: line)
     }
 
+    // Opt-in: real staging writes, never part of the simulator smoke suite.
+    func testLiveEventManagementOnDevice() throws {
+        guard ProcessInfo.processInfo.environment["LAUVER_LIVE_EVENTS"] == "1" else {
+            throw XCTSkip("Requires explicit live staging acceptance opt-in")
+        }
+        let app = XCUIApplication()
+        if let email = ProcessInfo.processInfo.environment["LAUVER_LIVE_EMAIL"],
+           let password = ProcessInfo.processInfo.environment["LAUVER_LIVE_PASSWORD"] {
+            app.launchArguments = ["-ui-testing-reset-auth"]
+            app.launch()
+            typeText(email, into: app.textFields["auth-email"], app: app)
+            typeText(password, into: app.secureTextFields["auth-password"], app: app)
+            app.buttons["auth-login"].tap()
+        } else { app.launch() }
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30), "Authenticated shell")
+        app.launchArguments = []
+        if app.buttons["Not Now"].waitForExistence(timeout: 3) { app.buttons["Not Now"].tap() }
+        openLiveEventsTab(in: app)
+        XCTAssertTrue(app.buttons["events-create"].waitForExistence(timeout: 15))
+        let title = "Cancel QA " + String(UUID().uuidString.prefix(8))
+        app.buttons["events-create"].tap()
+        let titleField = app.textFields["event-title-field"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 10))
+        titleField.tap()
+        titleField.typeText(title)
+        let venue = app.textFields["event-venue-field"]
+        venue.tap()
+        venue.typeText("Shanghai People's Park")
+        app.buttons["event-save-button"].tap()
+        let saved = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: titleField)
+        XCTAssertEqual(XCTWaiter.wait(for: [saved], timeout: 20), .completed, "Create form must close after successful POST")
+        captureEventScreen(app, name: "created")
+        XCTAssertTrue(app.navigationBars["Event Details"].waitForExistence(timeout: 10), "Created event opens directly, regardless of list pagination")
+        XCTAssertTrue(app.staticTexts[title].exists)
+        scrollToEventControl(app.buttons["event-edit"], in: app)
+        app.buttons["event-edit"].tap()
+        XCTAssertTrue(app.textFields["event-title-field"].waitForExistence(timeout: 10))
+        let editedTitle = title + " Edited"
+        typeText(" Edited", into: app.textFields["event-title-field"], app: app)
+        XCTAssertEqual(app.textFields["event-title-field"].value as? String, editedTitle)
+        app.buttons["event-save-button"].tap()
+        XCTAssertTrue(app.alerts.staticTexts["Event updated successfully."].waitForExistence(timeout: 15), "Edit receipt")
+        captureEventScreen(app, name: "edit-success")
+        app.alerts.buttons["OK"].tap()
+        XCTAssertTrue(app.buttons["events-create"].waitForExistence(timeout: 10), "Edit returns to list")
+        openLiveEvent(editedTitle, in: app)
+        XCTAssertFalse(app.buttons["Report Event"].exists, "Creators cannot report themselves")
+        scrollToEventControl(app.buttons["event-cancel"], in: app)
+        app.buttons["event-cancel"].tap()
+        XCTAssertTrue(app.alerts["Cancel this event?"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Keep Event"].tap()
+        XCTAssertTrue(app.buttons["event-cancel"].exists, "Dismissing confirmation must preserve the event")
+        app.buttons["event-cancel"].tap()
+        app.alerts["Cancel this event?"].buttons["Cancel Event"].tap()
+        XCTAssertTrue(app.alerts.staticTexts["Event cancelled successfully."].waitForExistence(timeout: 15), "Cancel receipt")
+        captureEventScreen(app, name: "cancel-success")
+        app.alerts.buttons["OK"].tap()
+        XCTAssertTrue(app.buttons["events-create"].waitForExistence(timeout: 10), "Cancel returns to list")
+        XCTAssertFalse(app.staticTexts[editedTitle].exists, "Cancelled row removed")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
+        openLiveEventsTab(in: app)
+        XCTAssertTrue(app.buttons["events-create"].waitForExistence(timeout: 15))
+        XCTAssertFalse(app.staticTexts[editedTitle].exists, "Cancelled row stays absent after relaunch")
+        captureEventScreen(app, name: "cancelled-list")
+        print("EVENT_ACCEPTANCE_TITLE: " + editedTitle)
+    }
+
+    func testLiveEventAttendanceOnDevice() throws {
+        guard ProcessInfo.processInfo.environment["LAUVER_LIVE_EVENTS"] == "1" else {
+            throw XCTSkip("Requires explicit live staging acceptance opt-in")
+        }
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
+        openLiveEventsTab(in: app)
+        openLiveEvent("Step 11 Partner Acceptance", in: app)
+        XCTAssertFalse(app.buttons["event-edit"].exists)
+        XCTAssertFalse(app.buttons["event-cancel"].exists)
+        scrollToEventControl(app.buttons["Join Event"], in: app)
+        app.buttons["Join Event"].tap()
+        XCTAssertTrue(app.buttons["Leave Event"].waitForExistence(timeout: 15))
+        captureEventScreen(app, name: "joined")
+        app.buttons["Leave Event"].tap()
+        XCTAssertTrue(app.buttons["Join Event"].waitForExistence(timeout: 15))
+        captureEventScreen(app, name: "left")
+        app.buttons["Join Event"].tap()
+        XCTAssertTrue(app.buttons["Leave Event"].waitForExistence(timeout: 15))
+    }
+
+    func testLiveEventReportsOnDevice() throws {
+        guard ProcessInfo.processInfo.environment["LAUVER_LIVE_EVENTS"] == "1" else {
+            throw XCTSkip("Requires explicit live staging acceptance opt-in")
+        }
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
+        openLiveEventsTab(in: app)
+        openLiveEvent("Step 11 Partner Acceptance", in: app)
+        for label in ["Report Event", "Report Organizer"] {
+            scrollToEventControl(app.buttons[label], in: app)
+            app.buttons[label].tap()
+            XCTAssertTrue(app.alerts.staticTexts["Report submitted successfully."].waitForExistence(timeout: 15))
+            captureEventScreen(app, name: label)
+            app.alerts.buttons["OK"].tap()
+        }
+    }
+
+    private func openLiveEventsTab(in app: XCUIApplication) {
+        let tab = app.tabBars.firstMatch.buttons["Events"]
+        for _ in 0..<3 {
+            tab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            if app.buttons["events-create"].waitForExistence(timeout: 3) { return }
+        }
+        XCTAssertTrue(app.buttons["events-create"].exists)
+    }
+
+    private func captureEventScreen(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    private func openLiveEvent(_ title: String, in app: XCUIApplication) {
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "event-row-", title)).firstMatch
+        for _ in 0..<35 {
+            if row.exists && row.isHittable { row.tap(); break }
+            let more = app.buttons["events-load-more"]
+            if more.exists && more.isHittable { more.tap() }
+            app.swipeUp()
+        }
+        captureEventScreen(app, name: "event-detail")
+        XCTAssertTrue(app.navigationBars["Event Details"].waitForExistence(timeout: 10), "Open exact unique event")
+    }
+
+    private func scrollToEventControl(_ control: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<8 {
+            if control.exists && control.isHittable { return }
+            app.swipeUp()
+        }
+        captureEventScreen(app, name: "missing-control")
+        XCTAssertTrue(control.exists && control.isHittable, "Detail control must be reachable by scrolling")
+    }
+
     func testEventsTabNavigation() {
         assertNavigation(tab: "Events", screen: "screen-events")
     }

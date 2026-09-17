@@ -56,3 +56,26 @@ account; the owner authorizes their own Strava athlete on iPhone. See
 [Step 08 evidence](../artifacts/acceptance/step-08.md) for the connect/expire/refresh/revoke
 commands and exact fixture cleanup. An unsigned archive or fake provider does not
 establish real OAuth or provider revocation acceptance.
+
+## Step 11 acceptance
+
+After deploying the Events fixes, use the existing private `.env.staging` configuration:
+
+```sh
+npx tsx scripts/verify-step-11-staging.ts prepare
+npx tsx scripts/verify-step-11-staging.ts verify
+npx tsx scripts/verify-step-11-staging.ts cleanup
+```
+
+The private journal defaults to `/tmp/lauver-step11-acceptance.json`; an explicit path
+can be passed as the second argument. Preparation creates four disposable accounts
+and 21 earlier events to reproduce a newly created event falling outside page one.
+Run `prepare` again to refresh fixture times before a delayed device/API run.
+`verify` measures create/immediate read, traverses pagination, races three distinct
+users for one remaining place, checks permissions, idempotency, edit, reporting and
+cancellation, then verifies report snapshots and audit rows in PostgreSQL.
+If only database connectivity failed, `evidence` resumes using saved report receipts.
+Keep the private journal until `cleanup` successfully removes the exact fixture accounts.
+Never commit it or use these credentials outside staging. See
+[Step 11 evidence](../artifacts/acceptance/step-11.md) for the device results and current
+staging status; a local pass does not establish deployment acceptance.

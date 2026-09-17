@@ -1045,7 +1045,7 @@ xcodebuild test \
 
 ### Step 11：Public Events 与 Apple Maps
 
-**状态：🟡 部分完成（2026-09-16）。** Events 数据模型、后端 CRUD、Upcoming 查询、sport/date/city/radius 筛选、分页、Join/Leave、容量事务保护、事件举报和 iOS Events 列表/详情、创建、编辑、取消、Apple Maps venue 搜索及当前位置选择已完成。设备 A 创建的活动已在设备 B 的 Upcoming 列表中真实显示，真机地图名称、位置和活动地点坐标一致性已确认；仍需在真机上完成编辑、取消、Join/Leave 和举报的逐项操作验收。
+**状态：🟡 收尾验收中（2026-09-17）。** 已修复创建后只刷新前 20 条导致活动不可达的问题：创建响应直接打开详情，列表支持后续页，刷新不覆盖并发写入。真机创建、编辑、Cancel、重启后状态、另一账号 Join/Leave 均已通过；staging 实测创建 399 ms，另一账号立即读取 411 ms，无异步可见性延迟。真实 PostgreSQL 20 人抢最后一个名额、容量编辑竞态、权限、Join/Leave 幂等与举报事务测试通过。举报修复已推送（`186e40f`，CI 全通过），等待 Render 部署及最终举报真机验收；证据见 `artifacts/acceptance/step-11.md`。
 
 **依赖：** Step 05、Step 07。
 
@@ -1075,7 +1075,7 @@ xcodebuild test \
 5. 取消活动从 Upcoming 消失，已有 attendee 能看到 cancelled 状态；
 6. ✅ Report Event 进入 reports 表并保留活动快照；Report Event/Organizer iOS 入口已接入。
 
-**当前完成范围：** Events 的后端 CRUD、筛选、人数、Join/Leave、事务容量保护、活动举报和 iOS 活动管理界面均已实现，由真实后端驱动且没有客户端自增人数。剩余工作是连接 staging 后在真机上逐项执行创建、编辑、取消、加入/退出、地图选择和举报验收。
+**当前完成范围：** 创建、编辑、Cancel、重启后状态、Join/Leave 已通过真实 iPhone + staging 验收；地图一致性沿用 2026-09-16 两设备手动证据。后端 156 tests、PostgreSQL integration 62 tests、iOS 105 XCTest 通过。剩余部署、举报真机与测试数据清理以 `artifacts/acceptance/step-11.md` 为准，不以本地测试替代 staging 结果。
 
 ### Step 12：Event Attendee Group Chat
 
@@ -1181,7 +1181,7 @@ xcodebuild test \
 **实现任务：**
 
 1. 运行当前仓库的 `npx expo start` 版本，记录参考 commit、运行方式、设备尺寸和主题，逐页保存参考截图；结合 `App.js`、`src/screens/`、`src/context/ThemeContext.js` 与实际使用的资源梳理页面和样式，不以记忆或临时猜测作为设计依据；
-2. 建立 Expo → SwiftUI 页面对应表，覆盖 Welcome、登录/注册/重置密码、Discover/筛选/其他用户资料、自己的 Profile/编辑资料、Events/活动详情/创建编辑、Messages/私聊/活动群聊、Settings/Connected Apps/Blocked Users/举报/删除账户；Expo 没有的 MVP 页面沿用统一设计语言；
+2. 建立 Expo → SwiftUI 页面对应表，运用lauver的官方logo，覆盖 Welcome、登录/注册/重置密码、Discover/筛选/其他用户资料、自己的 Profile/编辑资料、Events/活动详情/创建编辑、Messages/私聊/活动群聊、Settings/Connected Apps/Blocked Users/举报/删除账户；Expo 没有的 MVP 页面沿用统一设计语言；
 3. 扩展原生 Design System，统一品牌色、浅深色背景与文字、字体层级、间距、圆角、边框、图标、头像、按钮、输入框、列表行、Tab Bar、导航栏和 Sheet。优先复用已有品牌资源，避免各页面分别硬编码样式；
 4. 用 SwiftUI 逐页对齐参考版本的视觉层级与交互细节，包括按钮位置、表单反馈、筛选摘要、键盘避让、返回导航和滚动体验。保留原生认证、地图、照片与权限流程；Discover 继续使用普通列表和手动筛选；
 5. 为真实数据、长姓名/城市/文案、无头像、加载、空状态、错误、断网重试、按钮禁用和提交中状态提供完整样式；页面中不暴露无助于用户决策的实现细节或调试信息；

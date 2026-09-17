@@ -321,3 +321,88 @@ private final class TestUIStateStore: UIStateStoring {
         selectedTab = .discover
     }
 }
+
+@MainActor
+final class EventsPaginationTests: XCTestCase {
+    func testCreatedEventBeyondFirstPageSurvivesRefreshAndPaginationWithoutDuplicates() async {
+        let service = EventPagingStub()
+        let model = EventsViewModel(service: service)
+        await model.load()
+        XCTAssertEqual(model.events.count, 20)
+        let created = service.makeEvent(21)
+        model.insert(created)
+        await model.load()
+        XCTAssertTrue(model.events.contains { $0.id == created.id })
+        XCTAssertNotNil(model.nextCursor)
+        await model.load(refresh: false)
+        XCTAssertEqual(model.events.count, 21)
+        XCTAssertEqual(Set(model.events.map(\.id)).count, 21)
+        XCTAssertNil(model.nextCursor)
+        service.cancelled = true
+        model.replace(service.makeEvent(21, status: "cancelled"))
+        await model.load()
+        await model.load(refresh: false)
+        XCTAssertFalse(model.events.contains { $0.id == created.id })
+    }
+
+    func testFailedNextPageKeepsRowsAndCursorForRetry() async {
+        let service = EventPagingStub()
+        let model = EventsViewModel(service: service)
+        await model.load()
+        service.failNextPage = true
+        await model.load(refresh: false)
+        XCTAssertEqual(model.events.count, 20)
+        XCTAssertEqual(model.nextCursor, "page-two")
+        XCTAssertNotNil(model.error)
+        service.failNextPage = false
+        await model.load(refresh: false)
+        XCTAssertEqual(model.events.count, 21)
+        XCTAssertNil(model.error)
+    }
+
+    func testServerCancellationReplacesLocallySavedEventOnRefresh() async {
+        let service = EventPagingStub()
+        let model = EventsViewModel(service: service)
+        model.insert(service.makeEvent(21))
+        service.cancelled = true
+        await model.load()
+        XCTAssertFalse(model.events.contains { $0.id == "event-21" })
+    }
+
+    func testMutationDuringOlderListRequestSurvivesResponse() async {
+        let service = EventPagingStub()
+        let model = EventsViewModel(service: service)
+        service.beforePage = { model.insert(service.makeEvent(1, status: "cancelled")) }
+        await model.load()
+        XCTAssertFalse(model.events.contains { $0.id == "event-1" })
+    }
+}
+
+private final class EventPagingStub: EventsServicing {
+    var failNextPage = false
+    var cancelled = false
+    var beforePage: (@MainActor () -> Void)?
+    func makeEvent(_ n: Int, status: String = "upcoming") -> PublicEvent {
+        PublicEvent(id: "event-\(n)", title: "Event \(n)", description: nil,
+                    sport: "running", startsAt: String(format: "2030-10-%02dT10:00:00Z", n),
+                    endsAt: String(format: "2030-10-%02dT11:00:00Z", n), capacity: 10,
+                    attendeeCount: 1, venue: EventVenue(name: "Park", address: nil, latitude: 31, longitude: 121),
+                    status: status, creator: EventCreator(id: "owner", displayName: "Owner"),
+                    isAttendee: true, isCreator: true)
+    }
+    func events(sport: String?, city: String?, cursor: String?) async throws -> EventPage {
+        await beforePage?()
+        if cursor != nil {
+            if failNextPage { throw URLError(.notConnectedToInternet) }
+            return EventPage(events: [makeEvent(20)] + (cancelled ? [] : [makeEvent(21)]), nextCursor: nil)
+        }
+        return EventPage(events: (1...20).map { makeEvent($0) }, nextCursor: "page-two")
+    }
+    func event(id: String) async throws -> PublicEvent { makeEvent(21, status: cancelled ? "cancelled" : "upcoming") }
+    func joinEvent(id: String) async throws -> PublicEvent { throw URLError(.unsupportedURL) }
+    func leaveEvent(id: String) async throws -> PublicEvent { throw URLError(.unsupportedURL) }
+    func createEvent(_ draft: EventDraft) async throws -> PublicEvent { throw URLError(.unsupportedURL) }
+    func updateEvent(id: String, draft: EventDraft) async throws -> PublicEvent { throw URLError(.unsupportedURL) }
+    func cancelEvent(id: String) async throws -> PublicEvent { throw URLError(.unsupportedURL) }
+    func reportEvent(id: String, reason: String, details: String?, targetType: String) async throws -> String { throw URLError(.unsupportedURL) }
+}

@@ -596,26 +596,57 @@ import SwiftUI
 @MainActor
 final class EventsViewModel: ObservableObject {
     @Published private(set) var events: [PublicEvent] = []
+    @Published private(set) var nextCursor: String?
     @Published private(set) var loading = false
     @Published var error: String?
     private let service: any EventsServicing
+    // Server-confirmed mutations must survive a first-page refresh or an older in-flight request.
+    private var savedEvents: [String: PublicEvent] = [:]
+    private var mutationVersions: [String: Int] = [:]
     init(service: any EventsServicing) { self.service = service }
-    func load() async {
-        guard !loading else { return }; loading = true; error = nil
+    func load(refresh: Bool = true) async {
+        guard !loading, refresh || nextCursor != nil else { return }
+        loading = true; error = nil
+        let versionsAtStart = mutationVersions
         defer { loading = false }
-        do { events = try await service.events(sport: nil, city: nil, cursor: nil).events }
-        catch let caught { error = (caught as? APIError)?.userMessage ?? "Events could not be loaded." }
+        do {
+            let page = try await service.events(sport: nil, city: nil, cursor: refresh ? nil : nextCursor)
+            // A later server read is authoritative; only protect mutations made while it was in flight.
+            for event in page.events where mutationVersions[event.id] == versionsAtStart[event.id] {
+                savedEvents.removeValue(forKey: event.id)
+            }
+            if refresh {
+                for id in Array(savedEvents.keys) where mutationVersions[id] == versionsAtStart[id] {
+                    if let current = try? await service.event(id: id), mutationVersions[id] == versionsAtStart[id] {
+                        savedEvents[id] = current
+                    }
+                }
+            }
+            var rows = refresh ? [] : events
+            for event in page.events { rows.removeAll { $0.id == event.id }; rows.append(event) }
+            for event in savedEvents.values { rows.removeAll { $0.id == event.id }; rows.append(event) }
+            events = rows.filter { $0.status == "upcoming" }.sorted { ($0.startsAt, $0.id) < ($1.startsAt, $1.id) }
+            nextCursor = page.nextCursor
+        } catch { self.error = (error as? APIError)?.userMessage ?? "Events could not be loaded." }
     }
     func join(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.joinEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not join this event."; return event } }
     func leave(_ event: PublicEvent) async -> PublicEvent { do { let updated = try await service.leaveEvent(id: event.id); replace(updated); return updated } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not leave this event."; return event } }
-    fileprivate func insert(_ event: PublicEvent) { events.removeAll { $0.id == event.id }; events.append(event); events.sort { $0.startsAt < $1.startsAt } }
-    fileprivate func replace(_ event: PublicEvent) { if let i = events.firstIndex(where: { $0.id == event.id }) { events[i] = event } }
+    func insert(_ event: PublicEvent) { replace(event) }
+    func replace(_ event: PublicEvent) {
+        savedEvents[event.id] = event
+        mutationVersions[event.id, default: 0] += 1
+        events.removeAll { $0.id == event.id }
+        if event.status == "upcoming" { events.append(event) }
+        events.sort { ($0.startsAt, $0.id) < ($1.startsAt, $1.id) }
+    }
 }
 
 struct EventsView: View {
     @StateObject private var model: EventsViewModel
     let service: any EventsServicing
     @State private var showCreate = false
+    @State private var createdEvent: PublicEvent?
+    @State private var showCreatedEvent = false
     @State private var filter = EventFilter.all
     @StateObject private var location = UserLocationModel()
     init(service: any EventsServicing) { self.service = service; _model = StateObject(wrappedValue: EventsViewModel(service: service)) }
@@ -635,14 +666,25 @@ struct EventsView: View {
                         Text(event.startsAt).font(.footnote).foregroundStyle(.secondary)
                         Text("\(event.attendeeCount)/\(event.capacity) attendees").font(.footnote)
                     }
-                }.accessibilityIdentifier("event-row-title-\(event.title)")
-                    .accessibilityElement(children: .contain)
+                }.accessibilityIdentifier("event-row-\(event.id)")
+            }
+            if model.nextCursor != nil {
+                Button("Load more events") { Task { await model.load(refresh: false) } }
+                    .disabled(model.loading).accessibilityIdentifier("events-load-more")
             }
         }
-        .safeAreaPadding(.bottom, 96)
+        .safeAreaPadding(.bottom, 24)
         .navigationTitle("Events")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
-        .sheet(isPresented: $showCreate) { CreateEventView(service: service, onSuccess: { created in model.insert(created); showCreate = false; Task { await model.load() } }) { showCreate = false } }
+        .sheet(isPresented: $showCreate, onDismiss: {
+            if createdEvent != nil { showCreatedEvent = true }
+        }) { CreateEventView(service: service, onSuccess: { created in
+            model.insert(created); filter = .created; createdEvent = created; showCreate = false
+        }) { showCreate = false } }
+        .navigationDestination(isPresented: $showCreatedEvent) {
+            if let createdEvent { EventDetailView(event: createdEvent, model: model, service: service) }
+        }
+        .onChange(of: showCreatedEvent) { _, showing in if !showing { createdEvent = nil } }
         .task { await model.load() }
         .task { location.request() }
         .refreshable { await model.load() }
@@ -673,7 +715,9 @@ private struct EventDetailView: View {
     @State private var currentEvent: PublicEvent
     @State private var showEdit = false
     @State private var showCancelConfirm = false
-    @State private var showReport = false
+    @State private var editSaved = false
+    @State private var returnToList = false
+    @State private var submitting = false
     @State private var error: String?
     @State private var successMessage: String?
     init(event: PublicEvent, model: EventsViewModel, service: any EventsServicing) {
@@ -684,30 +728,57 @@ private struct EventDetailView: View {
         List {
             Section { Text(currentEvent.title).font(.title2.bold()); Text(currentEvent.description ?? "No description") }
             Section("Venue") { Text(currentEvent.venue.name); if let address = currentEvent.venue.address { Text(address).foregroundStyle(.secondary) } }
-            Section("Your status") { Label(currentEvent.isAttendee == true ? "You’re attending this event" : "You’re not attending this event", systemImage: currentEvent.isAttendee == true ? "checkmark.circle.fill" : "circle") }
+            Section("Your status") { if currentEvent.status == "cancelled" { Text("Cancelled").accessibilityIdentifier("event-cancelled") }; Label(currentEvent.isAttendee == true ? "You’re attending this event" : "You’re not attending this event", systemImage: currentEvent.isAttendee == true ? "checkmark.circle.fill" : "circle") }
             Section("Attendees") { Text("\(currentEvent.attendeeCount) of \(currentEvent.capacity)") }
             Section {
-                if currentEvent.isAttendee == true { Button("Leave Event", role: .destructive) { Task { currentEvent = await model.leave(currentEvent) } } }
-                else if currentEvent.status == "upcoming" { Button("Join Event") { Task { currentEvent = await model.join(currentEvent) } }.buttonStyle(.borderedProminent) }
+                if currentEvent.isAttendee == true && currentEvent.isCreator != true && currentEvent.status == "upcoming" { Button("Leave Event", role: .destructive) { Task { currentEvent = await model.leave(currentEvent) } } }
+                else if currentEvent.isAttendee != true && currentEvent.status == "upcoming" { Button("Join Event") { Task { currentEvent = await model.join(currentEvent) } }.buttonStyle(.borderedProminent) }
             }
-            Section("Safety") {
-                Button("Report Event", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "unsafe_event", details: nil) } }
-                Button("Report Organizer", role: .destructive) { Task { _ = try? await service.reportEvent(id: currentEvent.id, reason: "harassment", details: "Report organizer from event detail") } }
-            }
-            if currentEvent.isCreator == true {
+            if currentEvent.isCreator != true { Section("Safety") {
+                Button("Report Event", role: .destructive) { Task { await report(reason: "unsafe_event", details: nil, targetType: "event") } }
+                Button("Report Organizer", role: .destructive) { Task { await report(reason: "harassment", details: "Report organizer from event detail", targetType: "user") } }
+            } }
+            if currentEvent.isCreator == true && currentEvent.status == "upcoming" {
                 Section("Manage") {
-                    Button("Edit Event") { showEdit = true }
-                    Button("Cancel Event", role: .destructive) { showCancelConfirm = true }
+                    Button("Edit Event") { showEdit = true }.accessibilityIdentifier("event-edit")
+                    Button("Cancel Event", role: .destructive) { showCancelConfirm = true }.accessibilityIdentifier("event-cancel")
                 }
             }
         }
+        .disabled(submitting)
         .navigationTitle("Event Details")
-        .alert("Cancel this event?", isPresented: $showCancelConfirm) { Button("Cancel Event", role: .destructive) { Task { do { let updated = try await service.cancelEvent(id: event.id); model.replace(updated); successMessage = "Event cancelled successfully." } catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not cancel event." } } }; Button("Keep Event", role: .cancel) {} }
-        .alert("Success", isPresented: Binding(get: { successMessage != nil }, set: { if !$0 { successMessage = nil } })) { Button("OK") { dismiss() } } message: { Text(successMessage ?? "Done.") }
+        .toolbar(.hidden, for: .tabBar)
+        .alert("Cancel this event?", isPresented: $showCancelConfirm) { Button("Cancel Event", role: .destructive) { Task { await cancel() } }; Button("Keep Event", role: .cancel) {} }
+        .alert("Success", isPresented: Binding(get: { successMessage != nil }, set: { if !$0 { successMessage = nil } })) { Button("OK") { if returnToList { dismiss(); model.replace(currentEvent) } } } message: { Text(successMessage ?? "Done.") }
         .alert("Unable to update event", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(error ?? "Please try again.") }
         .alert("Unable to change attendance", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK", role: .cancel) {} } message: { Text(model.error ?? "Please try again.") }
-        .sheet(isPresented: $showEdit) { CreateEventView(service: service, existing: currentEvent, onSuccess: { updated in currentEvent = updated; showEdit = false; successMessage = "Event updated successfully." }) { showEdit = false } }
+        .sheet(isPresented: $showEdit, onDismiss: {
+            if editSaved { editSaved = false; returnToList = true; successMessage = "Event updated successfully." }
+        }) { CreateEventView(service: service, existing: currentEvent, onSuccess: { updated in currentEvent = updated; editSaved = true; showEdit = false }) { showEdit = false } }
         .task { if let refreshed = try? await service.event(id: event.id) { currentEvent = refreshed } }
+    }
+    private func cancel() async {
+        guard !submitting else { return }
+        submitting = true
+        defer { submitting = false }
+        do {
+            let refreshed = try await service.event(id: event.id)
+            currentEvent = refreshed
+            guard refreshed.isCreator == true else { error = "Only the event creator can cancel this event."; return }
+            currentEvent = try await service.cancelEvent(id: event.id)
+            returnToList = true
+            successMessage = "Event cancelled successfully."
+        } catch { self.error = (error as? APIError)?.userMessage ?? "Could not cancel event." }
+    }
+    private func report(reason: String, details: String?, targetType: String) async {
+        guard !submitting else { return }
+        submitting = true
+        defer { submitting = false }
+        do {
+            _ = try await service.reportEvent(id: event.id, reason: reason, details: details, targetType: targetType)
+            returnToList = false
+            successMessage = "Report submitted successfully."
+        } catch { self.error = (error as? APIError)?.userMessage ?? "Could not submit report." }
     }
 }
 
@@ -726,12 +797,17 @@ private struct CreateEventView: View {
     @State private var latitude = 31.2304
     @State private var longitude = 121.4737
     @State private var showVenueSearch = false
+    @State private var saving = false
     init(service: any EventsServicing, existing: PublicEvent? = nil, onSuccess: ((PublicEvent) -> Void)? = nil, done: @escaping () -> Void) {
         self.service = service; self.existing = existing; self.onSuccess = onSuccess; self.done = done
         _title = State(initialValue: existing?.title ?? "")
         _venue = State(initialValue: existing?.venue.name ?? "")
         _description = State(initialValue: existing?.description ?? "")
         _capacity = State(initialValue: existing?.capacity ?? 10)
+        let parser = ISO8601DateFormatter()
+        parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        _starts = State(initialValue: existing.flatMap { parser.date(from: $0.startsAt) } ?? Date().addingTimeInterval(3600))
+        _ends = State(initialValue: existing.flatMap { parser.date(from: $0.endsAt) } ?? Date().addingTimeInterval(7200))
         _latitude = State(initialValue: existing?.venue.latitude ?? 31.2304)
         _longitude = State(initialValue: existing?.venue.longitude ?? 121.4737)
     }
@@ -743,13 +819,15 @@ private struct CreateEventView: View {
             Stepper("Capacity: \(capacity)", value: $capacity, in: 2...1000)
             DatePicker("Starts", selection: $starts, in: Date()...)
             DatePicker("Ends", selection: $ends, in: starts...)
-            if let error { Text(error).foregroundStyle(.red) }
-            Button(existing == nil ? "Create Event" : "Save Changes") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty).accessibilityIdentifier("event-save-button")
-        }.navigationTitle("Create Event").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel", action: done) } } }
+            if let error { Text(error).foregroundStyle(.red).accessibilityIdentifier("event-save-error") }
+            Button(existing == nil ? "Create Event" : "Save Changes") { Task { await create() } }.disabled(saving || title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty).accessibilityIdentifier("event-save-button")
+        }.navigationTitle(existing == nil ? "Create Event" : "Edit Event").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel", action: done).disabled(saving) } } }
         .sheet(isPresented: $showVenueSearch) { VenueSearchView { item in venue = item.name; latitude = item.latitude; longitude = item.longitude; showVenueSearch = false } }
     }
     private func create() async {
-        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); let saved: PublicEvent; if let existing { saved = try await service.updateEvent(id: existing.id, draft: draft) } else { saved = try await service.createEvent(draft) }; done(); onSuccess?(saved) }
+        guard !saving else { return }; saving = true
+        defer { saving = false }
+        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: existing?.venue.address, venueLatitude: latitude, venueLongitude: longitude); let saved: PublicEvent; if let existing { saved = try await service.updateEvent(id: existing.id, draft: draft) } else { saved = try await service.createEvent(draft) }; onSuccess?(saved); done() }
         catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not create event." }
     }
 }
