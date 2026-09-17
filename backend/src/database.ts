@@ -22,14 +22,15 @@ export class PrismaDatabase implements Database {
 
   constructor(databaseURL: string) {
     const databaseURLObject = new URL(databaseURL);
+    databaseURLObject.searchParams.delete('sslmode');
+    databaseURLObject.searchParams.delete('uselibpqcompat');
     const adapter = new PrismaPg({
-      connectionString: databaseURL,
-      connectionTimeoutMillis: 3_000,
+      connectionString: databaseURLObject.toString(),
+      connectionTimeoutMillis: 15_000,
       max: 10,
-      // Render's externally reachable Postgres endpoint requires TLS. The
-      // certificate chain is validated by Render's managed endpoint, while
-      // explicit SSL here also keeps Prisma's pg adapter consistent with psql.
-      ...(databaseURLObject.searchParams.has('sslmode') ? { ssl: { rejectUnauthorized: false } } : {}),
+      // Render's externally reachable Postgres endpoint requires TLS. Keep
+      // this explicit rather than relying on pg's sslmode URL translation.
+      ssl: { rejectUnauthorized: true },
     });
 
     this.client = new PrismaClient({ adapter });

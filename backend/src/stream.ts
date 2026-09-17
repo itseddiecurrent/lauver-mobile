@@ -115,7 +115,7 @@ export class StreamService {
       const channels = await this.client.queryChannels({ cid: `messaging:${channelId}` }, [], { limit: 1 });
       const actual = new Set<string>();
       if (channels[0]) {
-        const members = await this.client.channel('messaging', channelId).queryMembers({}, {}, { limit: 1000 });
+        const members = await this.client.channel('messaging', channelId).queryMembers({}, {}, { limit: 300 });
         for (const member of members.members) actual.add(member.user_id ?? member.user?.id ?? '');
       }
       const missing = [...desired].filter(id => !actual.has(id));
@@ -123,9 +123,19 @@ export class StreamService {
       if (missing.length || unexpected.length) {
         differences.push({ eventId: event.id, missing, unexpected });
         if (apply) {
-          const channel = this.client.channel('messaging', channelId);
-          if (missing.length) await channel.addMembers(missing);
-          if (unexpected.length) await channel.removeMembers(unexpected);
+          if (!channels[0]) {
+            // A missing channel is a recoverable split-brain state. Create it
+            // from the DB source of truth instead of calling addMembers on a
+            // channel that Stream does not know yet.
+            await this.client.channel('messaging', channelId, {
+              members: [...desired],
+              created_by_id: event.creatorId,
+            }).create();
+          } else {
+            const channel = this.client.channel('messaging', channelId);
+            if (missing.length) await channel.addMembers(missing);
+            if (unexpected.length) await channel.removeMembers(unexpected);
+          }
         }
       }
     }
