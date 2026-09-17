@@ -39,7 +39,9 @@
 
 ### 收尾状态
 
-等待 staging 部署新举报处理并完成 Report Event/Organizer 真机复验；staging 数据库外部 TLS 连接被关闭，用户正在核查 VPN 出口与数据库访问白名单。数据库证据核对及临时账号清理尚未完成，未将这些待验证项标记完成。
+Render 已部署 `63793b0`；Report Event 与 Report Organizer 真机验收通过（18.3 秒，`/tmp/lauver-step11-reports-final.xcresult`）。完整 staging API 验收也通过，包括两类 report receipt、self-report 422 与取消后的状态。
+
+当前唯一未完成项是 PostgreSQL 证据查询和临时账号清理：本机经 VPN 出口 `23.165.184.186` 连接 Render 外部数据库仍在 TLS 握手阶段被关闭。待 Render 数据库白名单允许该 `/32` 后执行 `npx tsx scripts/verify-step-11-staging.ts evidence /tmp/lauver-step11-acceptance.json`，随后执行 `cleanup`；在此之前不宣称数据库证据和清理完成。
 
 ### 并发与 Redis
 
