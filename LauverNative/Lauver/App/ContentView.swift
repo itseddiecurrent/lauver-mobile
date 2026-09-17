@@ -734,14 +734,14 @@ private struct CreateEventView: View {
     }
     var body: some View {
         NavigationStack { Form {
-            TextField("Title", text: $title)
-            HStack { TextField("Venue", text: $venue); Button("Search") { showVenueSearch = true } }
+            TextField("Title", text: $title).accessibilityIdentifier("event-title-field")
+            HStack { TextField("Venue", text: $venue).accessibilityIdentifier("event-venue-field"); Button("Search") { showVenueSearch = true } }
             TextField("Description", text: $description)
             Stepper("Capacity: \(capacity)", value: $capacity, in: 2...1000)
             DatePicker("Starts", selection: $starts, in: Date()...)
             DatePicker("Ends", selection: $ends, in: starts...)
             if let error { Text(error).foregroundStyle(.red) }
-            Button(existing == nil ? "Create Event" : "Save Changes") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
+            Button(existing == nil ? "Create Event" : "Save Changes") { Task { await create() } }.disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty).accessibilityIdentifier("event-save-button")
         }.navigationTitle("Create Event").toolbar { ToolbarItem(placement: .topBarLeading) { Button("Cancel", action: done) } } }
         .sheet(isPresented: $showVenueSearch) { VenueSearchView { item in venue = item.name; latitude = item.latitude; longitude = item.longitude; showVenueSearch = false } }
     }
