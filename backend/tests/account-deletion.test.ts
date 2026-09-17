@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
+import type { PrismaClient } from '@prisma/client';
 
 import { AccountDeletionService, type AccountDeletionCleanup } from '../src/account-deletion.js';
 import { createAuthServiceStub, createTestApp } from './helpers/test-app.js';
@@ -38,17 +39,17 @@ describe('DELETE /v1/account', () => {
       .send({ confirmation: 'delete' });
 
     expect(response.status).toBe(422);
-    expect(response.body.code).toBe('confirmation_required');
+    expect((response.body as { code?: string }).code).toBe('confirmation_required');
     expect(begin).not.toHaveBeenCalled();
   });
 });
 
 describe('account deletion worker', () => {
-  function cleanup(): AccountDeletionCleanup {
+  function cleanup(deleteStreamUser: (userId: string) => Promise<void> = vi.fn<(userId: string) => Promise<void>>().mockResolvedValue(undefined)): AccountDeletionCleanup {
     return {
       revokeApple: vi.fn().mockResolvedValue(undefined),
       revokeStrava: vi.fn().mockResolvedValue(undefined),
-      deleteStreamUser: vi.fn().mockResolvedValue(undefined),
+      deleteStreamUser,
       deleteObject: vi.fn().mockResolvedValue(undefined),
     };
   }
@@ -63,7 +64,7 @@ describe('account deletion worker', () => {
       user: { delete: vi.fn().mockResolvedValue(undefined) },
     };
     const database = {
-      $transaction: vi.fn(async (callback: (value: typeof transaction) => unknown) => callback(transaction)),
+      $transaction: vi.fn((callback: (value: typeof transaction) => unknown) => Promise.resolve(callback(transaction))),
       user: {
         findUnique: vi.fn().mockResolvedValue({
           id: 'user-id',
@@ -74,16 +75,17 @@ describe('account deletion worker', () => {
       },
       accountDeletionJob: { update: vi.fn().mockResolvedValue(undefined) },
     };
-    const service = new AccountDeletionService(database as never, () => new Date('2026-09-17T00:00:00.000Z'));
-    const external = cleanup();
+    const service = new AccountDeletionService(database as unknown as PrismaClient, () => new Date('2026-09-17T00:00:00.000Z'));
+    const deleteStreamUser = vi.fn<(userId: string) => Promise<void>>().mockResolvedValue(undefined);
+    const external = cleanup(deleteStreamUser);
 
     await expect(service.processNext(external)).resolves.toBe(true);
     expect(transaction.user.delete).toHaveBeenCalledWith({ where: { id: 'user-id' } });
-    expect(transaction.accountDeletionJob.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(transaction.accountDeletionJob.update.mock.calls[0]?.[0]).toMatchObject({
       where: { id: 'job-id' },
-      data: expect.objectContaining({ status: 'COMPLETED' }),
-    }));
-    expect(external.deleteStreamUser).toHaveBeenCalledWith('user-id');
+      data: { status: 'COMPLETED' },
+    });
+    expect(deleteStreamUser.mock.calls).toContainEqual(['user-id']);
   });
 
   it('keeps the deleted user and schedules retry when external cleanup fails', async () => {
@@ -94,7 +96,7 @@ describe('account deletion worker', () => {
       },
     };
     const database = {
-      $transaction: vi.fn(async (callback: (value: typeof transaction) => unknown) => callback(transaction)),
+      $transaction: vi.fn((callback: (value: typeof transaction) => unknown) => Promise.resolve(callback(transaction))),
       user: {
         findUnique: vi.fn().mockResolvedValue({
           id: 'user-id',
@@ -105,14 +107,14 @@ describe('account deletion worker', () => {
       },
       accountDeletionJob: { update: vi.fn().mockResolvedValue(undefined) },
     };
-    const service = new AccountDeletionService(database as never, () => new Date('2026-09-17T00:00:00.000Z'));
-    const external = cleanup();
-    vi.mocked(external.deleteStreamUser).mockRejectedValue(new Error('stream unavailable'));
+    const service = new AccountDeletionService(database as unknown as PrismaClient, () => new Date('2026-09-17T00:00:00.000Z'));
+    const deleteStreamUser = vi.fn<(userId: string) => Promise<void>>().mockRejectedValue(new Error('stream unavailable'));
+    const external = cleanup(deleteStreamUser);
 
     await expect(service.processNext(external)).resolves.toBe(true);
-    expect(database.accountDeletionJob.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(database.accountDeletionJob.update.mock.calls[0]?.[0]).toMatchObject({
       where: { id: 'job-id' },
-      data: expect.objectContaining({ status: 'RETRY', lastError: 'stream unavailable' }),
-    }));
+      data: { status: 'RETRY', lastError: 'stream unavailable' },
+    });
   });
 });
