@@ -11,6 +11,10 @@ import type { SafetyServicing } from './safety.js';
 export const chatPairKey = (a: string, b: string) => [a, b].sort().join(':');
 export const chatChannelId = (a: string, b: string) => `dm-${createHash('sha256').update(chatPairKey(a, b)).digest('hex').slice(0, 40)}`;
 export const eventChatChannelId = (eventId: string) => `event-${eventId.replaceAll('-', '')}`;
+const eventIDFromChannelID = (channelId: string) => {
+  const compact = channelId.slice('event-'.length);
+  return compact.replace(/^([a-f0-9]{8})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{4})([a-f0-9]{12})$/, '$1-$2-$3-$4-$5');
+};
 const sendSchema = z.object({ id: z.uuid(), text: z.string().trim().min(1).max(2000) }).strict();
 const targetSchema = z.object({ targetUserId: z.uuid().transform(id => id.toLowerCase()) }).strict();
 const messageReportSchema = z.object({ reason: z.enum(['spam', 'harassment', 'hate_abuse', 'unsafe_event', 'impersonation', 'other']), details: z.string().trim().max(2000).optional() }).strict();
@@ -180,7 +184,7 @@ export class StreamService {
   }
 
   private async sendEvent(userId: string, channelId: string, input: z.infer<typeof sendSchema>) {
-    const eventId = channelId.slice(6);
+    const eventId = eventIDFromChannelID(channelId);
     const event = await this.database.event.findUnique({ where: { id: eventId }, include: { attendees: true } });
     if (!event || event.status !== 'UPCOMING' || !event.attendees.some(a => a.userId === userId))
       throw new ProfileError(403, 'event_chat_forbidden', 'This event chat is unavailable.');
@@ -208,7 +212,7 @@ export class StreamService {
     const isDirect = ids.length === 2 && ids.includes(userId) && chatChannelId(ids[0]!, ids[1]!) === channelId;
     let isEvent = false;
     if (channelId.startsWith('event-')) {
-      const eventId = channelId.slice(6);
+      const eventId = eventIDFromChannelID(channelId);
       const event = await this.database.event.findUnique({ where: { id: eventId }, include: { attendees: true } });
       isEvent = Boolean(event?.status === 'UPCOMING' && event.attendees.some(attendee => attendee.userId === userId) && ids.includes(userId));
     }
