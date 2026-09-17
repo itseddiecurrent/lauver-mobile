@@ -635,7 +635,8 @@ struct EventsView: View {
                         Text(event.startsAt).font(.footnote).foregroundStyle(.secondary)
                         Text("\(event.attendeeCount)/\(event.capacity) attendees").font(.footnote)
                     }
-                }.accessibilityIdentifier("event-row-\(event.id)")
+                }.accessibilityIdentifier("event-row-title-\(event.title)")
+                    .accessibilityElement(children: .contain)
             }
         }
         .safeAreaPadding(.bottom, 96)
