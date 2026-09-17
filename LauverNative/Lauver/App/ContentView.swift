@@ -745,7 +745,7 @@ private struct CreateEventView: View {
         .sheet(isPresented: $showVenueSearch) { VenueSearchView { item in venue = item.name; latitude = item.latitude; longitude = item.longitude; showVenueSearch = false } }
     }
     private func create() async {
-        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); if let existing { _ = try await service.updateEvent(id: existing.id, draft: draft) } else { _ = try await service.createEvent(draft) }; onSuccess?(); done() }
+        do { let draft = EventDraft(title: title, description: description.isEmpty ? nil : description, sport: existing?.sport ?? "running", startsAt: starts.ISO8601Format(), endsAt: ends.ISO8601Format(), capacity: capacity, venueName: venue, venueAddress: nil, venueLatitude: latitude, venueLongitude: longitude); if let existing { _ = try await service.updateEvent(id: existing.id, draft: draft) } else { _ = try await service.createEvent(draft) }; done(); onSuccess?() }
         catch let caught { error = (caught as? APIError)?.userMessage ?? "Could not create event." }
     }
 }

@@ -173,6 +173,7 @@ final class LauverUITests: XCTestCase {
 
 
 
+
     func testMessagesTabNavigation() {
         assertNavigation(tab: "Messages", screen: "screen-messages")
     }
