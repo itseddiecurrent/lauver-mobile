@@ -47,7 +47,7 @@ describe('Stream chat ownership and canonical channels', () => {
     const { service } = fixture();
     await service.token(a);
     expect(sdk.updateAppSettings).toHaveBeenCalledWith({ disable_auth_checks: false, disable_permissions_checks: false });
-    expect(sdk.updateChannelType).toHaveBeenCalledWith('messaging', expect.objectContaining({ grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members'] } }));
+    expect(sdk.updateChannelType).toHaveBeenCalledWith('messaging', expect.objectContaining({ grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members', 'send-message'] } }));
     sdk.queryMembers.mockResolvedValue({ members: [{ user_id: b }] });
     await expect(service.send(a, 'dm-' + 'a'.repeat(40), { id: a, text: 'hello' })).rejects.toMatchObject({ statusCode: 403 });
     expect(sdk.sendMessage).not.toHaveBeenCalled();

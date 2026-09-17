@@ -26,7 +26,7 @@ export class StreamService {
     if (!this.ready) this.ready = (async () => {
       await this.client.updateAppSettings({ disable_auth_checks: false, disable_permissions_checks: false });
       await this.client.updateChannelType('messaging', {
-        grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members'] },
+        grants: { user: [], guest: [], anonymous: [], channel_member: ['read-channel', 'read-channel-members', 'send-message'] },
         commands: [], reactions: false, replies: false, quotes: false, uploads: false, polls: false,
         typing_events: false, read_events: true, max_message_length: 2000,
       });
