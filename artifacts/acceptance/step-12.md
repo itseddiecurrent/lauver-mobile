@@ -41,3 +41,10 @@ Not signed off. Re-run the four-identity staging E2E and two-device UI flow afte
 - Attendee send still returned `403 event_chat_forbidden`; message report and subsequent cancellation checks were therefore not reached.
 - All temporary accounts were verified removed (`remaining step12 temp accounts: 0`).
 - The deployed staging revision still needs to be confirmed/advanced to `8db2cb3` before another acceptance run.
+
+## 2026-09-17 final continuation
+
+- Local re-verification after `d03aca0`: Backend lint, typecheck, build and 158/158 tests passed; the connected iPhone ran 105/105 `LauverTests` successfully at `/tmp/lauver-step12-device-tests.xcresult`.
+- `d03aca0` was pushed after GitHub `backend`, `ios`, and `guardrails` checks passed. Render `/healthz` and `/readyz` both returned 200.
+- A fresh staging probe again passed event creation, two joins, attendee query/watch, and cleanup, but attendee send still returned HTTP 403. The instance therefore remains on the pre-fix event-send behavior (the current code would return 503 for a Stream provider rejection); no Step12 sign-off is claimed.
+- All disposable `step12-live-*` / `step12-final-*` accounts from the probes were removed; the targeted cleanup query returned zero remaining accounts.
