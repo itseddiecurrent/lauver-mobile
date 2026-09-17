@@ -125,7 +125,10 @@ export class StreamService {
     await this.ensurePermissions();
     try {
       await this.client.deleteUser(userId, { hard_delete: true });
-    } catch {
+    } catch (error) {
+      // Stream has no record for users who never opened chat. Deletion must be
+      // idempotent, so its DoesNotExist API error is already a successful state.
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 16) return;
       throw new ProfileError(503, 'chat_unavailable', 'Chat account cleanup is temporarily unavailable.');
     }
   }
