@@ -55,7 +55,7 @@ export class EventService {
       const event = await tx.event.create({ data: { creatorId: userId, title: input.title, description: input.description ?? null, sport: input.sport, startsAt: new Date(input.startsAt), endsAt: new Date(input.endsAt), capacity: input.capacity, venueName: input.venueName, venueAddress: input.venueAddress ?? null, venueLatitude: input.venueLatitude, venueLongitude: input.venueLongitude } });
       await tx.eventAttendee.create({ data: { eventId: event.id, userId } });
       return tx.event.findUniqueOrThrow({ where: { id: event.id }, include: { attendees: true, creator: { include: { profile: true } } } });
-    });
+    }, { timeout: 15_000 });
     if (this.chatSync) {
       try { await this.chatSync.syncEventMember(row.id, userId, true); }
       catch (error) {
@@ -78,7 +78,7 @@ export class EventService {
       const endsAt = input.endsAt ? new Date(input.endsAt) : existing.endsAt;
       if (startsAt <= new Date() || endsAt <= startsAt) throw new EventError(422, 'invalid_event_time', 'Event times are invalid');
       return tx.event.update({ where: { id }, data: { ...input, startsAt, endsAt, description: input.description === undefined ? undefined : input.description, venueAddress: input.venueAddress === undefined ? undefined : input.venueAddress }, include: { attendees: true, creator: { include: { profile: true } } } });
-    });
+    }, { timeout: 15_000 });
     return this.response(row, userId);
   }
 
@@ -109,7 +109,7 @@ export class EventService {
       await tx.eventAttendee.create({ data: { eventId: id, userId } });
       newlyJoined = true;
       return tx.event.findUniqueOrThrow({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
-    });
+    }, { timeout: 15_000 });
     if (this.chatSync && newlyJoined) {
       try { await this.chatSync.syncEventMember(id, userId, true); }
       catch (error) {

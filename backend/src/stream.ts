@@ -195,9 +195,6 @@ export class StreamService {
     if (!event || event.status !== 'UPCOMING' || !event.attendees.some(a => a.userId === userId))
       throw new ProfileError(403, 'event_chat_forbidden', 'This event chat is unavailable.');
     const channel = this.client.channel('messaging', channelId);
-    const { members } = await channel.queryMembers({}, {}, { limit: 100 });
-    if (!members.some(member => (member.user_id ?? member.user?.id) === userId))
-      throw new ProfileError(403, 'event_chat_forbidden', 'This event chat is unavailable.');
     const id = createHash('sha256').update(`${userId}:${channelId}:${input.id}`).digest('hex');
     try { await channel.sendMessage({ id, text: input.text, user_id: userId }); }
     catch {
