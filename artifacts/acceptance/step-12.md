@@ -48,3 +48,13 @@ Not signed off. Re-run the four-identity staging E2E and two-device UI flow afte
 - `d03aca0` was pushed after GitHub `backend`, `ios`, and `guardrails` checks passed. Render `/healthz` and `/readyz` both returned 200.
 - A fresh staging probe again passed event creation, two joins, attendee query/watch, and cleanup, but attendee send still returned HTTP 403. The instance therefore remains on the pre-fix event-send behavior (the current code would return 503 for a Stream provider rejection); no Step12 sign-off is claimed.
 - All disposable `step12-live-*` / `step12-final-*` accounts from the probes were removed; the targeted cleanup query returned zero remaining accounts.
+
+## 2026-09-17 final acceptance
+
+- After Render deployed `a6e53b1`, staging E2E passed: event creation, two attendee joins, attendee query/watch, attendee message send, Leave access revocation, and Cancel access revocation.
+- `npm run reconcile:stream-memberships -- --dry-run` passed against staging with `differences: []`.
+- Three final disposable accounts were deleted after the run.
+
+### Sign-off
+
+Step 12 is accepted. The local backend checks, connected-iPhone XCTest, Render staging authorization flow, and reconciliation dry-run all passed.

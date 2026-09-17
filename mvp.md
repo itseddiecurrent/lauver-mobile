@@ -1079,7 +1079,7 @@ xcodebuild test \
 
 ### Step 12：Event Attendee Group Chat
 
-**状态：🟡 实现完成，真实 staging / 真机 E2E 待验收（2026-09-17）。** 已完成 private Event Stream channel、attendee 权限、Join/Leave/Cancel 的同步与补偿回滚、event message report、原生 Event Detail 群聊入口，以及 `reconcile:stream-memberships` dry-run/apply 命令。自动化证据见 `artifacts/acceptance/step-12.md`；真实 Stream staging 的 attendee、non-attendee、left attendee、suspended attendee 和两台真机实时互发仍需按下方测试方法执行。
+**状态：✅ 已完成（2026-09-17）。** 已完成 private Event Stream channel、attendee 权限、Join/Leave/Cancel 的同步与补偿回滚、event message report、原生 Event Detail 群聊入口，以及 `reconcile:stream-memberships` dry-run/apply 命令。真实 staging E2E 已通过创建、加入、query/watch、发送、Leave/Cancel 撤权；真机 XCTest 105/105 通过。证据见 `artifacts/acceptance/step-12.md`。
 
 **依赖：** Step 10、Step 11。
 
