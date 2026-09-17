@@ -19,11 +19,15 @@ const listSchema = z.object({ sport: z.enum(eventSports).optional(), from: z.iso
 export class EventError extends Error {
   constructor(readonly statusCode: number, readonly code: string, readonly publicMessage: string) { super(publicMessage); this.name = 'EventError'; }
 }
+export interface EventChatMembershipSync {
+  syncEventMember(eventId: string, userId: string, add: boolean): Promise<void>;
+  revokeEvent(eventId: string, members: string[]): Promise<void>;
+}
 type Input = z.infer<typeof createSchema>;
 type EventRow = Prisma.EventGetPayload<{ include: { attendees: true; creator: { include: { profile: true } } } }>;
 
 export class EventService {
-  constructor(private readonly client: PrismaClient) {}
+  constructor(private readonly client: PrismaClient, private readonly chatSync?: EventChatMembershipSync) {}
 
   async list(query: z.infer<typeof listSchema>, viewerId?: string) {
     const where: Prisma.EventWhereInput = { status: 'UPCOMING', startsAt: { gte: query.from ? new Date(query.from) : new Date() }, ...(query.sport ? { sport: query.sport } : {}), ...(query.city ? { venueName: { contains: query.city, mode: 'insensitive' } } : {}) };
@@ -52,6 +56,13 @@ export class EventService {
       await tx.eventAttendee.create({ data: { eventId: event.id, userId } });
       return tx.event.findUniqueOrThrow({ where: { id: event.id }, include: { attendees: true, creator: { include: { profile: true } } } });
     });
+    if (this.chatSync) {
+      try { await this.chatSync.syncEventMember(row.id, userId, true); }
+      catch (error) {
+        await this.client.event.delete({ where: { id: row.id } }).catch(() => undefined);
+        throw error;
+      }
+    }
     return this.response(row, userId);
   }
 
@@ -71,9 +82,23 @@ export class EventService {
     return this.response(row, userId);
   }
 
-  async cancel(userId: string, id: string) { const existing = await this.client.event.findUnique({ where: { id } }); if (!existing) throw new EventError(404, 'event_not_found', 'Event not found'); if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can cancel this event'); const row = await this.client.event.update({ where: { id }, data: { status: 'CANCELLED' }, include: { attendees: true, creator: { include: { profile: true } } } }); return this.response(row, userId); }
+  async cancel(userId: string, id: string) {
+    const existing = await this.client.event.findUnique({ where: { id }, include: { attendees: true } });
+    if (!existing) throw new EventError(404, 'event_not_found', 'Event not found');
+    if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can cancel this event');
+    const row = await this.client.event.update({ where: { id }, data: { status: 'CANCELLED' }, include: { attendees: true, creator: { include: { profile: true } } } });
+    if (this.chatSync) {
+      try { await this.chatSync.revokeEvent(id, existing.attendees.map(a => a.userId)); }
+      catch (error) {
+        await this.client.event.update({ where: { id }, data: { status: 'UPCOMING' } }).catch(() => undefined);
+        throw error;
+      }
+    }
+    return this.response(row, userId);
+  }
 
   async join(userId: string, id: string) {
+    let newlyJoined = false;
     const row = await this.client.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM events WHERE id = ${id}::uuid FOR UPDATE`;
       const event = await tx.event.findUnique({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
@@ -82,12 +107,34 @@ export class EventService {
       if (event.attendees.some((item) => item.userId === userId)) return event;
       if (event.attendees.length >= event.capacity) throw new EventError(409, 'event_full', 'This event is full');
       await tx.eventAttendee.create({ data: { eventId: id, userId } });
+      newlyJoined = true;
       return tx.event.findUniqueOrThrow({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
     });
+    if (this.chatSync && newlyJoined) {
+      try { await this.chatSync.syncEventMember(id, userId, true); }
+      catch (error) {
+        await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } }).catch(() => undefined);
+        throw error;
+      }
+    }
     return this.response(row, userId);
   }
 
-  async leave(userId: string, id: string) { const event = await this.client.event.findUnique({ where: { id } }); if (!event) throw new EventError(404, 'event_not_found', 'Event not found'); if (event.creatorId === userId) throw new EventError(409, 'creator_cannot_leave', 'The event creator cannot leave their event'); await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } }); return this.get(id, userId); }
+  async leave(userId: string, id: string) {
+    const event = await this.client.event.findUnique({ where: { id } });
+    if (!event) throw new EventError(404, 'event_not_found', 'Event not found');
+    if (event.creatorId === userId) throw new EventError(409, 'creator_cannot_leave', 'The event creator cannot leave their event');
+    const removed = await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } });
+    if (!removed.count) return this.get(id, userId);
+    if (this.chatSync) {
+      try { await this.chatSync.syncEventMember(id, userId, false); }
+      catch (error) {
+        await this.client.eventAttendee.create({ data: { eventId: id, userId } }).catch(() => undefined);
+        throw error;
+      }
+    }
+    return this.get(id, userId);
+  }
 
   async report(userId: string, id: string, reason: string, details: string | undefined, requestId: string, targetType: 'event' | 'user' = 'event') {
     const event = await this.client.event.findUnique({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });

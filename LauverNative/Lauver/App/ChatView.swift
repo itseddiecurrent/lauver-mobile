@@ -223,6 +223,42 @@ struct DirectConversationView: View {
     }
 }
 
+struct EventGroupConversationView: View {
+    @EnvironmentObject private var chat: ChatConnection
+    let service: any ChatServicing
+    let safetyService: (any SafetyServicing)?
+    let eventID: String
+    @State private var controller: ChatChannelController?
+    @State private var errorMessage: String?
+    @State private var attempt = 0
+
+    var body: some View {
+        Group {
+            if let controller, let client = chat.client {
+                ChatChannelView(viewFactory: LauverChatFactory(client: client, service: service), channelController: controller)
+            } else if let errorMessage {
+                VStack { ErrorStateView(message: errorMessage, requestID: nil); RetryButton { attempt += 1 } }.padding()
+            } else { ProgressView("Opening event group chat") }
+        }
+        .navigationTitle("Event Group Chat")
+        .task(id: attempt) {
+            errorMessage = nil
+            do {
+                let client = try await chat.connect(service: service)
+                let channel = try await service.eventChat(eventID: eventID)
+                try Task.checkCancellation()
+                controller = client.channelController(for: try ChannelId(cid: channel.id))
+            } catch { if !Task.isCancelled { errorMessage = (error as? APIError)?.userMessage ?? "This event chat could not be opened." } }
+        }
+        .toolbar(.hidden, for: .tabBar)
+        .sheet(isPresented: Binding(get: { chat.reportMessage != nil }, set: { if !$0 { chat.reportMessage = nil } })) {
+            if let message = chat.reportMessage {
+                ReportMessageView(service: service, message: message) { chat.reportMessage = nil }
+            }
+        }
+    }
+}
+
 struct ChatSafetyBar: View {
     let service: (any SafetyServicing)?
     let targetUserID: String

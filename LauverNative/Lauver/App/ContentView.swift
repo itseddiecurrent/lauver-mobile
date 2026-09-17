@@ -709,6 +709,7 @@ private final class UserLocationModel: NSObject, ObservableObject, CLLocationMan
 
 private struct EventDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var chat: ChatConnection
     let event: PublicEvent
     @ObservedObject var model: EventsViewModel
     let service: any EventsServicing
@@ -730,6 +731,18 @@ private struct EventDetailView: View {
             Section("Venue") { Text(currentEvent.venue.name); if let address = currentEvent.venue.address { Text(address).foregroundStyle(.secondary) } }
             Section("Your status") { if currentEvent.status == "cancelled" { Text("Cancelled").accessibilityIdentifier("event-cancelled") }; Label(currentEvent.isAttendee == true ? "You’re attending this event" : "You’re not attending this event", systemImage: currentEvent.isAttendee == true ? "checkmark.circle.fill" : "circle") }
             Section("Attendees") { Text("\(currentEvent.attendeeCount) of \(currentEvent.capacity)") }
+            if currentEvent.isAttendee == true && currentEvent.status == "upcoming", let chatService = service as? any ChatServicing {
+                Section("Event chat") {
+                    NavigationLink {
+                        EventGroupConversationView(service: chatService, safetyService: nil, eventID: currentEvent.id)
+                    } label: {
+                        Label("Open Group Chat", systemImage: "person.3.fill")
+                    }
+                    .accessibilityIdentifier("event-open-group-chat")
+                    Text("Only current attendees can read or send messages.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             Section {
                 if currentEvent.isAttendee == true && currentEvent.isCreator != true && currentEvent.status == "upcoming" { Button("Leave Event", role: .destructive) { Task { currentEvent = await model.leave(currentEvent) } } }
                 else if currentEvent.isAttendee != true && currentEvent.status == "upcoming" { Button("Join Event") { Task { currentEvent = await model.join(currentEvent) } }.buttonStyle(.borderedProminent) }

@@ -99,7 +99,7 @@ const server = createServer(
     stravaService,
     healthKitService: new HealthKitService(database.client),
     streamService,
-    eventService: new EventService(database.client),
+    eventService: new EventService(database.client, streamService),
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(

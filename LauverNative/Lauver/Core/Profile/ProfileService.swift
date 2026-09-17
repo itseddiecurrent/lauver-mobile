@@ -297,11 +297,13 @@ struct DirectChatChannel: Decodable, Equatable, Identifiable {
     let members: [String]
     var id: String { "\(channelType):\(channelId)" }
 }
+typealias EventChatChannel = DirectChatChannel
 
 protocol ChatServicing {
     func chatToken() async throws -> ChatToken
     func sendChatMessage(channelID: String, id: UUID, text: String) async throws
     func directChat(targetUserID: String) async throws -> DirectChatChannel
+    func eventChat(eventID: String) async throws -> EventChatChannel
     func reportChatMessage(channelID: String, messageID: String, reason: ReportReason, details: String) async throws -> ReportReceipt
 }
 
@@ -518,8 +520,9 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
     }
 
     func sendChatMessage(channelID: String, id: UUID, text: String) async throws {
-        guard channelID.hasPrefix("dm-"), channelID.count == 43,
-              channelID.dropFirst(3).allSatisfy({ $0.isHexDigit }) else { throw APIError.invalidRequest }
+        let validDirect = channelID.hasPrefix("dm-") && channelID.count == 43
+        let validEvent = channelID.hasPrefix("event-") && channelID.count == 38
+        guard (validDirect || validEvent), channelID.drop(while: { $0 != "-" }).dropFirst().allSatisfy({ $0.isHexDigit }) else { throw APIError.invalidRequest }
         struct Payload: Encodable { let id: UUID; let text: String }
         let body = try encoder.encode(Payload(id: id, text: text))
         let _: EmptyResponse = try await authenticatedRequest { token in
@@ -535,9 +538,15 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
             APIRequest(method: .post, path: "/v1/chat/direct", body: body, headers: Self.jsonAuthorization(token))
         }
     }
+    func eventChat(eventID: String) async throws -> EventChatChannel {
+        guard UUID(uuidString: eventID) != nil else { throw APIError.invalidRequest }
+        return try await authenticatedRequest { token in
+            APIRequest(path: "/v1/events/\(eventID)/chat", headers: Self.authorization(token))
+        }
+    }
 
     func reportChatMessage(channelID: String, messageID: String, reason: ReportReason, details: String) async throws -> ReportReceipt {
-        guard channelID.range(of: #"^dm-[a-f0-9]{40}$"#, options: .regularExpression) != nil,
+        guard channelID.range(of: #"^(dm-[a-f0-9]{40}|event-[a-f0-9]{32})$"#, options: .regularExpression) != nil,
               !messageID.isEmpty, messageID.count <= 128 else { throw APIError.invalidRequest }
         struct Payload: Encodable { let reason: ReportReason; let details: String }
         let body = try encoder.encode(Payload(reason: reason, details: details))

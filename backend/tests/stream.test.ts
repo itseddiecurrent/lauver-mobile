@@ -4,7 +4,7 @@ import express from 'express';
 import request from 'supertest';
 import { createAuthServiceStub } from './helpers/test-app.js';
 
-const sdk = vi.hoisted(() => ({ upsertUsers: vi.fn(), createToken: vi.fn(), channel: vi.fn(), create: vi.fn(), addMembers: vi.fn(), updateAppSettings: vi.fn(), updateChannelType: vi.fn(), queryMembers: vi.fn(), sendMessage: vi.fn(), getMessage: vi.fn() }));
+const sdk = vi.hoisted(() => ({ upsertUsers: vi.fn(), createToken: vi.fn(), channel: vi.fn(), create: vi.fn(), addMembers: vi.fn(), removeMembers: vi.fn(), updateAppSettings: vi.fn(), updateChannelType: vi.fn(), queryMembers: vi.fn(), queryChannels: vi.fn(), sendMessage: vi.fn(), getMessage: vi.fn() }));
 vi.mock('stream-chat', () => ({ StreamChat: class {
   upsertUsers = sdk.upsertUsers;
   createToken = sdk.createToken;
@@ -12,6 +12,7 @@ vi.mock('stream-chat', () => ({ StreamChat: class {
   updateAppSettings = sdk.updateAppSettings;
   updateChannelType = sdk.updateChannelType;
   getMessage = sdk.getMessage;
+  queryChannels = sdk.queryChannels;
 } }));
 import { StreamService, installStreamRoutes } from '../src/stream.js';
 const a = 'e1800000-0000-4000-8000-000000000001';
@@ -19,11 +20,12 @@ const b = 'e1800000-0000-4000-8000-000000000002';
 function fixture(blocked = false) {
   const database = { $executeRaw: vi.fn(), $queryRaw: vi.fn(), $transaction: vi.fn(), user: { count: vi.fn().mockResolvedValue(2), findMany: vi.fn().mockResolvedValue([{ id: a, profile: { displayName: 'A' } }, { id: b, profile: null }]) },
     profile: { findUnique: vi.fn().mockResolvedValue({ displayName: 'A' }) },
-    block: { findFirst: vi.fn().mockResolvedValue(blocked ? { blockerId: b } : null) } };
+    block: { findFirst: vi.fn().mockResolvedValue(blocked ? { blockerId: b } : null) },
+    event: { findUnique: vi.fn(), findMany: vi.fn() }, eventAttendee: { deleteMany: vi.fn(), create: vi.fn() } };
   database.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(database));
   return { database, service: new StreamService(database as unknown as PrismaClient, 'key', 'secret', 900) };
 }
-beforeEach(() => { vi.clearAllMocks(); sdk.channel.mockReturnValue({ create: sdk.create, addMembers: sdk.addMembers, queryMembers: sdk.queryMembers, sendMessage: sdk.sendMessage }); sdk.create.mockResolvedValue({}); sdk.upsertUsers.mockResolvedValue({}); sdk.createToken.mockReturnValue('signed-token'); });
+beforeEach(() => { vi.clearAllMocks(); sdk.channel.mockReturnValue({ create: sdk.create, addMembers: sdk.addMembers, removeMembers: sdk.removeMembers, queryMembers: sdk.queryMembers, sendMessage: sdk.sendMessage }); sdk.create.mockResolvedValue({}); sdk.addMembers.mockResolvedValue({}); sdk.removeMembers.mockResolvedValue({}); sdk.queryChannels.mockResolvedValue([]); sdk.upsertUsers.mockResolvedValue({}); sdk.createToken.mockReturnValue('signed-token'); });
 describe('Stream chat ownership and canonical channels', () => {
   it('syncs both members before creating the same channel for either direction', async () => {
     const { service } = fixture();
@@ -117,5 +119,24 @@ describe('Stream chat ownership and canonical channels', () => {
     const response = await request(app).post('/v1/chat/token').expect(200);
     expect((response.body as { userId: string }).userId).toBe(a);
     expect(response.headers['cache-control']).toBe('no-store');
+  });
+
+  it('only opens an upcoming event channel for current attendees', async () => {
+    const { service, database } = fixture();
+    database.event.findUnique.mockResolvedValue({ id: 'f1800000-0000-4000-8000-000000000001', status: 'UPCOMING', creatorId: a, attendees: [{ userId: a }, { userId: b }] });
+    await expect(service.eventGroup(a, 'f1800000-0000-4000-8000-000000000001')).resolves.toMatchObject({ channelId: 'event-f1800000000040008000000000000001', members: [a, b] });
+    database.event.findUnique.mockResolvedValue({ id: 'f1800000-0000-4000-8000-000000000001', status: 'UPCOMING', creatorId: a, attendees: [{ userId: a }, { userId: b }] });
+    await expect(service.eventGroup('e1800000-0000-4000-8000-000000000099', 'f1800000-0000-4000-8000-000000000001')).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  it('reconciles missing and unexpected Stream event members', async () => {
+    const { service, database } = fixture();
+    database.event.findMany.mockResolvedValue([{ id: 'f1800000-0000-4000-8000-000000000001', status: 'UPCOMING', attendees: [{ userId: a }, { userId: b }] }]);
+    sdk.queryChannels.mockResolvedValue([{}]);
+    sdk.queryMembers.mockResolvedValue({ members: [{ user_id: a }, { user_id: 'e1800000-0000-4000-8000-000000000003' }] });
+    await expect(service.reconcileEventMemberships()).resolves.toEqual([{ eventId: 'f1800000-0000-4000-8000-000000000001', missing: [b], unexpected: ['e1800000-0000-4000-8000-000000000003'] }]);
+    await service.reconcileEventMemberships(true);
+    expect(sdk.addMembers).toHaveBeenCalledWith([b]);
+    expect(sdk.removeMembers).toHaveBeenCalledWith(['e1800000-0000-4000-8000-000000000003']);
   });
 });
