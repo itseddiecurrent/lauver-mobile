@@ -1,3 +1,4 @@
+import type { EventService } from '../../src/events.js';
 import type { DiscoverServicing } from '../../src/discover.js';
 import pino from 'pino';
 import { vi } from 'vitest';
@@ -29,6 +30,7 @@ export function createTestApp(options: {
   safetyService?: SafetyServicing;
   safetyRateLimiter?: InMemoryRateLimiter;
   stravaService?: StravaServicing;
+  eventService?: EventService;
 } = {}) {
   return createApp({
     database: options.database ?? createDatabaseStub(),
@@ -44,6 +46,7 @@ export function createTestApp(options: {
     },
     safetyRateLimiter: options.safetyRateLimiter ?? new InMemoryRateLimiter(60_000, 20),
     stravaService: options.stravaService,
+    eventService: options.eventService,
   });
 }
 

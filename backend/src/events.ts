@@ -56,14 +56,18 @@ export class EventService {
   }
 
   async update(userId: string, id: string, input: z.infer<typeof patchSchema>) {
-    const existing = await this.client.event.findUnique({ where: { id } });
-    if (!existing) throw new EventError(404, 'event_not_found', 'Event not found');
-    if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can edit this event');
-    if (existing.status !== 'UPCOMING') throw new EventError(409, 'event_cancelled', 'Cancelled events cannot be edited');
-    const startsAt = input.startsAt ? new Date(input.startsAt) : existing.startsAt;
-    const endsAt = input.endsAt ? new Date(input.endsAt) : existing.endsAt;
-    if (startsAt <= new Date() || endsAt <= startsAt) throw new EventError(422, 'invalid_event_time', 'Event times are invalid');
-    const row = await this.client.event.update({ where: { id }, data: { ...input, startsAt, endsAt, description: input.description === undefined ? undefined : input.description, venueAddress: input.venueAddress === undefined ? undefined : input.venueAddress }, include: { attendees: true, creator: { include: { profile: true } } } });
+    const row = await this.client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM events WHERE id = ${id}::uuid FOR UPDATE`;
+      const existing = await tx.event.findUnique({ where: { id }, include: { attendees: true } });
+      if (!existing) throw new EventError(404, 'event_not_found', 'Event not found');
+      if (existing.creatorId !== userId) throw new EventError(403, 'event_forbidden', 'Only the event creator can edit this event');
+      if (existing.status !== 'UPCOMING') throw new EventError(409, 'event_cancelled', 'Cancelled events cannot be edited');
+      if (input.capacity !== undefined && input.capacity < existing.attendees.length) throw new EventError(409, 'capacity_below_attendance', 'Capacity cannot be lower than the current attendance');
+      const startsAt = input.startsAt ? new Date(input.startsAt) : existing.startsAt;
+      const endsAt = input.endsAt ? new Date(input.endsAt) : existing.endsAt;
+      if (startsAt <= new Date() || endsAt <= startsAt) throw new EventError(422, 'invalid_event_time', 'Event times are invalid');
+      return tx.event.update({ where: { id }, data: { ...input, startsAt, endsAt, description: input.description === undefined ? undefined : input.description, venueAddress: input.venueAddress === undefined ? undefined : input.venueAddress }, include: { attendees: true, creator: { include: { profile: true } } } });
+    });
     return this.response(row, userId);
   }
 
@@ -85,12 +89,16 @@ export class EventService {
 
   async leave(userId: string, id: string) { const event = await this.client.event.findUnique({ where: { id } }); if (!event) throw new EventError(404, 'event_not_found', 'Event not found'); if (event.creatorId === userId) throw new EventError(409, 'creator_cannot_leave', 'The event creator cannot leave their event'); await this.client.eventAttendee.deleteMany({ where: { eventId: id, userId } }); return this.get(id, userId); }
 
-  async report(userId: string, id: string, reason: string, details: string | undefined, requestId: string) {
+  async report(userId: string, id: string, reason: string, details: string | undefined, requestId: string, targetType: 'event' | 'user' = 'event') {
     const event = await this.client.event.findUnique({ where: { id }, include: { attendees: true, creator: { include: { profile: true } } } });
     if (!event) throw new EventError(404, 'event_not_found', 'Event not found');
+    if (event.creatorId === userId) throw new EventError(422, 'self_report', 'You cannot report your own event or yourself');
     const snapshot = { id: event.id, title: event.title, sport: event.sport, startsAt: event.startsAt.toISOString(), endsAt: event.endsAt.toISOString(), capacity: event.capacity, venue: { name: event.venueName, address: event.venueAddress, latitude: Number(event.venueLatitude), longitude: Number(event.venueLongitude) }, creator: { id: event.creatorId, displayName: event.creator.profile?.displayName ?? 'Lauver member' } } satisfies Prisma.InputJsonObject;
-    const report = await this.client.report.create({ data: { reporterId: userId, targetUserId: event.creatorId, targetType: 'event', source: 'event', reason, details: details ?? null, snapshot, requestId } });
-    await this.client.safetyAuditEvent.create({ data: { actorId: userId, targetId: event.creatorId, action: 'report_event', requestId, reportId: report.id } });
+    const report = await this.client.$transaction(async (tx) => {
+      const saved = await tx.report.create({ data: { reporterId: userId, targetUserId: event.creatorId, targetType, source: 'event', reason, details: details ?? null, snapshot, requestId } });
+      await tx.safetyAuditEvent.create({ data: { actorId: userId, targetId: event.creatorId, action: 'report', requestId, reportId: saved.id } });
+      return saved;
+    });
     return { referenceId: report.id };
   }
 
@@ -99,16 +107,21 @@ export class EventService {
 }
 
 export function installEventRoutes(app: Express, authService: AuthServicing, service: EventService): void {
+  function parse<T>(schema: z.ZodType<T>, value: unknown): T {
+    const result = schema.safeParse(value);
+    if (!result.success) throw new EventError(422, 'validation_failed', 'The request could not be validated');
+    return result.data;
+  }
   app.get('/v1/events', authenticated(authService, async (user, request, response) => { const parsed = listSchema.safeParse(request.query); if (!parsed.success) { response.status(422).json({ code: 'validation_failed', message: 'The request could not be validated', requestId: response.getHeader('x-request-id') }); return; } response.status(200).json(await service.list(parsed.data, user.id)); }));
   app.get('/v1/events/:eventId', authenticated(authService, async (user, request, response) => { const id = idSchema.safeParse(request.params.eventId); if (!id.success) throw new EventError(422, 'validation_failed', 'Invalid event ID'); response.status(200).json({ event: await service.get(id.data, user.id) }); }));
   app.post('/v1/events', authenticated(authService, async (user, request, response) => { const body = createSchema.safeParse(request.body); if (!body.success) throw new EventError(422, 'validation_failed', 'The request could not be validated'); response.status(201).json({ event: await service.create(user.id, body.data) }); }));
-  app.patch('/v1/events/:eventId', authenticated(authService, async (user, request, response) => { const id = idSchema.parse(request.params.eventId); const body = patchSchema.parse(request.body); response.status(200).json({ event: await service.update(user.id, id, body) }); }));
-  app.post('/v1/events/:eventId/cancel', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.cancel(user.id, idSchema.parse(request.params.eventId)) }); }));
-  app.post('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.join(user.id, idSchema.parse(request.params.eventId)) }); }));
-  app.delete('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.leave(user.id, idSchema.parse(request.params.eventId)) }); }));
+  app.patch('/v1/events/:eventId', authenticated(authService, async (user, request, response) => { const id = parse(idSchema, request.params.eventId); const body = parse(patchSchema, request.body); response.status(200).json({ event: await service.update(user.id, id, body) }); }));
+  app.post('/v1/events/:eventId/cancel', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.cancel(user.id, parse(idSchema, request.params.eventId)) }); }));
+  app.post('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.join(user.id, parse(idSchema, request.params.eventId)) }); }));
+  app.delete('/v1/events/:eventId/join', authenticated(authService, async (user, request, response) => { response.status(200).json({ event: await service.leave(user.id, parse(idSchema, request.params.eventId)) }); }));
   app.post('/v1/events/:eventId/report', authenticated(authService, async (user, request, response) => {
-    const id = idSchema.parse(request.params.eventId);
-    const body = z.object({ reason: z.string().trim().min(1).max(30), details: z.string().trim().max(2000).optional() }).strict().parse(request.body);
-    response.status(201).json(await service.report(user.id, id, body.reason, body.details, String(response.getHeader('x-request-id'))));
+    const id = parse(idSchema, request.params.eventId);
+    const body = parse(z.object({ reason: z.enum(['spam', 'harassment', 'hate_abuse', 'unsafe_event', 'impersonation', 'other']), details: z.string().trim().max(2000).optional(), targetType: z.enum(['event', 'user']).default('event') }).strict(), request.body);
+    response.status(201).json(await service.report(user.id, id, body.reason, body.details, String(response.getHeader('x-request-id')), body.targetType));
   }));
 }
