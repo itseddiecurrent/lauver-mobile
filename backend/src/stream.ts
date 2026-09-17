@@ -43,7 +43,8 @@ export class StreamService {
 
   async token(userId: string, displayName?: string | null): Promise<{ token: string; expiresAt: string }> {
     await this.ensurePermissions();
-    const profile = await this.database.profile.findUnique({ where: { userId }, select: { displayName: true } });
+    const profile = await this.database.profile.findUnique({ where: { userId }, select: { displayName: true, user: { select: { status: true } } } });
+    if (profile?.user?.status && profile.user.status !== 'ACTIVE') throw new ProfileError(403, 'chat_forbidden', 'Chat is unavailable for this account.');
     await this.client.upsertUsers([{ id: userId, name: displayName ?? profile?.displayName ?? 'Lauver member', role: 'user' }]);
     const expiresAt = Math.floor(Date.now() / 1000) + this.tokenTTLSeconds;
     return { token: this.client.createToken(userId, expiresAt), expiresAt: new Date(expiresAt * 1000).toISOString() };
@@ -113,6 +114,11 @@ export class StreamService {
     if (!members.length) return;
     try { await this.client.channel('messaging', eventChatChannelId(eventId)).removeMembers(members); }
     catch { throw new ProfileError(503, 'chat_unavailable', 'Event chat membership could not be synchronized.'); }
+  }
+
+  async deleteMessage(_channelId: string, messageId: string): Promise<void> {
+    try { await this.client.deleteMessage(messageId, true); }
+    catch { throw new ProfileError(503, 'chat_unavailable', 'The message could not be deleted.'); }
   }
 
   async reconcileEventMemberships(apply = false): Promise<{ eventId: string; missing: string[]; unexpected: string[] }[]> {

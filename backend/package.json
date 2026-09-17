@@ -19,7 +19,8 @@
     "test:integration": "tsx scripts/test-integration.ts",
     "verify:step-06:staging": "tsx scripts/verify-step-06-staging.ts",
     "verify:step-07:staging": "tsx scripts/verify-step-07-staging.ts",
-    "verify:step-08:staging": "tsx scripts/verify-step-08-staging.ts"
+    "verify:step-08:staging": "tsx scripts/verify-step-08-staging.ts",
+    "admin:create": "tsx scripts/create-admin.ts"
     ,"reconcile:stream-memberships": "tsx scripts/reconcile-stream-memberships.ts"
   },
   "dependencies": {

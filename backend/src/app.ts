@@ -23,6 +23,7 @@ import { installStreamRoutes } from './stream.js';
 import type { StreamService } from './stream.js';
 import { EventError, installEventRoutes } from './events.js';
 import type { EventService } from './events.js';
+import { installAdminRoutes, type AdminService } from './admin.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -57,6 +58,7 @@ export type AppDependencies = {
   healthKitService?: HealthKitService;
   streamService?: StreamService;
   eventService?: EventService;
+  adminService?: AdminService;
 };
 
 class CorsOriginError extends Error {
@@ -151,6 +153,7 @@ export function createApp(dependencies: AppDependencies): Express {
   if (dependencies.healthKitService) installHealthKitRoutes(app, { authService: dependencies.authService, service: dependencies.healthKitService });
   if (dependencies.streamService) installStreamRoutes(app, { authService: dependencies.authService, service: dependencies.streamService, safetyService: dependencies.safetyService });
   if (dependencies.eventService) installEventRoutes(app, dependencies.authService, dependencies.eventService);
+  if (dependencies.adminService) installAdminRoutes(app, dependencies.adminService);
   installProfileRoutes(app, {
     authService: dependencies.authService,
     profileService: dependencies.profileService,

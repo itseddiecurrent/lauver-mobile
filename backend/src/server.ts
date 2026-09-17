@@ -19,6 +19,7 @@ import { StravaProvider, StravaTokenCipher } from './strava-provider.js';
 import { HealthKitService } from './healthkit.js';
 import { StreamService } from './stream.js';
 import { EventService } from './events.js';
+import { AdminService } from './admin.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -83,6 +84,7 @@ const photoCleanupInterval = setInterval(() => {
 }, 5 * 60 * 1_000);
 photoCleanupInterval.unref();
 const streamService = config.stream ? new StreamService(database.client, config.stream.apiKey, config.stream.apiSecret, config.stream.tokenTTLSeconds) : undefined;
+const adminService = new AdminService(database.client, streamService);
 if (streamService) database.safetyService.onBlocking = (actor, target) => streamService.blockPair(actor, target);
 const server = createServer(
   createApp({
@@ -100,6 +102,7 @@ const server = createServer(
     healthKitService: new HealthKitService(database.client),
     streamService,
     eventService: new EventService(database.client, streamService),
+    adminService,
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(
