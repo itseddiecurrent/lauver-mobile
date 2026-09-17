@@ -245,6 +245,7 @@ struct ContentView: View {
     @StateObject private var viewModel: AppViewModel
     private let discoverService: any DiscoverServicing
     private let profileService: any ProfileServicing
+    private let accountDeletionService: any AccountDeletionServicing
     private let safetyService: any SafetyServicing
     private let eventsService: any EventsServicing
     private let stravaService: any StravaServicing
@@ -252,6 +253,7 @@ struct ContentView: View {
     init(container: AppContainer) {
         discoverService = container.discoverService
         profileService = container.profileService
+        accountDeletionService = container.accountDeletionService
         safetyService = container.safetyService
         eventsService = container.eventsService
         stravaService = container.stravaService
@@ -272,7 +274,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, discoverService: discoverService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, accountDeletionService: accountDeletionService, discoverService: discoverService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
             }
         }
         .task {
@@ -493,6 +495,7 @@ private struct LoginPlaceholderView: View {
 private struct AuthenticatedShellView: View {
     @ObservedObject var viewModel: AppViewModel
     let profileService: any ProfileServicing
+    let accountDeletionService: any AccountDeletionServicing
     let discoverService: any DiscoverServicing
     let safetyService: any SafetyServicing
     let eventsService: any EventsServicing
@@ -524,7 +527,7 @@ private struct AuthenticatedShellView: View {
             .badge(chat.unreadMessages > 0 ? min(chat.unreadMessages, 99) : 0)
 
             NavigationStack {
-                OwnProfileView(service: profileService, safetyService: safetyService, stravaService: stravaService, healthUploader: profileService as? any HealthWorkoutUploading) {
+                OwnProfileView(service: profileService, accountDeletionService: accountDeletionService, safetyService: safetyService, stravaService: stravaService, healthUploader: profileService as? any HealthWorkoutUploading) {
                     Task { await viewModel.signOut() }
                 }
             }

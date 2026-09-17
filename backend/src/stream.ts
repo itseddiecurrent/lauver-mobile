@@ -121,6 +121,15 @@ export class StreamService {
     catch { throw new ProfileError(503, 'chat_unavailable', 'The message could not be deleted.'); }
   }
 
+  async deleteUser(userId: string): Promise<void> {
+    await this.ensurePermissions();
+    try {
+      await this.client.deleteUser(userId, { hard_delete: true });
+    } catch {
+      throw new ProfileError(503, 'chat_unavailable', 'Chat account cleanup is temporarily unavailable.');
+    }
+  }
+
   async reconcileEventMemberships(apply = false): Promise<{ eventId: string; missing: string[]; unexpected: string[] }[]> {
     await this.ensurePermissions();
     const events = await this.database.event.findMany({ where: { status: 'UPCOMING' }, include: { attendees: true } });

@@ -95,6 +95,49 @@ describe('AppleAuthorizationProvider', () => {
     });
     expect(tokenVerifier.tokens).toEqual(['device-identity-token', 'server-identity-token']);
   });
+
+  it('revokes a stored refresh token with a signed client secret', async () => {
+    const fetchStub = vi.fn<typeof fetch>().mockImplementation((_url, init) => {
+      if (!(init?.body instanceof URLSearchParams)) throw new Error('Expected form body');
+      const body = init.body;
+      expect(body.get('client_id')).toBe(clientID);
+      expect(body.get('token')).toBe('apple-refresh-token');
+      expect(body.get('token_type_hint')).toBe('refresh_token');
+      expect(body.get('client_secret')).not.toBeNull();
+      return Promise.resolve(new Response(null, { status: 200 }));
+    });
+    const signingPair = await generateKeyPair('ES256', { extractable: true });
+    const pkcs8 = await crypto.subtle.exportKey('pkcs8', signingPair.privateKey);
+    const provider = new AppleAuthorizationProvider({
+      clientID,
+      teamID: 'TEAM123456',
+      keyID: 'KEY1234567',
+      privateKey: pem('PRIVATE KEY', pkcs8),
+      verifier: new StubIdentityTokenVerifier(),
+      fetch: fetchStub,
+    });
+
+    await expect(provider.revoke('apple-refresh-token')).resolves.toBeUndefined();
+    expect(fetchStub).toHaveBeenCalledOnce();
+  });
+
+  it('treats an already revoked Apple grant as successful', async () => {
+    const fetchStub = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400 }),
+    );
+    const signingPair = await generateKeyPair('ES256', { extractable: true });
+    const pkcs8 = await crypto.subtle.exportKey('pkcs8', signingPair.privateKey);
+    const provider = new AppleAuthorizationProvider({
+      clientID,
+      teamID: 'TEAM123456',
+      keyID: 'KEY1234567',
+      privateKey: pem('PRIVATE KEY', pkcs8),
+      verifier: new StubIdentityTokenVerifier(),
+      fetch: fetchStub,
+    });
+
+    await expect(provider.revoke('already-revoked-token')).resolves.toBeUndefined();
+  });
 });
 
 describe('AppleTokenCipher', () => {

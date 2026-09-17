@@ -20,6 +20,8 @@ import { HealthKitService } from './healthkit.js';
 import { StreamService } from './stream.js';
 import { EventService } from './events.js';
 import { AdminService } from './admin.js';
+import { AccountDeletionService } from './account-deletion.js';
+import type { AccountDeletionCleanup } from './account-deletion.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -38,6 +40,8 @@ const appleProvider = config.appleAuthEnabled
 const appleTokenCipher = config.appleAuthEnabled
   ? new AppleTokenCipher(config.appleTokenEncryptionKey!)
   : undefined;
+const stravaProvider = config.strava ? new StravaProvider(config.strava) : undefined;
+const stravaTokenCipher = config.strava ? new StravaTokenCipher(config.strava.tokenEncryptionKey) : undefined;
 const authService = new AuthService({
   repository: database.authRepository,
   appleProvider,
@@ -67,8 +71,8 @@ const profileService = new ProfileService({
   storage: photoStorage,
 });
 const stravaService = new StravaService(database.stravaRepository,
-  config.strava ? new StravaProvider(config.strava) : undefined,
-  config.strava ? new StravaTokenCipher(config.strava.tokenEncryptionKey) : undefined);
+  stravaProvider,
+  stravaTokenCipher);
 void stravaService.processCleanup().catch(() => { logger.warn('Initial Strava cleanup failed'); });
 const stravaCleanupInterval = setInterval(() => {
   void stravaService.processCleanup().catch(() => { logger.warn('Scheduled Strava cleanup failed'); });
@@ -85,6 +89,29 @@ const photoCleanupInterval = setInterval(() => {
 photoCleanupInterval.unref();
 const streamService = config.stream ? new StreamService(database.client, config.stream.apiKey, config.stream.apiSecret, config.stream.tokenTTLSeconds) : undefined;
 const adminService = new AdminService(database.client, streamService);
+const accountDeletionService = new AccountDeletionService(database.client);
+const accountDeletionCleanup: AccountDeletionCleanup = {
+  async revokeApple(_userId, encryptedRefreshToken) {
+    if (!appleProvider || !appleTokenCipher) throw new Error('Apple cleanup is not configured');
+    await appleProvider.revoke(appleTokenCipher.decrypt(encryptedRefreshToken));
+  },
+  async revokeStrava(_userId, encryptedRefreshToken) {
+    if (!stravaProvider || !stravaTokenCipher) throw new Error('Strava cleanup is not configured');
+    await stravaProvider.revoke(stravaTokenCipher.decrypt(encryptedRefreshToken, _userId, 'refresh'));
+  },
+  async deleteStreamUser(userId) {
+    if (streamService) await streamService.deleteUser(userId);
+  },
+  async deleteObject(objectKey) {
+    await photoStorage.deleteObject(objectKey);
+  },
+};
+const accountDeletionInterval = setInterval(() => {
+  void accountDeletionService.processNext(accountDeletionCleanup).catch((error: unknown) => {
+    logger.error({ err: error }, 'Account deletion worker failed');
+  });
+}, 60_000);
+accountDeletionInterval.unref();
 if (streamService) database.safetyService.onBlocking = (actor, target) => streamService.blockPair(actor, target);
 const server = createServer(
   createApp({
@@ -103,6 +130,7 @@ const server = createServer(
     streamService,
     eventService: new EventService(database.client, streamService),
     adminService,
+    accountDeletionService,
     safetyService: database.safetyService,
     safetyRateLimiter: new InMemoryRateLimiter(60_000, 20),
     profileRateLimiter: new InMemoryRateLimiter(
@@ -124,6 +152,7 @@ function handleSignal(signal: string): void {
   shuttingDown = true;
   clearInterval(photoCleanupInterval);
   clearInterval(stravaCleanupInterval);
+  clearInterval(accountDeletionInterval);
 
   void shutdownServer(
     server,

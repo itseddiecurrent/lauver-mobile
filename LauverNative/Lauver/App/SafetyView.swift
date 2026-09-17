@@ -311,7 +311,12 @@ struct SafetySettingsView: View {
     let stravaService: any StravaServicing
     let healthUploader: (any HealthWorkoutUploading)?
     let signOut: () -> Void
-    init(service: any SafetyServicing, stravaService: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) { self.service = service; self.stravaService = stravaService; self.healthUploader = healthUploader; self.signOut = signOut }
+    let accountDeletionService: any AccountDeletionServicing
+    @State private var showingDeleteConfirmation = false
+    @State private var isDeleting = false
+    @State private var errorMessage: String?
+
+    init(service: any SafetyServicing, stravaService: any StravaServicing, accountDeletionService: any AccountDeletionServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) { self.service = service; self.stravaService = stravaService; self.accountDeletionService = accountDeletionService; self.healthUploader = healthUploader; self.signOut = signOut }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
@@ -328,8 +333,39 @@ struct SafetySettingsView: View {
                     }.accessibilityIdentifier("settings-blocked-users")
                 }
                 Button("Sign Out", role: .destructive, action: signOut).accessibilityIdentifier("settings-sign-out")
+                Text("ACCOUNT").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
+                safetyCard {
+                    Button("Delete Account", role: .destructive) {
+                        showingDeleteConfirmation = true
+                    }
+                    .disabled(isDeleting)
+                    .accessibilityIdentifier("settings-delete-account")
+                    Text("This permanently removes your Lauver account and connected data.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                if let errorMessage {
+                    Text(errorMessage).font(.footnote).foregroundStyle(.red).accessibilityIdentifier("settings-delete-account-error")
+                }
             }.padding(LauverDesign.Spacing.large)
         }.background(LauverDesign.ColorToken.background).navigationTitle("Settings")
+            .alert("Delete your account?", isPresented: $showingDeleteConfirmation) {
+                Button("Delete Account", role: .destructive) {
+                    isDeleting = true
+                    errorMessage = nil
+                    Task {
+                        do {
+                            try await accountDeletionService.deleteAccount()
+                            signOut()
+                        } catch {
+                            isDeleting = false
+                            errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone. You will be signed out immediately.")
+            }
     }
 }
 

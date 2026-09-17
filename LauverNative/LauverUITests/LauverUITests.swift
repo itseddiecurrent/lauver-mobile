@@ -457,6 +457,26 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Morning run"].exists)
     }
 
+    func testSettingsDeleteAccountRequiresConfirmationAndReturnsToLogin() {
+        let app = launchAuthenticatedShell()
+        selectTab("Profile", in: app)
+        tapWhenHittable(app.buttons["profile-settings"])
+        let deleteAccount = app.buttons["settings-delete-account"]
+        for _ in 0..<4 where !deleteAccount.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(deleteAccount.waitForExistence(timeout: 5))
+
+        tapWhenHittable(deleteAccount)
+        XCTAssertTrue(app.alerts["Delete your account?"].waitForExistence(timeout: 5))
+        app.alerts.buttons["Cancel"].tap()
+        XCTAssertTrue(deleteAccount.exists)
+
+        tapWhenHittable(deleteAccount)
+        app.alerts.buttons["Delete Account"].tap()
+        XCTAssertTrue(app.buttons["auth-login"].waitForExistence(timeout: 5))
+    }
+
     private func assertNavigation(tab: String, screen: String) {
         let app = launchAuthenticatedShell()
         let tabButton = app.tabBars.firstMatch.buttons[tab]

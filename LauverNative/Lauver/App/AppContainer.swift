@@ -6,6 +6,7 @@ struct AppContainer {
     let authService: any AuthServicing
     let discoverService: any DiscoverServicing
     let profileService: any ProfileServicing
+    let accountDeletionService: any AccountDeletionServicing
     let safetyService: any SafetyServicing
     let eventsService: any EventsServicing
     let stravaService: any StravaServicing
@@ -99,6 +100,9 @@ struct AppContainer {
                 ? UITestDiscoverService(safetyService: testSafetyService)
                 : liveProfileService,
             profileService: profileService,
+            accountDeletionService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? UITestAccountDeletionService()
+                : liveProfileService,
             safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? testSafetyService
                 : liveProfileService,
@@ -115,6 +119,10 @@ struct AppContainer {
             uiStateStore: uiStateStore
         )
     }
+}
+
+private struct UITestAccountDeletionService: AccountDeletionServicing {
+    func deleteAccount() async throws {}
 }
 
 private struct UITestEventsService: EventsServicing {

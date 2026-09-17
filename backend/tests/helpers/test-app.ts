@@ -11,6 +11,7 @@ import type { ProfileServicing } from '../../src/profile.js';
 import type { SafetyServicing } from '../../src/safety.js';
 import type { StravaServicing } from '../../src/strava.js';
 import type { AdminService } from '../../src/admin.js';
+import type { AccountDeletionServicing } from '../../src/account-deletion.js';
 
 export function createDatabaseStub(overrides: Partial<Database> = {}): Database {
   return {
@@ -33,6 +34,7 @@ export function createTestApp(options: {
   stravaService?: StravaServicing;
   eventService?: EventService;
   adminService?: AdminService;
+  accountDeletionService?: AccountDeletionServicing;
 } = {}) {
   return createApp({
     database: options.database ?? createDatabaseStub(),
@@ -50,6 +52,7 @@ export function createTestApp(options: {
     stravaService: options.stravaService,
     eventService: options.eventService,
     adminService: options.adminService,
+    accountDeletionService: options.accountDeletionService,
   });
 }
 

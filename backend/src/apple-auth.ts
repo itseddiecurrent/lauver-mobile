@@ -15,6 +15,7 @@ import {
 
 const appleIssuer = 'https://appleid.apple.com';
 const appleTokenURL = 'https://appleid.apple.com/auth/token';
+const appleRevokeURL = 'https://appleid.apple.com/auth/revoke';
 const appleJWKSURL = 'https://appleid.apple.com/auth/keys';
 
 export type AppleVerifiedIdentity = {
@@ -46,6 +47,10 @@ export class AppleAuthorizationError extends Error {
 
 export interface AppleAuthorizing {
   authorize(input: AppleAuthorizationInput): Promise<AppleAuthorization>;
+}
+
+export interface AppleRevoking {
+  revoke(refreshToken: string): Promise<void>;
 }
 
 export class DisabledAppleAuthorizationProvider implements AppleAuthorizing {
@@ -109,7 +114,7 @@ type AppleTokenResponse = {
 
 type Fetching = typeof fetch;
 
-export class AppleAuthorizationProvider implements AppleAuthorizing {
+export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoking {
   readonly #clientID: string;
   readonly #teamID: string;
   readonly #keyID: string;
@@ -175,6 +180,33 @@ export class AppleAuthorizationProvider implements AppleAuthorizing {
       email: suppliedIdentity.email ?? exchangedIdentity.email,
       refreshToken: payload.refresh_token,
     };
+  }
+
+  async revoke(refreshToken: string): Promise<void> {
+    let response: Response;
+    try {
+      response = await this.#fetch(appleRevokeURL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: this.#clientID,
+          client_secret: await this.#createClientSecret(),
+          token: refreshToken,
+          token_type_hint: 'refresh_token',
+        }),
+        signal: AbortSignal.timeout(5_000),
+      });
+    } catch {
+      throw new AppleAuthorizationError('unavailable');
+    }
+
+    if (response.ok) return;
+    let payload: AppleTokenResponse = {};
+    try { payload = await response.json() as AppleTokenResponse; } catch { /* use unavailable below */ }
+    // Deletion is idempotent: Apple already rejecting an invalid/revoked grant
+    // means the external authorization is no longer usable.
+    if (payload.error === 'invalid_grant') return;
+    throw new AppleAuthorizationError('unavailable');
   }
 
   async #createClientSecret(): Promise<string> {

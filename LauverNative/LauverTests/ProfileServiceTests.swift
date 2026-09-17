@@ -66,6 +66,20 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(disconnected.status, .connected)
     }
 
+    func testDeleteAccountUsesBearerTokenAndDecodesDeletionJob() async throws {
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, "/v1/account")
+            XCTAssertEqual(request.httpMethod, "DELETE")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
+            let body = try XCTUnwrap(Self.bodyData(request))
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: body) as? [String: String], ["confirmation": "DELETE"])
+            return Self.response(request, status: 202, body: "{\"status\":\"pending\",\"jobId\":\"job-id\"}")
+        }
+
+        try await service.deleteAccount()
+    }
+
     func testStravaStartDoesNotAutomaticallyReplayLostResponse() async {
         var attempts = 0
         ProfileURLProtocolStub.requestHandler = { _ in attempts += 1; throw URLError(.networkConnectionLost) }

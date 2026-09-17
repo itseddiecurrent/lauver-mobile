@@ -278,6 +278,10 @@ protocol ProfileServicing {
     func deletePhoto() async throws
 }
 
+protocol AccountDeletionServicing {
+    func deleteAccount() async throws
+}
+
 protocol HealthWorkoutUploading {
     func uploadHealthWorkouts(_ workouts: [HealthWorkoutSummary]) async throws
     func healthWorkouts() async throws -> [HealthWorkoutSummary]
@@ -346,7 +350,7 @@ protocol EventsServicing {
     func reportEvent(id: String, reason: String, details: String?, targetType: String) async throws -> String
 }
 
-final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
+final class ProfileService: ProfileServicing, AccountDeletionServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -433,6 +437,15 @@ final class ProfileService: ProfileServicing, DiscoverServicing, SafetyServicing
     func deletePhoto() async throws {
         let _: EmptyResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/me/photo", headers: Self.authorization(token))
+        }
+    }
+
+    func deleteAccount() async throws {
+        struct DeletionResponse: Decodable { let status: String; let jobId: String }
+        struct Confirmation: Encodable { let confirmation = "DELETE" }
+        let body = try encoder.encode(Confirmation())
+        let _: DeletionResponse = try await authenticatedRequest { token in
+            APIRequest(method: .delete, path: "/v1/account", body: body, headers: Self.jsonAuthorization(token))
         }
     }
 

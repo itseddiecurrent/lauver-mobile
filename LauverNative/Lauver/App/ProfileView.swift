@@ -90,13 +90,15 @@ struct OwnProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
     @State private var editingProfile: WorkoutProfile?
     let signOut: () -> Void
+    let accountDeletionService: any AccountDeletionServicing
     let safetyService: any SafetyServicing
     let stravaService: any StravaServicing
     let healthUploader: (any HealthWorkoutUploading)?
 
-    init(service: any ProfileServicing, safetyService: any SafetyServicing, stravaService: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) {
+    init(service: any ProfileServicing, accountDeletionService: any AccountDeletionServicing, safetyService: any SafetyServicing, stravaService: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: ProfileViewModel(service: service))
         self.signOut = signOut
+        self.accountDeletionService = accountDeletionService
         self.safetyService = safetyService
         self.stravaService = stravaService
         self.healthUploader = healthUploader
@@ -126,7 +128,7 @@ struct OwnProfileView: View {
         .navigationTitle("Profile")
         .accessibilityIdentifier("screen-profile")
         .toolbar {
-            NavigationLink { SafetySettingsView(service: safetyService, stravaService: stravaService, healthUploader: healthUploader, signOut: signOut) } label: {
+            NavigationLink { SafetySettingsView(service: safetyService, stravaService: stravaService, accountDeletionService: accountDeletionService, healthUploader: healthUploader, signOut: signOut) } label: {
                 Label("Settings", systemImage: "gearshape")
             }.accessibilityIdentifier("profile-settings")
         }
