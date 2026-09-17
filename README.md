@@ -205,6 +205,21 @@ Only the backend receives storage credentials. Use a bucket policy or CDN config
 
 ## Container and Render deployment
 
+### Admin dashboard provisioning
+
+The Step 13 admin API is mounted under `/admin`. There is no public admin registration endpoint. After the Step 13 migration has been deployed, provision or rotate an administrator from a trusted shell using environment variables that are not committed:
+
+```bash
+cd backend
+ADMIN_EMAIL=admin@example.com \
+ADMIN_PASSWORD='use-a-new-long-password' \
+DATABASE_URL='postgresql://...' \
+AUTH_ACCESS_TOKEN_SECRET='a-local-only-32-character-secret' \
+npm run admin:create
+```
+
+The command stores only an Argon2id password hash. Admin login returns a CSRF token and sets an isolated Secure session cookie; browser write requests must send that token in `x-csrf-token`. Keep the admin database URL and password out of shell history where possible, and use a Render one-off shell or trusted local machine with the staging external database URL.
+
 Build the production API image from the repository root:
 
 ```bash
