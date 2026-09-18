@@ -808,6 +808,14 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
             .compactMap { $0 }
             .joined(separator: ", ")
         cityRequest.resultTypes = .address
+        // Keep the normalization anchored to the result the user selected.
+        // Without a region MapKit may return the first same-named locality in
+        // another part of the country (for example, Nanjing for Shanghai).
+        cityRequest.region = MKCoordinateRegion(
+            center: placemark.coordinate,
+            latitudinalMeters: 150_000,
+            longitudinalMeters: 150_000
+        )
         let cityResponse = try await MKLocalSearch(request: cityRequest).start()
         guard let cityItem = cityResponse.mapItems.first(where: {
             let localityMatches = $0.placemark.locality?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
