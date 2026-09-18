@@ -145,6 +145,11 @@ export interface AuthServicing {
   register(email: string, password: string): Promise<AuthSession>;
   login(email: string, password: string): Promise<AuthSession>;
   reauthenticatePassword(userId: string, password: string): Promise<void>;
+  reauthenticateApple(userId: string, input: {
+    identityToken: string;
+    authorizationCode: string;
+    nonce: string;
+  }): Promise<void>;
   signInWithApple(input: {
     identityToken: string;
     authorizationCode: string;
@@ -226,6 +231,32 @@ export class AuthService implements AuthServicing {
     }
     if (!(await this.#passwordHasher.verify(account.passwordHash, password))) {
       throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+    }
+  }
+
+  async reauthenticateApple(userId: string, input: {
+    identityToken: string;
+    authorizationCode: string;
+    nonce: string;
+  }): Promise<void> {
+    if (this.#appleProvider === undefined) {
+      throw new AuthError(503, 'apple_sign_in_unavailable', 'Sign in with Apple is unavailable');
+    }
+    try {
+      const authorization = await this.#appleProvider.authorize(input);
+      const subject = await this.#repository.findAppleSubjectForUser(userId);
+      if (subject === null || subject !== authorization.subject) {
+        throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+      }
+    } catch (error) {
+      if (error instanceof AuthError) throw error;
+      if (error instanceof AppleAuthorizationError) {
+        if (error.reason === 'unavailable') {
+          throw new AuthError(503, 'apple_sign_in_unavailable', 'Sign in with Apple is unavailable');
+        }
+        throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+      }
+      throw error;
     }
   }
 

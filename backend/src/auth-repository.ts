@@ -40,6 +40,7 @@ export interface AuthRepository {
   createEmailAccount(email: string, passwordHash: string): Promise<EmailAccount>;
   findEmailAccount(email: string): Promise<EmailAccount | null>;
   findEmailForUser(userId: string): Promise<string | null>;
+  findAppleSubjectForUser(userId: string): Promise<string | null>;
   linkOrCreateAppleAccount(input: {
     subject: string;
     email: string | null;
@@ -141,6 +142,14 @@ export class PrismaAuthRepository implements AuthRepository {
       select: { email: true },
     });
     return apple?.email ?? null;
+  }
+
+  async findAppleSubjectForUser(userId: string): Promise<string | null> {
+    const identity = await this.#client.authIdentity.findFirst({
+      where: { userId, provider: 'APPLE' },
+      select: { providerSubject: true },
+    });
+    return identity?.providerSubject ?? null;
   }
 
   async linkOrCreateAppleAccount(input: {

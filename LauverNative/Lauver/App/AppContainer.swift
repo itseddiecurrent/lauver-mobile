@@ -123,6 +123,7 @@ struct AppContainer {
 
 private struct UITestAccountDeletionService: AccountDeletionServicing {
     func deleteAccount(currentPassword: String) async throws {}
+    func deleteAccount(appleCredential: AppleSignInCredential) async throws {}
 }
 
 private struct UITestEventsService: EventsServicing {

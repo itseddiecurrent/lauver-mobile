@@ -280,6 +280,7 @@ protocol ProfileServicing {
 
 protocol AccountDeletionServicing {
     func deleteAccount(currentPassword: String) async throws
+    func deleteAccount(appleCredential: AppleSignInCredential) async throws
 }
 
 protocol HealthWorkoutUploading {
@@ -444,6 +445,27 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
         struct DeletionResponse: Decodable { let status: String; let jobId: String }
         struct Confirmation: Encodable { let confirmation = "DELETE"; let currentPassword: String }
         let body = try encoder.encode(Confirmation(currentPassword: currentPassword))
+        let _: DeletionResponse = try await authenticatedRequest { token in
+            APIRequest(method: .delete, path: "/v1/account", body: body, headers: Self.jsonAuthorization(token))
+        }
+    }
+
+    func deleteAccount(appleCredential: AppleSignInCredential) async throws {
+        struct AppleCredentialPayload: Encodable {
+            let identityToken: String
+            let authorizationCode: String
+            let nonce: String
+        }
+        struct Confirmation: Encodable {
+            let confirmation = "DELETE"
+            let appleCredential: AppleCredentialPayload
+        }
+        struct DeletionResponse: Decodable { let status: String; let jobId: String }
+        let body = try encoder.encode(Confirmation(appleCredential: AppleCredentialPayload(
+            identityToken: appleCredential.identityToken,
+            authorizationCode: appleCredential.authorizationCode,
+            nonce: appleCredential.nonce
+        )))
         let _: DeletionResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/account", body: body, headers: Self.jsonAuthorization(token))
         }

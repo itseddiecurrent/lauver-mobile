@@ -5,7 +5,7 @@ Date: 2026-09-17
 ## Implemented
 
 - `DELETE /v1/account` requires an authenticated Bearer session, the explicit `confirmation: "DELETE"` body, and the current Email-account password.
-- Incorrect or missing re-authentication is rejected before a deletion job is created; Apple-authenticated accounts still require the Apple re-authentication provider flow before sign-off.
+- Incorrect or missing re-authentication is rejected before a deletion job is created. Email accounts use the current password; Apple accounts use a fresh Apple authorization and provider-subject match.
 - Deletion is idempotent through the unique `account_deletion_jobs.user_id` record.
 - The account is marked `DELETED`, all active sessions are revoked, and password-reset tokens are removed before the asynchronous cleanup job is queued.
 - The worker retries external cleanup with bounded exponential backoff and never restores account access after a provider failure.
@@ -14,7 +14,7 @@ Date: 2026-09-17
 
 ## Automated evidence
 
-- `cd backend && npm test` — **170/170 passed**.
+- `cd backend && npm test` — **171/171 passed**.
 - `cd backend && npm run lint` — **passed**.
 - `cd backend && npm run typecheck` — **passed**.
 - `cd backend && npm run build` — **passed**.
@@ -26,7 +26,7 @@ Date: 2026-09-17
 
 - PostgreSQL integration deletion tests have not run in this environment because `TEST_DATABASE_URL` and `DATABASE_URL` are unset.
 - Render staging deletion E2E has not been run in this continuation. It must cover Email and Apple accounts, with/without Strava and HealthKit data, Chat/Event/report data, old-token rejection, database/object-storage/Stream cleanup, and retry after each external-provider failure.
-- Email accounts now require current-password re-authentication before starting deletion. Apple-account re-authentication still needs an Apple credential hand-off from the native flow and provider-backed staging evidence.
+- Email accounts require current-password re-authentication before starting deletion. Apple accounts now require a fresh Apple credential and subject match; provider-backed staging evidence is still pending.
 - A real iPhone deletion run and confirmation that the post-delete app restart remains at Login are still required.
 
 ## Sign-off

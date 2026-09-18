@@ -41,8 +41,27 @@ describe('DELETE /v1/account', () => {
       .send({ confirmation: 'delete' });
 
     expect(response.status).toBe(422);
-    expect((response.body as { code?: string }).code).toBe('confirmation_required');
+    expect((response.body as { code?: string }).code).toBe('reauthentication_required');
     expect(begin).not.toHaveBeenCalled();
+  });
+
+  it('supports Apple credential re-authentication', async () => {
+    const begin = vi.fn().mockResolvedValue({ status: 'pending', jobId: 'job-id' });
+    const reauthenticateApple = vi.fn().mockResolvedValue(undefined);
+    const appleCredential = {
+      identityToken: 'identity-token', authorizationCode: 'authorization-code', nonce: 'n'.repeat(32),
+    };
+    const response = await request(createTestApp({
+      authService: createAuthServiceStub({
+        restore: vi.fn().mockResolvedValue({ id: 'user-id', email: 'runner@example.com' }),
+        reauthenticateApple,
+      }),
+      accountDeletionService: { begin },
+    })).delete('/v1/account').set('Authorization', 'Bearer access-token')
+      .send({ confirmation: 'DELETE', appleCredential });
+    expect(response.status).toBe(202);
+    expect(reauthenticateApple).toHaveBeenCalledWith('user-id', appleCredential);
+    expect(begin).toHaveBeenCalledWith('user-id');
   });
 });
 

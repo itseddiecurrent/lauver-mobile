@@ -334,6 +334,10 @@ class MemoryAuthRepository implements AuthRepository {
     );
   }
 
+  findAppleSubjectForUser(userId: string): Promise<string | null> {
+    return Promise.resolve(this.appleAccounts.find((account) => account.userId === userId)?.subject ?? null);
+  }
+
   linkOrCreateAppleAccount(input: {
     subject: string;
     email: string | null;

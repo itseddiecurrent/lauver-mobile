@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 import StreamChat
 
@@ -315,6 +316,7 @@ struct SafetySettingsView: View {
     @State private var showingDeleteConfirmation = false
     @State private var showingDeleteReauthentication = false
     @State private var currentPassword = ""
+    @State private var appleNonce: String?
     @State private var isDeleting = false
     @State private var errorMessage: String?
 
@@ -367,28 +369,58 @@ struct SafetySettingsView: View {
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("settings-delete-account-password")
                     Button("Permanently Delete Account", role: .destructive) {
-                        isDeleting = true
-                        showingDeleteReauthentication = false
-                        errorMessage = nil
-                        let password = currentPassword
-                        currentPassword = ""
-                        Task {
-                            do {
-                                try await accountDeletionService.deleteAccount(currentPassword: password)
-                                signOut()
-                            } catch {
-                                isDeleting = false
-                                errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
-                            }
-                        }
+                        submitDeletion { try await accountDeletionService.deleteAccount(currentPassword: currentPassword) }
                     }
                     .disabled(currentPassword.isEmpty || isDeleting)
                     .accessibilityIdentifier("settings-delete-account-submit")
+                    HStack {
+                        Rectangle().frame(height: 1).foregroundStyle(.quaternary)
+                        Text("or").font(.caption).foregroundStyle(.secondary)
+                        Rectangle().frame(height: 1).foregroundStyle(.quaternary)
+                    }
+                    SignInWithAppleButton(.continue) { request in
+                        do {
+                            let nonce = try AppleSignInNonce.generate()
+                            appleNonce = nonce
+                            request.requestedScopes = []
+                            request.nonce = AppleSignInNonce.hash(nonce)
+                        } catch {
+                            appleNonce = nil
+                            errorMessage = "Apple re-authentication could not start."
+                        }
+                    } onCompletion: { result in
+                        defer { appleNonce = nil }
+                        do {
+                            guard let nonce = appleNonce else { throw AppleSignInError.nonceGenerationFailed }
+                            let credential = try AppleSignInCredential(authorization: result.get(), nonce: nonce)
+                            submitDeletion { try await accountDeletionService.deleteAccount(appleCredential: credential) }
+                        } catch {
+                            errorMessage = (error as? APIError)?.userMessage ?? "Apple re-authentication failed."
+                        }
+                    }
+                    .frame(height: 44)
+                    .accessibilityIdentifier("settings-delete-account-apple")
                     Button("Cancel") { showingDeleteReauthentication = false }
                 }
                 .padding(LauverDesign.Spacing.large)
                 .presentationDetents([.medium])
             }
+    }
+
+    private func submitDeletion(_ operation: @escaping () async throws -> Void) {
+        isDeleting = true
+        showingDeleteReauthentication = false
+        errorMessage = nil
+        currentPassword = ""
+        Task {
+            do {
+                try await operation()
+                signOut()
+            } catch {
+                isDeleting = false
+                errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
+            }
+        }
     }
 }
 

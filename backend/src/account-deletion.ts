@@ -143,19 +143,30 @@ export function installAccountDeletionRoutes(
   dependencies: { authService: AuthServicing; service: AccountDeletionServicing },
 ): void {
   app.delete('/v1/account', authenticated(dependencies.authService, async (user, request, response) => {
-    const parsed = z.object({
-      confirmation: z.literal('DELETE'),
-      currentPassword: z.string().min(1).max(128),
-    }).strict().safeParse(request.body);
+    const parsed = z.union([
+      z.object({ confirmation: z.literal('DELETE'), currentPassword: z.string().min(1).max(128) }).strict(),
+      z.object({
+        confirmation: z.literal('DELETE'),
+        appleCredential: z.object({
+          identityToken: z.string().min(1).max(10_000),
+          authorizationCode: z.string().min(1).max(2_000),
+          nonce: z.string().min(32).max(128),
+        }).strict(),
+      }).strict(),
+    ]).safeParse(request.body);
     if (!parsed.success) {
       response.status(422).json({
-        code: 'confirmation_required',
-        message: 'Type DELETE to confirm account deletion',
+        code: 'reauthentication_required',
+        message: 'Confirm deletion and re-authenticate to continue',
         requestId: response.getHeader('x-request-id'),
       });
       return;
     }
-    await dependencies.authService.reauthenticatePassword(user.id, parsed.data.currentPassword);
+    if ('currentPassword' in parsed.data) {
+      await dependencies.authService.reauthenticatePassword(user.id, parsed.data.currentPassword);
+    } else {
+      await dependencies.authService.reauthenticateApple(user.id, parsed.data.appleCredential);
+    }
     response.status(202).json(await dependencies.service.begin(user.id));
   }));
 }
