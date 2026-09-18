@@ -13,6 +13,7 @@ import {
   type AppleAuthorizing,
   type AppleTokenCipher,
 } from './apple-auth.js';
+import type { FirebaseTokenVerifier } from './firebase-auth.js';
 
 const accessTokenIssuer = 'lauver-api';
 const accessTokenAudience = 'lauver-ios';
@@ -131,6 +132,7 @@ export type AuthServiceOptions = {
   repository: AuthRepository;
   appleProvider?: AppleAuthorizing;
   appleTokenCipher?: AppleTokenCipher;
+  firebaseVerifier?: FirebaseTokenVerifier;
   passwordHasher?: PasswordHasher;
   passwordResetDelivery?: PasswordResetDelivery;
   onPasswordResetDeliveryFailure?: (error: unknown) => void;
@@ -150,6 +152,7 @@ export interface AuthServicing {
     authorizationCode: string;
     nonce: string;
   }): Promise<void>;
+  reauthenticateGoogle(userId: string, idToken: string): Promise<void>;
   signInWithApple(input: {
     identityToken: string;
     authorizationCode: string;
@@ -158,6 +161,7 @@ export interface AuthServicing {
     givenName: string | null;
     familyName: string | null;
   }): Promise<AuthSession>;
+  signInWithGoogle(idToken: string): Promise<AuthSession>;
   refresh(refreshToken: string): Promise<AuthSession>;
   logout(refreshToken: string): Promise<void>;
   forgotPassword(email: string): Promise<void>;
@@ -169,6 +173,7 @@ export class AuthService implements AuthServicing {
   readonly #repository: AuthRepository;
   readonly #appleProvider: AppleAuthorizing | undefined;
   readonly #appleTokenCipher: AppleTokenCipher | undefined;
+  readonly #firebaseVerifier: FirebaseTokenVerifier | undefined;
   readonly #passwordHasher: PasswordHasher;
   readonly #passwordResetDelivery: PasswordResetDelivery;
   readonly #onPasswordResetDeliveryFailure: (error: unknown) => void;
@@ -182,6 +187,7 @@ export class AuthService implements AuthServicing {
     this.#repository = options.repository;
     this.#appleProvider = options.appleProvider;
     this.#appleTokenCipher = options.appleTokenCipher;
+    this.#firebaseVerifier = options.firebaseVerifier;
     this.#passwordHasher = options.passwordHasher ?? new Argon2idPasswordHasher();
     this.#passwordResetDelivery = options.passwordResetDelivery ?? new NoopPasswordResetDelivery();
     this.#onPasswordResetDeliveryFailure = options.onPasswordResetDeliveryFailure ?? (() => {});
@@ -260,6 +266,22 @@ export class AuthService implements AuthServicing {
     }
   }
 
+  async reauthenticateGoogle(userId: string, idToken: string): Promise<void> {
+    if (this.#firebaseVerifier === undefined) {
+      throw new AuthError(503, 'google_sign_in_unavailable', 'Google sign-in is unavailable');
+    }
+    try {
+      const identity = await this.#firebaseVerifier.verifyIdToken(idToken);
+      const subject = await this.#repository.findFirebaseSubjectForUser(userId);
+      if (identity.signInProvider !== 'google.com' || !identity.emailVerified || subject !== identity.uid) {
+        throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+      }
+    } catch (error) {
+      if (error instanceof AuthError) throw error;
+      throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+    }
+  }
+
   async signInWithApple(input: {
     identityToken: string;
     authorizationCode: string;
@@ -296,6 +318,30 @@ export class AuthService implements AuthServicing {
         throw invalidAppleCredentialError();
       }
       throw error;
+    }
+  }
+
+  async signInWithGoogle(idToken: string): Promise<AuthSession> {
+    if (this.#firebaseVerifier === undefined) {
+      throw new AuthError(503, 'google_sign_in_unavailable', 'Google sign-in is unavailable');
+    }
+    try {
+      const identity = await this.#firebaseVerifier.verifyIdToken(idToken);
+      if (identity.signInProvider !== 'google.com' || !identity.email || !identity.emailVerified) {
+        throw new AuthError(401, 'invalid_google_credential', 'Google sign-in could not be verified');
+      }
+      const account = await this.#repository.linkOrCreateFirebaseAccount({
+        uid: identity.uid,
+        email: normalizeEmail(identity.email),
+        displayName: identity.displayName,
+      });
+      if (account === null || account.status !== 'ACTIVE') {
+        throw new AuthError(401, 'invalid_google_credential', 'Google sign-in could not be verified');
+      }
+      return await this.#createSession(account.userId, account.email);
+    } catch (error) {
+      if (error instanceof AuthError) throw error;
+      throw new AuthError(401, 'invalid_google_credential', 'Google sign-in could not be verified');
     }
   }
 

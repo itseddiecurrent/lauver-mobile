@@ -23,6 +23,7 @@ const appleSignInSchema = z.object({
   givenName: z.string().trim().min(1).max(100).nullable().default(null),
   familyName: z.string().trim().min(1).max(100).nullable().default(null),
 }).strict();
+const googleSignInSchema = z.object({ idToken: z.string().min(1).max(10_000) }).strict();
 const refreshSchema = z.object({ refreshToken: z.string().min(1).max(512) }).strict();
 const forgotPasswordSchema = z.object({ email: emailSchema }).strict();
 const resetPasswordSchema = z.object({
@@ -64,6 +65,17 @@ export function installAuthRoutes(app: Express, dependencies: AuthRouteDependenc
     if (!consumeRateLimit('apple', request, body.nonce, response, dependencies.rateLimiter)) return;
     try {
       response.status(200).json(await dependencies.authService.signInWithApple(body));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/v1/auth/google', async (request, response, next) => {
+    const body = parseBody(googleSignInSchema, request, response);
+    if (body === null) return;
+    if (!consumeRateLimit('google', request, body.idToken, response, dependencies.rateLimiter)) return;
+    try {
+      response.status(200).json(await dependencies.authService.signInWithGoogle(body.idToken));
     } catch (error) {
       next(error);
     }

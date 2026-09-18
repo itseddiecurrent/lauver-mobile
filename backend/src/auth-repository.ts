@@ -15,6 +15,12 @@ export type AppleAccount = {
   status: UserStatus;
 };
 
+export type FirebaseAccount = {
+  userId: string;
+  email: string;
+  status: UserStatus;
+};
+
 export type StoredSession = {
   id: string;
   userId: string;
@@ -41,6 +47,7 @@ export interface AuthRepository {
   findEmailAccount(email: string): Promise<EmailAccount | null>;
   findEmailForUser(userId: string): Promise<string | null>;
   findAppleSubjectForUser(userId: string): Promise<string | null>;
+  findFirebaseSubjectForUser(userId: string): Promise<string | null>;
   linkOrCreateAppleAccount(input: {
     subject: string;
     email: string | null;
@@ -48,6 +55,11 @@ export interface AuthRepository {
     familyName: string | null;
     refreshTokenEncrypted: string;
   }): Promise<AppleAccount | null>;
+  linkOrCreateFirebaseAccount(input: {
+    uid: string;
+    email: string;
+    displayName: string | null;
+  }): Promise<FirebaseAccount | null>;
   createSession(session: {
     id: string;
     userId: string;
@@ -141,12 +153,25 @@ export class PrismaAuthRepository implements AuthRepository {
       where: { identity: { userId, provider: 'APPLE' } },
       select: { email: true },
     });
-    return apple?.email ?? null;
+    if (apple?.email !== undefined) return apple.email;
+    const firebase = await this.#client.firebaseCredential.findFirst({
+      where: { identity: { userId, provider: 'FIREBASE' } },
+      select: { email: true },
+    });
+    return firebase?.email ?? null;
   }
 
   async findAppleSubjectForUser(userId: string): Promise<string | null> {
     const identity = await this.#client.authIdentity.findFirst({
       where: { userId, provider: 'APPLE' },
+      select: { providerSubject: true },
+    });
+    return identity?.providerSubject ?? null;
+  }
+
+  async findFirebaseSubjectForUser(userId: string): Promise<string | null> {
+    const identity = await this.#client.authIdentity.findFirst({
+      where: { userId, provider: 'FIREBASE' },
       select: { providerSubject: true },
     });
     return identity?.providerSubject ?? null;
@@ -214,6 +239,46 @@ export class PrismaAuthRepository implements AuthRepository {
           },
         },
       });
+      return { userId: user.id, email: input.email, status: user.status };
+    });
+  }
+
+  async linkOrCreateFirebaseAccount(input: {
+    uid: string;
+    email: string;
+    displayName: string | null;
+  }): Promise<FirebaseAccount | null> {
+    return this.#client.$transaction(async (transaction) => {
+      const existing = await transaction.authIdentity.findUnique({
+        where: { provider_providerSubject: { provider: 'FIREBASE', providerSubject: input.uid } },
+        include: { user: true, firebaseCredential: true },
+      });
+      if (existing !== null) {
+        await transaction.firebaseCredential.upsert({
+          where: { identityId: existing.id },
+          create: { identityId: existing.id, email: input.email, displayName: input.displayName },
+          update: { email: input.email, ...(input.displayName !== null ? { displayName: input.displayName } : {}) },
+        });
+        return { userId: existing.userId, email: input.email, status: existing.user.status };
+      }
+
+      const emailIdentity = await transaction.authIdentity.findUnique({
+        where: { provider_providerSubject: { provider: 'EMAIL', providerSubject: input.email } },
+        include: { user: true },
+      });
+      const user = emailIdentity?.user ?? await transaction.user.create({ data: { id: randomUUID() } });
+      const identity = await transaction.authIdentity.create({
+        data: {
+          id: randomUUID(),
+          userId: user.id,
+          provider: 'FIREBASE',
+          providerSubject: input.uid,
+          firebaseCredential: {
+            create: { email: input.email, displayName: input.displayName },
+          },
+        },
+      });
+      void identity;
       return { userId: user.id, email: input.email, status: user.status };
     });
   }

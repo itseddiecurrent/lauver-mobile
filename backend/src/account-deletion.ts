@@ -17,6 +17,7 @@ export interface AccountDeletionServicing {
 export type AccountDeletionCleanup = {
   revokeApple(userId: string, encryptedRefreshToken: string): Promise<void>;
   revokeStrava(userId: string, encryptedRefreshToken: string): Promise<void>;
+  deleteFirebaseUser(uid: string): Promise<void>;
   deleteStreamUser(userId: string): Promise<void>;
   deleteObject(objectKey: string): Promise<void>;
 };
@@ -75,6 +76,8 @@ export class AccountDeletionService implements AccountDeletionServicing {
       if (user !== null) {
         const appleToken = user.identities.find((identity) => identity.appleCredential !== null)?.appleCredential?.refreshTokenEncrypted;
         if (appleToken !== undefined) await cleanup.revokeApple(user.id, appleToken);
+        const firebaseIdentity = user.identities.find((identity) => identity.provider === 'FIREBASE');
+        if (firebaseIdentity !== undefined) await cleanup.deleteFirebaseUser(firebaseIdentity.providerSubject);
         const stravaToken = user.stravaConnection?.refreshTokenEncrypted;
         if (stravaToken !== undefined) await cleanup.revokeStrava(user.id, stravaToken);
         await cleanup.deleteStreamUser(user.id);
@@ -153,6 +156,10 @@ export function installAccountDeletionRoutes(
           nonce: z.string().min(32).max(128),
         }).strict(),
       }).strict(),
+      z.object({
+        confirmation: z.literal('DELETE'),
+        googleCredential: z.object({ idToken: z.string().min(1).max(10_000) }).strict(),
+      }).strict(),
     ]).safeParse(request.body);
     if (!parsed.success) {
       response.status(422).json({
@@ -164,8 +171,10 @@ export function installAccountDeletionRoutes(
     }
     if ('currentPassword' in parsed.data) {
       await dependencies.authService.reauthenticatePassword(user.id, parsed.data.currentPassword);
-    } else {
+    } else if ('appleCredential' in parsed.data) {
       await dependencies.authService.reauthenticateApple(user.id, parsed.data.appleCredential);
+    } else {
+      await dependencies.authService.reauthenticateGoogle(user.id, parsed.data.googleCredential.idToken);
     }
     response.status(202).json(await dependencies.service.begin(user.id));
   }));

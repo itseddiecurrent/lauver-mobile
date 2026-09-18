@@ -21,6 +21,7 @@ import { StreamService } from './stream.js';
 import { EventService } from './events.js';
 import { AdminService } from './admin.js';
 import { AccountDeletionService } from './account-deletion.js';
+import { FirebaseAdminTokenVerifier } from './firebase-auth.js';
 import type { AccountDeletionCleanup } from './account-deletion.js';
 
 const config = loadConfig();
@@ -42,10 +43,12 @@ const appleTokenCipher = config.appleAuthEnabled
   : undefined;
 const stravaProvider = config.strava ? new StravaProvider(config.strava) : undefined;
 const stravaTokenCipher = config.strava ? new StravaTokenCipher(config.strava.tokenEncryptionKey) : undefined;
+const firebaseVerifier = config.firebase ? new FirebaseAdminTokenVerifier(config.firebase) : undefined;
 const authService = new AuthService({
   repository: database.authRepository,
   appleProvider,
   appleTokenCipher,
+  firebaseVerifier,
   passwordResetDelivery,
   onPasswordResetDeliveryFailure: (error) => {
     logger.warn({ err: error }, 'Password-reset delivery failed');
@@ -98,6 +101,10 @@ const accountDeletionCleanup: AccountDeletionCleanup = {
   async revokeStrava(_userId, encryptedRefreshToken) {
     if (!stravaProvider || !stravaTokenCipher) throw new Error('Strava cleanup is not configured');
     await stravaProvider.revoke(stravaTokenCipher.decrypt(encryptedRefreshToken, _userId, 'refresh'));
+  },
+  async deleteFirebaseUser(uid) {
+    if (!firebaseVerifier) throw new Error('Firebase auth is not configured');
+    await firebaseVerifier.deleteUser(uid);
   },
   async deleteStreamUser(userId) {
     if (streamService) await streamService.deleteUser(userId);

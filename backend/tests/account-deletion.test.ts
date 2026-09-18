@@ -70,6 +70,7 @@ describe('account deletion worker', () => {
     return {
       revokeApple: vi.fn().mockResolvedValue(undefined),
       revokeStrava: vi.fn().mockResolvedValue(undefined),
+      deleteFirebaseUser: vi.fn().mockResolvedValue(undefined),
       deleteStreamUser,
       deleteObject: vi.fn().mockResolvedValue(undefined),
     };

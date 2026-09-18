@@ -136,3 +136,30 @@ describe('Apple auth route', () => {
     expect(signInWithApple).not.toHaveBeenCalled();
   });
 });
+
+describe('Google auth route', () => {
+  it('passes the Firebase ID token to the auth service', async () => {
+    const signInWithGoogle = vi.fn().mockResolvedValue({
+      user: { id: 'trusted-user', email: 'runner@gmail.com' },
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      expiresIn: 900,
+    });
+    const response = await request(createTestApp({
+      authService: createAuthServiceStub({ signInWithGoogle }),
+    })).post('/v1/auth/google').send({ idToken: 'firebase-id-token' });
+
+    expect(response.status).toBe(200);
+    expect(signInWithGoogle).toHaveBeenCalledWith('firebase-id-token');
+  });
+
+  it('rejects extra client-controlled identity fields', async () => {
+    const signInWithGoogle = vi.fn();
+    const response = await request(createTestApp({
+      authService: createAuthServiceStub({ signInWithGoogle }),
+    })).post('/v1/auth/google').send({ idToken: 'firebase-id-token', userId: 'attacker-controlled' });
+
+    expect(response.status).toBe(422);
+    expect(signInWithGoogle).not.toHaveBeenCalled();
+  });
+});

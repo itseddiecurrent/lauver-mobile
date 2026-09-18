@@ -142,6 +142,32 @@ paths:
           $ref: '#/components/responses/AuthError'
         '503':
           $ref: '#/components/responses/AuthError'
+  /v1/auth/google:
+    post:
+      operationId: signInWithGoogle
+      summary: Verify a Firebase Google ID token and create a Lauver session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirebaseGoogleRequest'
+      responses:
+        '200':
+          description: Authenticated Google-backed session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
+        '429':
+          $ref: '#/components/responses/AuthError'
+        '503':
+          $ref: '#/components/responses/AuthError'
   /v1/auth/logout:
     post:
       operationId: logoutSession
@@ -758,6 +784,15 @@ components:
           type: string
           minLength: 1
           maxLength: 512
+    FirebaseGoogleRequest:
+      type: object
+      additionalProperties: false
+      required: [idToken]
+      properties:
+        idToken:
+          type: string
+          minLength: 1
+          maxLength: 10000
     AppleSignInRequest:
       type: object
       additionalProperties: false

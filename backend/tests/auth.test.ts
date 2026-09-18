@@ -13,6 +13,7 @@ import {
   type AppleAuthorizationInput,
   type AppleAuthorizing,
 } from '../src/apple-auth.js';
+import type { FirebaseTokenVerifier } from '../src/firebase-auth.js';
 import {
   DuplicateEmailError,
   type AuthRepository,
@@ -209,6 +210,32 @@ describe('AuthService', () => {
     expect(repository.accounts).toHaveLength(1);
   });
 
+  it('verifies Google through Firebase and creates a Lauver session', async () => {
+    const repository = new MemoryAuthRepository();
+    const verifier = new FakeFirebaseVerifier();
+    const service = makeService(repository, new CapturingResetDelivery(), undefined, verifier);
+
+    const session = await service.signInWithGoogle('firebase-id-token');
+
+    expect(session.user.email).toBe('google@example.com');
+    expect(repository.firebaseAccounts).toEqual([
+      { uid: 'firebase-google-uid', userId: session.user.id, email: 'google@example.com' },
+    ]);
+    await expect(service.restore(session.accessToken)).resolves.toEqual(session.user);
+  });
+
+  it('rejects a Firebase identity authenticated by a non-Google provider', async () => {
+    const repository = new MemoryAuthRepository();
+    const verifier = new FakeFirebaseVerifier();
+    verifier.identity = { ...verifier.identity, signInProvider: 'password' };
+    const service = makeService(repository, new CapturingResetDelivery(), undefined, verifier);
+
+    await expect(service.signInWithGoogle('firebase-id-token')).rejects.toMatchObject({
+      code: 'invalid_google_credential',
+    });
+    expect(repository.firebaseAccounts).toHaveLength(0);
+  });
+
   it('rejects a revoked Apple authorization without creating a local session', async () => {
     const repository = new MemoryAuthRepository();
     const provider = new FakeAppleProvider();
@@ -278,6 +305,7 @@ function makeService(
   repository: MemoryAuthRepository,
   passwordResetDelivery: PasswordResetDelivery = new CapturingResetDelivery(),
   appleProvider?: AppleAuthorizing,
+  firebaseVerifier?: FirebaseTokenVerifier,
 ): AuthService {
   return new AuthService({
     repository,
@@ -285,6 +313,7 @@ function makeService(
     appleTokenCipher: appleProvider === undefined
       ? undefined
       : new AppleTokenCipher(Buffer.alloc(32, 7).toString('base64')),
+    firebaseVerifier,
     passwordHasher: new FastPasswordHasher(),
     passwordResetDelivery,
     accessTokenSecret: 'test-auth-secret-at-least-32-characters',
@@ -306,11 +335,18 @@ type MemoryAppleAccount = {
   refreshTokenEncrypted: string;
 };
 
+type MemoryFirebaseAccount = {
+  uid: string;
+  userId: string;
+  email: string;
+};
+
 class MemoryAuthRepository implements AuthRepository {
   readonly accounts = new Map<string, MutableAccount>();
   readonly sessions = new Map<string, StoredSession>();
   readonly resetTokens = new Map<string, ResetRecord>();
   readonly appleAccounts: MemoryAppleAccount[] = [];
+  readonly firebaseAccounts: MemoryFirebaseAccount[] = [];
 
   createEmailAccount(email: string, passwordHash: string): Promise<EmailAccount> {
     if (this.accounts.has(email)) throw new DuplicateEmailError();
@@ -338,6 +374,10 @@ class MemoryAuthRepository implements AuthRepository {
     return Promise.resolve(this.appleAccounts.find((account) => account.userId === userId)?.subject ?? null);
   }
 
+  findFirebaseSubjectForUser(userId: string): Promise<string | null> {
+    return Promise.resolve(this.firebaseAccounts.find((account) => account.userId === userId)?.uid ?? null);
+  }
+
   linkOrCreateAppleAccount(input: {
     subject: string;
     email: string | null;
@@ -362,6 +402,23 @@ class MemoryAuthRepository implements AuthRepository {
       this.accounts.set(input.email, account);
     }
     this.appleAccounts.push({ ...input, email: input.email, userId: account.userId });
+    return Promise.resolve({ userId: account.userId, email: input.email, status: account.status });
+  }
+
+  linkOrCreateFirebaseAccount(input: {
+    uid: string;
+    email: string;
+    displayName: string | null;
+  }): Promise<{ userId: string; email: string; status: 'ACTIVE' | 'SUSPENDED' | 'DELETED' } | null> {
+    void input.displayName;
+    const existing = this.firebaseAccounts.find((account) => account.uid === input.uid);
+    if (existing !== undefined) return Promise.resolve({ userId: existing.userId, email: input.email, status: 'ACTIVE' });
+    let account = this.accounts.get(input.email);
+    if (account === undefined) {
+      account = { userId: crypto.randomUUID(), email: input.email, status: 'ACTIVE', passwordHash: '' };
+      this.accounts.set(input.email, account);
+    }
+    this.firebaseAccounts.push({ uid: input.uid, userId: account.userId, email: input.email });
     return Promise.resolve({ userId: account.userId, email: input.email, status: account.status });
   }
 
@@ -479,5 +536,25 @@ class FakeAppleProvider implements AppleAuthorizing {
     void _input;
     if (this.failure !== undefined) return Promise.reject(this.failure);
     return Promise.resolve(this.authorization);
+  }
+}
+
+class FakeFirebaseVerifier implements FirebaseTokenVerifier {
+  identity = {
+    uid: 'firebase-google-uid',
+    email: 'google@example.com',
+    emailVerified: true,
+    displayName: 'Google Runner',
+    signInProvider: 'google.com',
+  };
+
+  verifyIdToken(_idToken: string) {
+    void _idToken;
+    return Promise.resolve(this.identity);
+  }
+
+  deleteUser(_uid: string) {
+    void _uid;
+    return Promise.resolve();
   }
 }

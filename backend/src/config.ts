@@ -32,6 +32,10 @@ const environmentSchema = z.object({
   APPLE_KEY_ID: z.string().min(1).optional(),
   APPLE_PRIVATE_KEY: z.string().min(1).optional(),
   APPLE_TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+  FIREBASE_AUTH_ENABLED: z.enum(['true', 'false']).default('false'),
+  FIREBASE_PROJECT_ID: z.string().min(1).optional(),
+  FIREBASE_CLIENT_EMAIL: z.email().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().min(1).optional(),
   STRAVA_ENABLED: z.enum(['true', 'false']).default('false'),
   STRAVA_CLIENT_ID: z.string().regex(/^[1-9][0-9]*$/).optional(),
   STRAVA_CLIENT_SECRET: z.string().min(1).optional(),
@@ -121,6 +125,13 @@ const environmentSchema = z.object({
       });
     }
   }
+  if (environment.FIREBASE_AUTH_ENABLED === 'true') {
+    for (const key of ['FIREBASE_PROJECT_ID', 'FIREBASE_CLIENT_EMAIL', 'FIREBASE_PRIVATE_KEY'] as const) {
+      if (environment[key] === undefined) {
+        context.addIssue({ code: 'custom', path: [key], message: `${key} is required when FIREBASE_AUTH_ENABLED=true` });
+      }
+    }
+  }
 });
 
 export type AppConfig = {
@@ -146,6 +157,7 @@ export type AppConfig = {
   appleKeyID?: string;
   applePrivateKey?: string;
   appleTokenEncryptionKey?: string;
+  firebase?: { projectId: string; clientEmail: string; privateKey: string };
   strava?: { clientID: string; clientSecret: string; callbackURL: string; tokenEncryptionKey: string };
   stream?: { apiKey: string; apiSecret: string; tokenTTLSeconds: number };
   profilePhotoStorageEnabled: boolean;
@@ -200,6 +212,13 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): AppCon
     appleKeyID: parsed.APPLE_KEY_ID,
     applePrivateKey: parsed.APPLE_PRIVATE_KEY,
     appleTokenEncryptionKey: parsed.APPLE_TOKEN_ENCRYPTION_KEY,
+    ...(parsed.FIREBASE_AUTH_ENABLED === 'true' ? {
+      firebase: {
+        projectId: parsed.FIREBASE_PROJECT_ID!,
+        clientEmail: parsed.FIREBASE_CLIENT_EMAIL!,
+        privateKey: parsed.FIREBASE_PRIVATE_KEY!,
+      },
+    } : {}),
     ...(parsed.STRAVA_ENABLED === 'true' ? { strava: { clientID: parsed.STRAVA_CLIENT_ID!, clientSecret: parsed.STRAVA_CLIENT_SECRET!,
       callbackURL: parsed.STRAVA_CALLBACK_URL!, tokenEncryptionKey: parsed.STRAVA_TOKEN_ENCRYPTION_KEY! } } : {}),
     ...(parsed.STREAM_ENABLED === 'true' ? { stream: { apiKey: parsed.STREAM_API_KEY!, apiSecret: parsed.STREAM_API_SECRET!, tokenTTLSeconds: parsed.STREAM_TOKEN_TTL_SECONDS } } : {}),
