@@ -122,7 +122,7 @@ struct AppContainer {
 }
 
 private struct UITestAccountDeletionService: AccountDeletionServicing {
-    func deleteAccount() async throws {}
+    func deleteAccount(currentPassword: String) async throws {}
 }
 
 private struct UITestEventsService: EventsServicing {

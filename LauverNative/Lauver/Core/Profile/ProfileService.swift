@@ -279,7 +279,7 @@ protocol ProfileServicing {
 }
 
 protocol AccountDeletionServicing {
-    func deleteAccount() async throws
+    func deleteAccount(currentPassword: String) async throws
 }
 
 protocol HealthWorkoutUploading {
@@ -440,10 +440,10 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
         }
     }
 
-    func deleteAccount() async throws {
+    func deleteAccount(currentPassword: String) async throws {
         struct DeletionResponse: Decodable { let status: String; let jobId: String }
-        struct Confirmation: Encodable { let confirmation = "DELETE" }
-        let body = try encoder.encode(Confirmation())
+        struct Confirmation: Encodable { let confirmation = "DELETE"; let currentPassword: String }
+        let body = try encoder.encode(Confirmation(currentPassword: currentPassword))
         let _: DeletionResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/account", body: body, headers: Self.jsonAuthorization(token))
         }

@@ -144,6 +144,7 @@ export type AuthServiceOptions = {
 export interface AuthServicing {
   register(email: string, password: string): Promise<AuthSession>;
   login(email: string, password: string): Promise<AuthSession>;
+  reauthenticatePassword(userId: string, password: string): Promise<void>;
   signInWithApple(input: {
     identityToken: string;
     authorizationCode: string;
@@ -215,6 +216,17 @@ export class AuthService implements AuthServicing {
       throw invalidCredentialsError();
     }
     return this.#createSession(account.userId, account.email);
+  }
+
+  async reauthenticatePassword(userId: string, password: string): Promise<void> {
+    const email = await this.#repository.findEmailForUser(userId);
+    const account = email === null ? null : await this.#repository.findEmailAccount(email);
+    if (account === null || account.userId !== userId || account.status !== 'ACTIVE') {
+      throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+    }
+    if (!(await this.#passwordHasher.verify(account.passwordHash, password))) {
+      throw new AuthError(401, 'reauthentication_required', 'Re-authentication is required');
+    }
   }
 
   async signInWithApple(input: {

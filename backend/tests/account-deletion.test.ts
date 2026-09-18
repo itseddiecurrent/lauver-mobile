@@ -9,17 +9,19 @@ describe('DELETE /v1/account', () => {
   it('requires an authenticated user and starts deletion for that user', async () => {
     const begin = vi.fn().mockResolvedValue({ status: 'pending', jobId: 'job-id' });
     const restore = vi.fn().mockResolvedValue({ id: 'user-id', email: 'runner@example.com' });
+    const reauthenticatePassword = vi.fn().mockResolvedValue(undefined);
     const response = await request(createTestApp({
-      authService: createAuthServiceStub({ restore }),
+      authService: createAuthServiceStub({ restore, reauthenticatePassword }),
       accountDeletionService: { begin },
     }))
       .delete('/v1/account')
       .set('Authorization', 'Bearer access-token')
-      .send({ confirmation: 'DELETE' });
+      .send({ confirmation: 'DELETE', currentPassword: 'correct-password' });
 
     expect(response.status).toBe(202);
     expect(response.body).toEqual({ status: 'pending', jobId: 'job-id' });
     expect(restore).toHaveBeenCalledWith('access-token');
+    expect(reauthenticatePassword).toHaveBeenCalledWith('user-id', 'correct-password');
     expect(begin).toHaveBeenCalledWith('user-id');
   });
 
@@ -32,7 +34,7 @@ describe('DELETE /v1/account', () => {
   it('requires the explicit DELETE confirmation phrase', async () => {
     const begin = vi.fn();
     const response = await request(createTestApp({
-      authService: createAuthServiceStub({ restore: vi.fn().mockResolvedValue({ id: 'user-id', email: 'runner@example.com' }) }),
+      authService: createAuthServiceStub({ restore: vi.fn().mockResolvedValue({ id: 'user-id', email: 'runner@example.com' }), reauthenticatePassword: vi.fn() }),
       accountDeletionService: { begin },
     }))
       .delete('/v1/account')

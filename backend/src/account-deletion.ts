@@ -143,7 +143,10 @@ export function installAccountDeletionRoutes(
   dependencies: { authService: AuthServicing; service: AccountDeletionServicing },
 ): void {
   app.delete('/v1/account', authenticated(dependencies.authService, async (user, request, response) => {
-    const parsed = z.object({ confirmation: z.literal('DELETE') }).strict().safeParse(request.body);
+    const parsed = z.object({
+      confirmation: z.literal('DELETE'),
+      currentPassword: z.string().min(1).max(128),
+    }).strict().safeParse(request.body);
     if (!parsed.success) {
       response.status(422).json({
         code: 'confirmation_required',
@@ -152,6 +155,7 @@ export function installAccountDeletionRoutes(
       });
       return;
     }
+    await dependencies.authService.reauthenticatePassword(user.id, parsed.data.currentPassword);
     response.status(202).json(await dependencies.service.begin(user.id));
   }));
 }

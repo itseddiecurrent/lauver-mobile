@@ -73,11 +73,11 @@ final class ProfileServiceTests: XCTestCase {
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json")
             let body = try XCTUnwrap(Self.bodyData(request))
-            XCTAssertEqual(try JSONSerialization.jsonObject(with: body) as? [String: String], ["confirmation": "DELETE"])
+            XCTAssertEqual(try JSONSerialization.jsonObject(with: body) as? [String: String], ["confirmation": "DELETE", "currentPassword": "test-password"])
             return Self.response(request, status: 202, body: "{\"status\":\"pending\",\"jobId\":\"job-id\"}")
         }
 
-        try await service.deleteAccount()
+        try await service.deleteAccount(currentPassword: "test-password")
     }
 
     func testStravaStartDoesNotAutomaticallyReplayLostResponse() async {

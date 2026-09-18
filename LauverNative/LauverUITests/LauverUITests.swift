@@ -474,6 +474,11 @@ final class LauverUITests: XCTestCase {
 
         tapWhenHittable(deleteAccount)
         app.alerts.buttons["Delete Account"].tap()
+        let password = app.secureTextFields["settings-delete-account-password"]
+        XCTAssertTrue(password.waitForExistence(timeout: 5))
+        password.tap()
+        password.typeText("test-password")
+        tapWhenHittable(app.buttons["settings-delete-account-submit"])
         XCTAssertTrue(app.buttons["auth-login"].waitForExistence(timeout: 5))
     }
 

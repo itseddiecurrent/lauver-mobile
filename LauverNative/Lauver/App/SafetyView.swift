@@ -313,6 +313,8 @@ struct SafetySettingsView: View {
     let signOut: () -> Void
     let accountDeletionService: any AccountDeletionServicing
     @State private var showingDeleteConfirmation = false
+    @State private var showingDeleteReauthentication = false
+    @State private var currentPassword = ""
     @State private var isDeleting = false
     @State private var errorMessage: String?
 
@@ -350,21 +352,42 @@ struct SafetySettingsView: View {
         }.background(LauverDesign.ColorToken.background).navigationTitle("Settings")
             .alert("Delete your account?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete Account", role: .destructive) {
-                    isDeleting = true
-                    errorMessage = nil
-                    Task {
-                        do {
-                            try await accountDeletionService.deleteAccount()
-                            signOut()
-                        } catch {
-                            isDeleting = false
-                            errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
-                        }
-                    }
+                    showingDeleteReauthentication = true
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This action cannot be undone. You will be signed out immediately.")
+            }
+            .sheet(isPresented: $showingDeleteReauthentication) {
+                VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
+                    Text("Re-authenticate to delete").font(.title2.weight(.bold))
+                    Text("Enter your current password to permanently delete this account.")
+                        .foregroundStyle(.secondary)
+                    SecureField("Current password", text: $currentPassword)
+                        .textFieldStyle(.roundedBorder)
+                        .accessibilityIdentifier("settings-delete-account-password")
+                    Button("Permanently Delete Account", role: .destructive) {
+                        isDeleting = true
+                        showingDeleteReauthentication = false
+                        errorMessage = nil
+                        let password = currentPassword
+                        currentPassword = ""
+                        Task {
+                            do {
+                                try await accountDeletionService.deleteAccount(currentPassword: password)
+                                signOut()
+                            } catch {
+                                isDeleting = false
+                                errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
+                            }
+                        }
+                    }
+                    .disabled(currentPassword.isEmpty || isDeleting)
+                    .accessibilityIdentifier("settings-delete-account-submit")
+                    Button("Cancel") { showingDeleteReauthentication = false }
+                }
+                .padding(LauverDesign.Spacing.large)
+                .presentationDetents([.medium])
             }
     }
 }
