@@ -21,6 +21,7 @@ Date: 2026-09-17
 - `xcodebuild test -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -destination "platform=iOS Simulator,id=F6A3D49F-DC24-40C3-A717-305EB0B9F4F5" -only-testing:LauverTests` — **106/106 passed**.
 - `xcodebuild build -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging` — **passed** (simulator build; existing CLLocation concurrency warnings only).
 - Render staging smoke using a disposable Email account — **passed**: registration, password re-authenticated deletion (`202`), and old access-token rejection (`401`). Deletion job: `6e26ea20-0dc3-4c54-9b18-21038c33a0f2`.
+- Render staging Strava-connected account — **passed**: Strava status was `connected`, password re-authenticated deletion returned `202`, both old access and refresh tokens returned `401`, and PostgreSQL recorded deletion job `f3588ff7-e8be-4499-bce1-0467b43d6786` as `COMPLETED` on attempt 1 with no error; the associated user row was absent after cleanup.
 - The full native test invocation was interrupted by the simulator test runner after package/build startup; it was not counted as a pass.
 
 ## Remaining acceptance / blockers
