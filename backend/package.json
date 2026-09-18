@@ -22,6 +22,7 @@
     "verify:step-08:staging": "tsx scripts/verify-step-08-staging.ts",
     "admin:create": "tsx scripts/create-admin.ts",
     "verify:step-13:staging": "tsx scripts/verify-step-13-staging.ts",
+    "verify:step-13:moderation": "tsx scripts/verify-step-13-moderation-staging.ts",
     "reconcile:stream-memberships": "tsx scripts/reconcile-stream-memberships.ts"
   },
   "dependencies": {

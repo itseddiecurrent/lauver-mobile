@@ -81,6 +81,13 @@ export class StreamService {
       await this.client.upsertUsers(members.map(id => ({ id, role: 'user' as const })));
       const channel = this.client.channel('messaging', channelId, { members, created_by_id: event.creatorId });
       await channel.create();
+      // `create` is idempotent and does not update members when the channel
+      // already exists. Reconcile the complete attendee set before granting
+      // the caller group-chat access.
+      const existing = await channel.queryMembers({}, {}, { limit: members.length });
+      const existingIDs = new Set(existing.members.map(member => member.user_id ?? member.user?.id));
+      const missing = members.filter(id => !existingIDs.has(id));
+      if (missing.length) await channel.addMembers(missing);
       return { channelType: 'messaging', channelId, members };
     } catch {
       throw new ProfileError(503, 'chat_unavailable', 'Chat is temporarily unavailable. Please try again.');
@@ -238,11 +245,24 @@ export class StreamService {
       isEvent = Boolean(event?.status === 'UPCOMING' && event.attendees.some(attendee => attendee.userId === userId) && ids.includes(userId));
     }
     if (!isDirect && !isEvent) throw new ProfileError(403, 'chat_forbidden', 'This conversation is unavailable.');
-    const message = await this.client.getMessage(messageId);
-    if (message.message.cid !== `messaging:${channelId}` || !message.message.user?.id || message.message.user.id === userId || (isEvent && !ids.includes(message.message.user.id))) {
+    let messageCID: string | undefined, messageUserID: string | undefined, messageText: string, messageDeletedAt: string | undefined;
+    try {
+      const response = await this.client.getMessage(messageId);
+      messageCID = response.message.cid; messageUserID = response.message.user?.id; messageText = response.message.text ?? ''; messageDeletedAt = response.message.deleted_at;
+    }
+    catch {
+      // Stream can briefly return 404 for a freshly-created event message.
+      // Querying the private channel gives the same authorization boundary
+      // while allowing the report flow to tolerate that eventual consistency.
+      const result = await channel.query({ messages: { limit: 100 } });
+      const found = result.messages.find(candidate => candidate.id === messageId);
+      if (!found) throw new ProfileError(404, 'message_not_found', 'Message not found.');
+      messageCID = found.cid; messageUserID = found.user?.id; messageText = found.text ?? ''; messageDeletedAt = found.deleted_at;
+    }
+    if (messageCID !== `messaging:${channelId}` || !messageUserID || messageUserID === userId || messageDeletedAt || (isEvent && !ids.includes(messageUserID))) {
       throw new ProfileError(404, 'message_not_found', 'Message not found.');
     }
-    return { targetUserId: message.message.user.id, messageId, messageText: message.message.text ?? '', messageSenderId: message.message.user.id };
+    return { targetUserId: messageUserID, messageId, messageText, messageSenderId: messageUserID };
   }
 
   async blockPair(userId: string, target: string) {
