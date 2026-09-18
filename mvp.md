@@ -1145,7 +1145,7 @@ xcodebuild test \
 
 ### Step 14：账户删除全链路
 
-**状态：🟡 Email + Strava 全链路及 iPhone 17e 真机验收已通过，完整验收待完成（2026-09-18）。** 删除编排、幂等 retry、会话立即撤销、外部清理接线、Email/Apple 重新认证、原生设置入口和真机构建已完成；Render staging 已验证 Strava connected 账户删除、旧 token 失效、deletion job 完成、PostgreSQL/Stream 用户清理，真机强退重启后仍停留 Login。真实 Apple provider cleanup 和带头像的 object storage fixture 仍待完成。证据见 `artifacts/acceptance/step-14.md`。
+**状态：✅ 已完成并签收（2026-09-18）。** Email + Strava 以及 Apple + 头像账户均已在 Render staging 和实体 iPhone 17e 完成删除全链路：重新认证、立即撤销 access/refresh token、Apple/Strava provider cleanup、PostgreSQL/Stream/object storage 清理、后台 job 完成、强退重启后仍停留 Login。证据见 `artifacts/acceptance/step-14.md`。
 
 **依赖：** Step 04、Step 05、Step 08、Step 09、Step 10、Step 12、Step 13。
 

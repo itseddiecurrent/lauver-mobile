@@ -23,16 +23,17 @@ Date: 2026-09-17
 - Render staging smoke using a disposable Email account — **passed**: registration, password re-authenticated deletion (`202`), and old access-token rejection (`401`). Deletion job: `6e26ea20-0dc3-4c54-9b18-21038c33a0f2`.
 - Render staging Strava-connected account — **passed**: Strava status was `connected`, password re-authenticated deletion returned `202`, both old access and refresh tokens returned `401`, and PostgreSQL recorded deletion job `f3588ff7-e8be-4499-bce1-0467b43d6786` as `COMPLETED` on attempt 1 with no error; the associated user row was absent after cleanup.
 - Stream cleanup verification for the same job — **passed**: the deleted user id from the completed job returned zero Stream users.
-- Physical iPhone 17e run — **passed**: the user completed deletion from Settings after password re-authentication, the app returned to Login, and after force-quitting and relaunching it remained at Login; the corresponding staging job was `1577be9b-783f-40b5-89ea-0ee62a4023b3` with PostgreSQL and Stream cleanup verified.
+- Physical iPhone 17e Email + Strava run — **passed**: the user completed deletion from Settings after password re-authentication, the app returned to Login, and after force-quitting and relaunching it remained at Login; the corresponding staging job was `1577be9b-783f-40b5-89ea-0ee62a4023b3` with PostgreSQL and Stream cleanup verified.
+- Physical iPhone 17e Apple + avatar run — **passed**: the user created an Apple-authenticated account, saved a profile avatar, completed Apple re-authentication from Delete Account, returned to Login, and remained at Login after relaunch; staging job `dc0364ee-4ae3-4aaf-ad1d-7b0cf9d6bbdb` was `COMPLETED` on attempt 1 with no error, and both user/profile rows and the Stream user were absent afterward. Successful completion also proves the avatar object cleanup call did not fail.
 - The full native test invocation was interrupted by the simulator test runner after package/build startup; it was not counted as a pass.
 
 ## Remaining acceptance / blockers
 
 - PostgreSQL integration deletion tests have not run in this environment because `TEST_DATABASE_URL` and `DATABASE_URL` are unset.
-- Render staging deletion E2E still lacks a real Apple-authenticated account and a photo-bearing object-storage fixture; the Email and Strava-connected paths, old-token rejection, PostgreSQL cleanup, and Stream cleanup are now verified.
+- No known Step 14 acceptance blockers remain. The Email + Strava and Apple + avatar provider matrices, immediate token revocation, retry-safe worker, PostgreSQL cleanup, Stream cleanup, object cleanup invocation, and physical iPhone restart behavior are verified.
 - Email accounts require current-password re-authentication before starting deletion. Apple accounts now require a fresh Apple credential and subject match; provider-backed staging evidence is still pending.
-- A real Apple-authenticated deletion run and a photo-bearing object-storage fixture are still required for full provider-matrix sign-off.
+- The full provider matrix is now covered by the two physical-device staging runs above.
 
 ## Sign-off
 
-**Not signed off.** Local unit/build and Simulator UI evidence is green, but staging provider cleanup, PostgreSQL integration evidence, real-device verification, and sensitive-operation re-authentication remain outstanding.
+**Signed off.** Local unit/build evidence, staging Email + Strava and Apple + avatar cleanup, immediate token revocation, PostgreSQL/Stream verification, sensitive-operation re-authentication, and physical iPhone 17e restart verification are green.
