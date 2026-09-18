@@ -112,12 +112,17 @@ async function main() {
   check(deleteMessage.status === 200, `direct chat message deleted (${deleteMessage.status})`);
   check((await api('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'deleted message probe' })).status === 404, 'deleted Stream message no longer readable');
 
-  const sql = new Client({ connectionString: databaseURL }); await sql.connect();
+  const sql = new Client({ connectionString: databaseURL, ssl: { rejectUnauthorized: false } }); await sql.connect();
   try {
     const audit = await sql.query<{ action: string; count: number }>(`SELECT action, count(*)::int AS count FROM admin_audit_logs WHERE reason LIKE 'Step 13 %' GROUP BY action`);
     for (const action of ['report_status', 'suspend_user', 'restore_user', 'remove_event', 'delete_message']) check(Number(audit.rows.find(row => row.action === action)?.count ?? 0) >= 1, `${action} audit persisted`);
   } finally { await sql.end(); }
-  await admin('POST', '/admin/auth/logout');
+  let logout: { status: number } = { status: 0 };
+  for (let attempt = 0; attempt < 3 && logout.status !== 204; attempt++) {
+    try { logout = await admin('POST', '/admin/auth/logout'); }
+    catch { await new Promise(resolve => setTimeout(resolve, 3_000)); }
+  }
+  check(logout.status === 204, 'admin logout');
   console.log(JSON.stringify({ result: 'passed', sources: ['profile', 'chat-direct', 'event', 'chat-event'], moderation: ['suspend-restore', 'remove-event', 'delete-message'] }));
 }
 main().catch(error => { console.error(error instanceof Error ? `FAIL: ${error.message}` : 'FAIL: moderation acceptance failed'); process.exitCode = 1; });

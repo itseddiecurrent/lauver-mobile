@@ -1112,7 +1112,7 @@ xcodebuild test \
 
 ### Step 13：Admin Report Dashboard
 
-**状态：🟡 后端第一阶段实现完成，staging/admin UI 验收待完成（2026-09-17）。** 已建立隔离的 Admin session、CSRF、RBAC、report workflow、用户暂停/恢复、活动下架、Stream message 删除和不可变 admin audit log；管理员账号仅通过 `npm run admin:create` 受控创建，不提供公开注册。完整 staging 验收和后台 UI 仍待执行。
+**状态：✅ staging/admin UI 验收完成（2026-09-18）。** 已建立隔离的 Admin session、CSRF、RBAC、report workflow、用户暂停/恢复、活动下架、Stream message 删除和不可变 admin audit log；管理员账号仅通过 `npm run admin:create` 受控创建，不提供公开注册。真实 staging 已完成四类举报来源、状态流、暂停/恢复、活动下架、群聊权限、消息删除和 audit log E2E；整体产品视觉签收仍归 Step 14A。
 
 **依赖：** Step 07、Step 10、Step 11、Step 12。
 

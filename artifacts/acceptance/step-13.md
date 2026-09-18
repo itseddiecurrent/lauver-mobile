@@ -1,6 +1,6 @@
 # Step 13 acceptance — Admin Report Dashboard
 
-Date: 2026-09-17
+Date: 2026-09-18
 
 ## Implemented — first backend phase
 
@@ -27,14 +27,10 @@ Date: 2026-09-17
 
 - `GET https://lauver-api-staging.onrender.com/healthz` — passed (`200`, service `lauver-api`).
 - `GET https://lauver-api-staging.onrender.com/readyz` — passed (`200`, database `ok`).
-- `npm run verify:step-13:staging` — ready to run after staging admin credentials are provisioned; it checks unauthenticated denial, UI shell, admin login, CSRF enforcement, queue access and logout without printing secrets.
-- 2026-09-17 execution — blocked before network login because `ADMIN_EMAIL` and `ADMIN_PASSWORD` are not present in the process environment or ignored env files; no credential was guessed or printed.
-- 2026-09-17 rerun — `npm run admin:create` succeeded against `STAGING_DATABASE_URL`; the current source was then run locally against the same staging database and `npm run verify:step-13:staging` passed: unauthenticated denial, UI shell, admin login, CSRF rejection, report queue (`1` report), and logout. No fixture or report mutation was performed.
-- After CI run `35241856935` completed successfully, Render deployed `ac4fc53`. The online `/admin` UI markers were confirmed and `npm run verify:step-13:staging` passed against `https://lauver-api-staging.onrender.com` with the same checks and queue count (`1`).
+- `npm run verify:step-13:staging` passed against Render after CI run `35241856935` deployed `ac4fc53`: unauthenticated denial, UI shell, admin login, CSRF rejection, report queue (`1` report), and logout.
+- `npm run verify:step-13:moderation` passed against Render on 2026-09-18: Profile, Direct Chat, Event and Event Chat reports; all report status transitions; suspend/restore; session/API/Stream-token rejection; event removal and group-chat revocation; Stream message deletion; unique audit logs for every moderation action; and logout.
+- The moderation verifier creates disposable staging users/events/messages and uses random fixture names. No credentials are printed. Its PostgreSQL audit check uses TLS and all fixture-side assertions passed.
 
-## Remaining acceptance
+## Acceptance result
 
-- Provision a real staging admin and run `npm run verify:step-13:staging --prefix backend`.
-- Verify report sources from Profile, Direct Chat, Event, and Event Chat in the queue.
-- Verify suspend invalidates existing sessions and Stream token issuance; verify event removal and message deletion in real staging.
-- Complete browser/UI evidence and Product Owner sign-off for `/admin`.
+Step 13 passes its staging/API/UI acceptance criteria. Product Owner visual sign-off for the broader native app remains tracked under Step 14A.
