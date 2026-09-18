@@ -16,6 +16,10 @@ enum LauverDesign {
         static let accent = Color(red: 232 / 255, green: 96 / 255, blue: 44 / 255)
         static let background = adaptive(light: 0xF0EDE8, dark: 0x161412)
         static let surface = adaptive(light: 0xEAE6DF, dark: 0x201D1A)
+        static let elevated = adaptive(light: 0xFFFFFF, dark: 0x2C2825)
+        static let text = adaptive(light: 0x1C1A18, dark: 0xEDE9E3)
+        static let textSecondary = adaptive(light: 0x555555, dark: 0xB0A498)
+        static let divider = adaptive(light: 0xD9D0C7, dark: 0x2E2A26)
         static let danger = Color.red
 
         private static func adaptive(light: UInt32, dark: UInt32) -> Color {

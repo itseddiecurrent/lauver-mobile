@@ -301,25 +301,41 @@ private struct LoginPlaceholderView: View {
     @State private var appleNonce: String?
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            LauverDesign.ColorToken.background.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: LauverDesign.Spacing.large) {
                     VStack(spacing: LauverDesign.Spacing.small) {
-                        Text(AppMetadata.displayName)
-                            .font(.largeTitle.bold())
-                            .accessibilityIdentifier("lauver-title")
-
-                        Text("\(viewModel.configuration.environment.rawValue.capitalized) environment")
+                        Image("LauverLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 190, height: 148)
+                            .accessibilityLabel(AppMetadata.displayName)
+                        Text("AI-Powered Athletic Community")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                            .accessibilityIdentifier("app-environment")
+                            .accessibilityIdentifier("lauver-tagline")
                     }
 
                     ServiceStatusView(status: viewModel.serviceStatus) {
                         Task { await viewModel.checkHealth() }
                     }
 
-                    authForm
+                    VStack(alignment: .leading, spacing: LauverDesign.Spacing.medium) {
+                        if viewModel.authScreenMode == .login || viewModel.authScreenMode == .register {
+                            HStack(spacing: 4) {
+                                authTab("Sign In", mode: .login)
+                                authTab("Create Account", mode: .register)
+                            }
+                            .padding(4)
+                            .background(LauverDesign.ColorToken.background.opacity(0.65), in: RoundedRectangle(cornerRadius: LauverDesign.Radius.button))
+                        }
+                        Text(authTitle)
+                            .font(.title2.weight(.heavy))
+                        authForm
+                    }
+                    .padding(LauverDesign.Spacing.large)
+                    .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.card))
 
                     if let authMessage = viewModel.authMessage {
                         Text(authMessage)
@@ -329,10 +345,31 @@ private struct LoginPlaceholderView: View {
                             .accessibilityIdentifier("auth-message")
                     }
                 }
-                .padding(LauverDesign.Spacing.large)
+                .padding(.horizontal, LauverDesign.Spacing.large)
+                .padding(.vertical, LauverDesign.Spacing.large)
             }
-            .navigationTitle("Welcome")
         }
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var authTitle: String {
+        switch viewModel.authScreenMode {
+        case .login: return "Welcome back"
+        case .register: return "Join the pack"
+        case .forgotPassword: return "Reset Password"
+        case .resetPassword: return "Enter Reset Token"
+        case .resetComplete: return "Password Reset Complete"
+        }
+    }
+
+    private func authTab(_ title: String, mode: AuthScreenMode) -> some View {
+        Button(title) { viewModel.showAuthScreen(mode) }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.text : .secondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.elevated : .clear, in: RoundedRectangle(cornerRadius: 9))
+            .accessibilityIdentifier(mode == .login ? "auth-tab-login" : "auth-tab-register")
     }
 
     @ViewBuilder
@@ -351,18 +388,26 @@ private struct LoginPlaceholderView: View {
 
     private var credentialsForm: some View {
         VStack(spacing: LauverDesign.Spacing.medium) {
-            TextField("Email", text: $email)
-                .textContentType(.emailAddress)
-                .keyboardType(.emailAddress)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("auth-email")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("EMAIL").font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
+                TextField("you@example.com", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.horizontal, 14).padding(.vertical, 13)
+                    .background(LauverDesign.ColorToken.elevated, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.button))
+                    .accessibilityIdentifier("auth-email")
+            }
 
-            SecureField("Password", text: $password)
-                .textContentType(viewModel.authScreenMode == .register ? .newPassword : .password)
-                .textFieldStyle(.roundedBorder)
-                .accessibilityIdentifier("auth-password")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("PASSWORD").font(.caption2.weight(.heavy)).foregroundStyle(.secondary)
+                SecureField(viewModel.authScreenMode == .register ? "Min. 12 characters" : "••••••••", text: $password)
+                    .textContentType(viewModel.authScreenMode == .register ? .newPassword : .password)
+                    .padding(.horizontal, 14).padding(.vertical, 13)
+                    .background(LauverDesign.ColorToken.elevated, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.button))
+                    .accessibilityIdentifier("auth-password")
+            }
 
             Button(viewModel.authScreenMode == .register ? "Create Account" : "Log In") {
                 Task {
@@ -375,6 +420,7 @@ private struct LoginPlaceholderView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(LauverDesign.ColorToken.accent)
+            .controlSize(.large)
             .disabled(viewModel.isAuthSubmitting)
             .accessibilityIdentifier(viewModel.authScreenMode == .register ? "auth-register" : "auth-login")
 

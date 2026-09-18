@@ -1180,7 +1180,7 @@ xcodebuild test \
 
 ### Step 14A：UI 视觉对齐与体验优化（参照 Expo 版本）
 
-**状态：🟡 已随 Step 07 启动设计基础，逐页视觉与真机验收待完成；必须在 Step 15 前通过。** 已参照 Expo 主题源码统一原生橙色强调与暖色浅深背景/卡片，并应用于安全流程；完整截图对比及 Product Owner UI 签收尚未完成。使用 14A 编号保留现有 Step 编号和验收记录。
+**状态：🟡 进行中（2026-09-18）。** 已完成第一轮 Expo 基线盘点、Logo 原生资源接入、Design System token 扩展，以及登录/注册入口的首轮视觉对齐，并在实体 iPhone 17e 构建安装；Profile、Discover、Events、Messages、Settings 的逐页对比、截图和全功能回归仍待完成。证据见 `artifacts/acceptance/step-14a.md`。
 
 **依赖：** Step 02；设计基础与已完成页面可立即开展，其余页面随 Step 07–14 实现同步推进，最终验收依赖 Step 00–14 全部通过。
 
