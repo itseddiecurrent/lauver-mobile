@@ -369,7 +369,8 @@ struct SafetySettingsView: View {
                         .textFieldStyle(.roundedBorder)
                         .accessibilityIdentifier("settings-delete-account-password")
                     Button("Permanently Delete Account", role: .destructive) {
-                        submitDeletion { try await accountDeletionService.deleteAccount(currentPassword: currentPassword) }
+                        let password = currentPassword
+                        submitDeletion { try await accountDeletionService.deleteAccount(currentPassword: password) }
                     }
                     .disabled(currentPassword.isEmpty || isDeleting)
                     .accessibilityIdentifier("settings-delete-account-submit")
