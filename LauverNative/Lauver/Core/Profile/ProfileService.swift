@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 @preconcurrency import MapKit
 import UIKit
 
@@ -768,7 +769,7 @@ private func nilIfBlank(_ value: String) -> String? {
 }
 
 @MainActor
-final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate {
+final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocalSearchCompleterDelegate, CLLocationManagerDelegate {
     @Published var query = "" {
         didSet { completer.queryFragment = query }
     }
@@ -776,11 +777,16 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
     @Published private(set) var errorMessage: String?
 
     private let completer = MKLocalSearchCompleter()
+    private let locationManager = CLLocationManager()
+    private var locationContinuation: CheckedContinuation<CLLocation, Error>?
+    private var authorizationContinuation: CheckedContinuation<Void, Error>?
 
     override init() {
         super.init()
         completer.delegate = self
         completer.resultTypes = .address
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyKilometer
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
@@ -833,9 +839,103 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
             longitude: cityItem.placemark.coordinate.longitude
         )
     }
+
+    func currentCity() async throws -> ProfileCity {
+        let location = try await currentLocation()
+        let placemark = try await CLGeocoder().reverseGeocodeLocation(location).first
+        guard let placemark else { throw CitySearchError.noResult }
+        let cityName = placemark.locality ?? placemark.subAdministrativeArea ?? placemark.administrativeArea
+        guard let cityName, !cityName.isEmpty, let countryCode = placemark.isoCountryCode else {
+            throw CitySearchError.noResult
+        }
+
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = [cityName, placemark.administrativeArea, countryCode]
+            .compactMap { $0 }
+            .joined(separator: ", ")
+        request.resultTypes = .address
+        request.region = MKCoordinateRegion(
+            center: location.coordinate,
+            latitudinalMeters: 150_000,
+            longitudinalMeters: 150_000
+        )
+        let response = try await MKLocalSearch(request: request).start()
+        guard let cityItem = response.mapItems.first(where: {
+            let item = $0.placemark
+            let localityMatches = item.locality?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
+            let countyMatches = item.subAdministrativeArea?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
+            let nameMatches = item.name?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
+            return (localityMatches || countyMatches || nameMatches) &&
+                item.thoroughfare == nil && item.subThoroughfare == nil
+        }) else {
+            throw CitySearchError.noResult
+        }
+        return ProfileCity(
+            name: cityName,
+            regionCode: placemark.administrativeArea,
+            countryCode: countryCode,
+            latitude: cityItem.placemark.coordinate.latitude,
+            longitude: cityItem.placemark.coordinate.longitude
+        )
+    }
+
+    private func currentLocation() async throws -> CLLocation {
+        guard CLLocationManager.locationServicesEnabled() else { throw CitySearchError.locationDisabled }
+        switch locationManager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse: break
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+            try await waitForAuthorization()
+        default:
+            throw CitySearchError.locationDenied
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            locationContinuation = continuation
+            locationManager.requestLocation()
+        }
+    }
+
+    private func waitForAuthorization() async throws {
+        if locationManager.authorizationStatus == .authorizedAlways || locationManager.authorizationStatus == .authorizedWhenInUse { return }
+        try await withCheckedThrowingContinuation { continuation in
+            authorizationContinuation = continuation
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        switch manager.authorizationStatus {
+        case .authorizedAlways, .authorizedWhenInUse:
+            authorizationContinuation?.resume()
+            authorizationContinuation = nil
+        case .denied, .restricted:
+            authorizationContinuation?.resume(throwing: CitySearchError.locationDenied)
+            authorizationContinuation = nil
+        default: break
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        locationContinuation?.resume(returning: location)
+        locationContinuation = nil
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        locationContinuation?.resume(throwing: error)
+        locationContinuation = nil
+    }
 }
 
 enum CitySearchError: LocalizedError {
     case noResult
-    var errorDescription: String? { "Select a city-level search result." }
+    case locationDisabled
+    case locationDenied
+
+    var errorDescription: String? {
+        switch self {
+        case .noResult: return "Select a city-level search result."
+        case .locationDisabled: return "Location Services are turned off. Enable them in Settings."
+        case .locationDenied: return "Lauver needs location permission to identify your city."
+        }
+    }
 }

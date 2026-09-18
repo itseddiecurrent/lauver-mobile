@@ -429,6 +429,28 @@ private struct CitySearchView: View {
                     ContentUnavailableView("Search for a city", systemImage: "building.2")
                 }
             }
+            .safeAreaInset(edge: .top) {
+                Button {
+                    resolving = true
+                    Task {
+                        do { selection(try await search.currentCity()) }
+                        catch {
+                            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Could not determine your city."
+                            resolving = false
+                        }
+                    }
+                } label: {
+                    Label("Use Current Location", systemImage: "location.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(LauverDesign.ColorToken.accent)
+                .disabled(resolving)
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.bar)
+                .accessibilityIdentifier("profile-city-use-location")
+            }
             .searchable(text: $search.query, prompt: "City name")
             .navigationTitle("Choose City")
             .navigationBarTitleDisplayMode(.inline)
