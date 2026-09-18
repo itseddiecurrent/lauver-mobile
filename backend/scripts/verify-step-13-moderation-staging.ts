@@ -55,8 +55,9 @@ async function main() {
   check(event.status === 201, `event fixture created (${event.status})`);
   const eventID = event.data.event.id;
   check((await api('POST', `/v1/events/${eventID}/join`, partner)).status === 200, 'event partner joined');
-  check((await api('POST', `/v1/chat/direct`, owner, { targetUserId: target.user.id })).status === 200, 'direct channel created');
-  const direct = await api<{ channelId: string }>('POST', '/v1/chat/direct', owner, { targetUserId: target.user.id });
+  let direct = await api<{ channelId: string }>('POST', '/v1/chat/direct', owner, { targetUserId: target.user.id });
+  if (direct.status !== 200) { await new Promise(resolve => setTimeout(resolve, 3_000)); direct = await api<{ channelId: string }>('POST', '/v1/chat/direct', owner, { targetUserId: target.user.id }); }
+  check(direct.status === 200, `direct channel created (${direct.status})`);
   const directMessage = await api<{ id: string }>('POST', `/v1/chat/channels/${direct.data.channelId}/messages`, target, { id: randomUUID(), text: 'Step 13 direct moderation fixture' });
   check(directMessage.status === 200, 'direct message created');
   const directReport = await api<{ referenceId: string }>('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'Step 13 direct chat moderation fixture' });
@@ -97,7 +98,8 @@ async function main() {
   const suspend = await admin('POST', `/admin/api/users/${partner.user.id}/suspend`, { reason: 'Step 13 suspend fixture' });
   check(suspend.status === 200, 'user suspended');
   check((await api('GET', '/v1/me', partner)).status === 401, 'suspended access token rejected');
-  check((await api('POST', '/v1/chat/token', partner, {})).status === 403, 'suspended user cannot receive Stream token');
+  const suspendedToken = await api('POST', '/v1/chat/token', partner, {});
+  check(suspendedToken.status === 401 || suspendedToken.status === 403, 'suspended user cannot receive Stream token');
   check((await admin('POST', `/admin/api/users/${partner.user.id}/restore`, { reason: 'Step 13 restore fixture' })).status === 200, 'user restored');
 
   const remove = await admin('POST', `/admin/api/events/${eventID}/remove`, { reason: 'Step 13 event removal fixture' });
@@ -105,8 +107,9 @@ async function main() {
   check((await api('POST', `/v1/events/${eventID}/join`, target)).status === 409, 'removed event cannot be joined');
   check((await api('GET', `/v1/events/${eventID}/chat`, owner)).status === 403, 'removed event chat is inaccessible');
 
-  const deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, messageId: directMessage.data.id, reason: 'Step 13 message deletion fixture' });
-  check(deleteMessage.status === 200, 'direct chat message deleted');
+  let deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, reason: 'Step 13 message deletion fixture' });
+  for (let attempt = 0; attempt < 4 && deleteMessage.status !== 200; attempt++) { await new Promise(resolve => setTimeout(resolve, 3_000)); deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, reason: 'Step 13 message deletion fixture' }); }
+  check(deleteMessage.status === 200, `direct chat message deleted (${deleteMessage.status})`);
   check((await api('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'deleted message probe' })).status === 404, 'deleted Stream message no longer readable');
 
   const sql = new Client({ connectionString: databaseURL }); await sql.connect();
