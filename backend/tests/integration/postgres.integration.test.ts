@@ -1,4 +1,5 @@
 import { Client } from 'pg';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -456,21 +457,15 @@ describe('PostgreSQL integration', () => {
       `INSERT INTO profiles(user_id, photo_key, updated_at) VALUES($1, $2, CURRENT_TIMESTAMP)`,
       [userID, 'profile-photos/order-first.jpg'],
     );
+    const firstID = randomUUID();
+    const secondID = randomUUID();
     await sqlClient.query(
-      `INSERT INTO profile_photos(user_id, object_key, sort_order, is_primary, updated_at)
+      `INSERT INTO profile_photos(id, user_id, object_key, sort_order, is_primary, updated_at)
        VALUES
-         ($1, 'profile-photos/order-first.jpg', 0, true, CURRENT_TIMESTAMP),
-         ($1, 'profile-photos/order-second.jpg', 1, false, CURRENT_TIMESTAMP)`,
-      [userID],
+         ($1, $3, 'profile-photos/order-first.jpg', 0, true, CURRENT_TIMESTAMP),
+         ($2, $3, 'profile-photos/order-second.jpg', 1, false, CURRENT_TIMESTAMP)`,
+      [firstID, secondID, userID],
     );
-    const photos = await sqlClient.query<{ id: string }>(
-      `SELECT id FROM profile_photos WHERE user_id = $1 ORDER BY sort_order`,
-      [userID],
-    );
-    const firstID = photos.rows[0]?.id;
-    const secondID = photos.rows[1]?.id;
-    expect(firstID).toBeDefined();
-    expect(secondID).toBeDefined();
 
     const response = await request(profileApp)
       .patch('/v1/me/photos/order')
