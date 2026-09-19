@@ -123,6 +123,12 @@ final class AppViewModel: ObservableObject {
         }
     }
 
+    func signInWithGoogle() async {
+        await authenticate(appleUserIdentifier: nil) {
+            try await authService.signInWithGoogle()
+        }
+    }
+
     func appleSignInDidFail(_ error: Error) {
         if let authorizationError = error as? ASAuthorizationError,
            authorizationError.code == .canceled {
@@ -244,6 +250,7 @@ final class AppViewModel: ObservableObject {
 struct ContentView: View {
     @StateObject private var viewModel: AppViewModel
     private let discoverService: any DiscoverServicing
+    private let matchService: any MatchServicing
     private let profileService: any ProfileServicing
     private let accountDeletionService: any AccountDeletionServicing
     private let safetyService: any SafetyServicing
@@ -252,6 +259,7 @@ struct ContentView: View {
 
     init(container: AppContainer) {
         discoverService = container.discoverService
+        matchService = container.matchService
         profileService = container.profileService
         accountDeletionService = container.accountDeletionService
         safetyService = container.safetyService
@@ -274,7 +282,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, accountDeletionService: accountDeletionService, discoverService: discoverService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, accountDeletionService: accountDeletionService, discoverService: discoverService, matchService: matchService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
             }
         }
         .task {
@@ -304,16 +312,23 @@ private struct LoginPlaceholderView: View {
         ZStack {
             LauverDesign.ColorToken.background.ignoresSafeArea()
             ScrollView {
-                VStack(spacing: LauverDesign.Spacing.large) {
-                    VStack(spacing: LauverDesign.Spacing.small) {
+                VStack(spacing: 32) {
+                    VStack(spacing: 6) {
                         Image("LauverLogo")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 190, height: 148)
+                            // Match Expo's wide logo bounding box. The source asset
+                            // already contains transparent breathing room.
+                            .frame(width: 240, height: 80)
                             .accessibilityLabel(AppMetadata.displayName)
-                        Text("AI-Powered Athletic Community")
+                            .accessibilityIdentifier("lauver-title")
+                        Text(viewModel.configuration.environment == .staging ? "Staging environment" : "Production environment")
+                            .font(.caption2)
+                            .foregroundStyle(LauverDesign.ColorToken.textSecondary)
+                            .accessibilityIdentifier("app-environment")
+                        Text("Athletic Community")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(LauverDesign.ColorToken.textSecondary)
                             .accessibilityIdentifier("lauver-tagline")
                     }
 
@@ -328,14 +343,15 @@ private struct LoginPlaceholderView: View {
                                 authTab("Create Account", mode: .register)
                             }
                             .padding(4)
-                            .background(LauverDesign.ColorToken.background.opacity(0.65), in: RoundedRectangle(cornerRadius: LauverDesign.Radius.button))
+                            .background(LauverDesign.ColorToken.divider, in: RoundedRectangle(cornerRadius: 14))
                         }
                         Text(authTitle)
                             .font(.title2.weight(.heavy))
+                            .foregroundStyle(LauverDesign.ColorToken.text)
                         authForm
                     }
-                    .padding(LauverDesign.Spacing.large)
-                    .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.card))
+                    .padding(24)
+                    .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: 24))
 
                     if let authMessage = viewModel.authMessage {
                         Text(authMessage)
@@ -345,8 +361,8 @@ private struct LoginPlaceholderView: View {
                             .accessibilityIdentifier("auth-message")
                     }
                 }
-                .padding(.horizontal, LauverDesign.Spacing.large)
-                .padding(.vertical, LauverDesign.Spacing.large)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 24)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -365,10 +381,10 @@ private struct LoginPlaceholderView: View {
     private func authTab(_ title: String, mode: AuthScreenMode) -> some View {
         Button(title) { viewModel.showAuthScreen(mode) }
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.text : .secondary)
+            .foregroundStyle(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.text : LauverDesign.ColorToken.textSecondary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 9)
-            .background(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.elevated : .clear, in: RoundedRectangle(cornerRadius: 9))
+            .background(viewModel.authScreenMode == mode ? LauverDesign.ColorToken.elevated : .clear, in: RoundedRectangle(cornerRadius: 10))
             .accessibilityIdentifier(mode == .login ? "auth-tab-login" : "auth-tab-register")
     }
 
@@ -409,7 +425,7 @@ private struct LoginPlaceholderView: View {
                     .accessibilityIdentifier("auth-password")
             }
 
-            Button(viewModel.authScreenMode == .register ? "Create Account" : "Log In") {
+            Button(viewModel.authScreenMode == .register ? "Create Account" : "Sign In") {
                 Task {
                     if viewModel.authScreenMode == .register {
                         await viewModel.register(email: email, password: password)
@@ -418,9 +434,7 @@ private struct LoginPlaceholderView: View {
                     }
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(LauverDesign.ColorToken.accent)
-            .controlSize(.large)
+            .buttonStyle(LauverPrimaryButtonStyle())
             .disabled(viewModel.isAuthSubmitting)
             .accessibilityIdentifier(viewModel.authScreenMode == .register ? "auth-register" : "auth-login")
 
@@ -460,6 +474,22 @@ private struct LoginPlaceholderView: View {
             .frame(height: 48)
             .disabled(viewModel.isAuthSubmitting)
             .accessibilityIdentifier("auth-apple")
+
+            Button {
+                Task { await viewModel.signInWithGoogle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Text("G")
+                        .font(.headline.weight(.black))
+                        .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
+                    Text("Continue with Google")
+                        .font(.body.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(LauverSecondaryButtonStyle())
+            .disabled(viewModel.isAuthSubmitting)
+            .accessibilityIdentifier("auth-google")
 
             Button(viewModel.authScreenMode == .register ? "Already have an account?" : "Create an account") {
                 viewModel.showAuthScreen(viewModel.authScreenMode == .register ? .login : .register)
@@ -543,6 +573,7 @@ private struct AuthenticatedShellView: View {
     let profileService: any ProfileServicing
     let accountDeletionService: any AccountDeletionServicing
     let discoverService: any DiscoverServicing
+    let matchService: any MatchServicing
     let safetyService: any SafetyServicing
     let eventsService: any EventsServicing
     let stravaService: any StravaServicing
@@ -551,24 +582,33 @@ private struct AuthenticatedShellView: View {
 
 
     var body: some View {
-        TabView {
+        TabView(selection: $viewModel.selectedTab) {
             NavigationStack {
                 DiscoverView(service: discoverService, profileService: profileService, safetyService: safetyService)
             }
+            .tag(AppTab.discover)
             .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
+
+            NavigationStack {
+                MatchView(matchService: matchService, profileService: profileService, safetyService: safetyService, chatService: chatService)
+            }
+            .tag(AppTab.match)
+            .tabItem { Label(AppTab.match.title, systemImage: AppTab.match.systemImage) }
 
             NavigationStack {
                 EventsView(service: eventsService)
             }
+            .tag(AppTab.events)
             .tabItem { Label(AppTab.events.title, systemImage: AppTab.events.systemImage) }
 
             NavigationStack {
                 if let chatService {
-                    MessagesView(service: chatService, discoverService: discoverService, safetyService: safetyService)
+                    MessagesView(service: chatService)
                 } else {
                     PlaceholderScreen(tab: .messages, message: "Your conversations will appear here.")
                 }
             }
+            .tag(AppTab.messages)
             .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
             .badge(chat.unreadMessages > 0 ? min(chat.unreadMessages, 99) : 0)
 
@@ -577,11 +617,49 @@ private struct AuthenticatedShellView: View {
                     Task { await viewModel.signOut() }
                 }
             }
+            .tag(AppTab.profile)
             .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
         }
         .tint(LauverDesign.ColorToken.accent)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .environmentObject(chat)
         .onDisappear { chat.stop() }
+    }
+}
+
+private struct MatchGateView: View {
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: LauverDesign.Spacing.large) {
+                Image(systemName: AppTab.match.systemImage)
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(LauverDesign.ColorToken.accent)
+                    .accessibilityHidden(true)
+
+                VStack(spacing: LauverDesign.Spacing.small) {
+                    Text("Match is opt-in")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(LauverDesign.ColorToken.text)
+                    Text("Your public workout profile only enters the Match pool after you explicitly enable it in Profile settings. You can turn it off at any time.")
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(LauverDesign.ColorToken.textSecondary)
+                }
+
+                Button("Review Profile Settings") {
+                    selectedTab = .profile
+                }
+                .buttonStyle(LauverPrimaryButtonStyle())
+                .accessibilityIdentifier("match-review-settings")
+            }
+            .padding(LauverDesign.Spacing.large)
+            .frame(maxWidth: .infinity)
+        }
+        .background(LauverDesign.ColorToken.background)
+        .navigationTitle("Match")
+        .accessibilityIdentifier("screen-match")
     }
 }
 
@@ -621,23 +699,22 @@ private struct ServiceStatusView: View {
     let status: ServiceStatus
     let retry: () -> Void
 
+    @ViewBuilder
     var body: some View {
-        VStack(spacing: LauverDesign.Spacing.medium) {
-            switch status {
-            case .loading:
-                LoadingStateView(title: "Checking Lauver API")
-            case .online:
-                Label("API Online", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(LauverDesign.ColorToken.accent)
-                    .accessibilityIdentifier("api-online")
-            case let .offline(message, requestID):
+        switch status {
+        case .loading, .online:
+            // Health checks still run in the background, but implementation
+            // details are intentionally invisible during the normal flow.
+            EmptyView()
+        case let .offline(message, requestID):
+            VStack(spacing: LauverDesign.Spacing.medium) {
                 ErrorStateView(message: message, requestID: requestID)
                 RetryButton(action: retry)
             }
+            .padding()
+            .frame(maxWidth: .infinity)
+            .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.card))
         }
-        .padding()
-        .frame(maxWidth: .infinity)
-        .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: LauverDesign.Radius.card))
     }
 }
 import SwiftUI
@@ -723,6 +800,10 @@ struct EventsView: View {
             }
         }
         .safeAreaPadding(.bottom, 24)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(LauverDesign.ColorToken.background)
+        .tint(LauverDesign.ColorToken.accent)
         .navigationTitle("Events")
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Create", systemImage: "plus") { showCreate = true }.accessibilityIdentifier("events-create") } }
         .sheet(isPresented: $showCreate, onDismiss: {

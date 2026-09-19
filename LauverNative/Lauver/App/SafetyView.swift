@@ -309,6 +309,7 @@ struct BlockedUsersView: View {
 
 struct SafetySettingsView: View {
     let service: any SafetyServicing
+    let profileService: any ProfileServicing
     let stravaService: any StravaServicing
     let healthUploader: (any HealthWorkoutUploading)?
     let signOut: () -> Void
@@ -319,8 +320,12 @@ struct SafetySettingsView: View {
     @State private var appleNonce: String?
     @State private var isDeleting = false
     @State private var errorMessage: String?
+    @State private var isVisibleInMatch = false
+    @State private var isLoadingMatchVisibility = true
+    @State private var isSavingMatchVisibility = false
+    @State private var matchVisibilityError: String?
 
-    init(service: any SafetyServicing, stravaService: any StravaServicing, accountDeletionService: any AccountDeletionServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) { self.service = service; self.stravaService = stravaService; self.accountDeletionService = accountDeletionService; self.healthUploader = healthUploader; self.signOut = signOut }
+    init(service: any SafetyServicing, profileService: any ProfileServicing, stravaService: any StravaServicing, accountDeletionService: any AccountDeletionServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) { self.service = service; self.profileService = profileService; self.stravaService = stravaService; self.accountDeletionService = accountDeletionService; self.healthUploader = healthUploader; self.signOut = signOut }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
@@ -335,6 +340,23 @@ struct SafetySettingsView: View {
                     NavigationLink { BlockedUsersView(service: service) } label: {
                         Label("Blocked Users", systemImage: "person.crop.circle.badge.xmark").frame(maxWidth: .infinity, alignment: .leading)
                     }.accessibilityIdentifier("settings-blocked-users")
+                }
+                Text("MATCHING").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
+                safetyCard {
+                    Toggle("Show my profile in matching pool", isOn: Binding(
+                        get: { isVisibleInMatch },
+                        set: { newValue in Task { await updateMatchVisibility(newValue) } }
+                    ))
+                    .tint(LauverDesign.ColorToken.accent)
+                    .disabled(isLoadingMatchVisibility || isSavingMatchVisibility)
+                    .accessibilityIdentifier("settings-match-visibility-toggle")
+                    if isLoadingMatchVisibility { ProgressView().controlSize(.small) }
+                    Text("When off, your profile stays out of the matching pool and you cannot browse or Like other profiles there.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    if let matchVisibilityError {
+                        Text(matchVisibilityError).font(.footnote).foregroundStyle(.red)
+                            .accessibilityIdentifier("settings-match-visibility-error")
+                    }
                 }
                 Button("Sign Out", role: .destructive, action: signOut).accessibilityIdentifier("settings-sign-out")
                 Text("ACCOUNT").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
@@ -351,7 +373,13 @@ struct SafetySettingsView: View {
                     Text(errorMessage).font(.footnote).foregroundStyle(.red).accessibilityIdentifier("settings-delete-account-error")
                 }
             }.padding(LauverDesign.Spacing.large)
-        }.background(LauverDesign.ColorToken.background).navigationTitle("Settings")
+        }
+        .background(LauverDesign.ColorToken.background)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(LauverDesign.ColorToken.accent)
+        .navigationTitle("Settings")
+        .task { await loadMatchVisibility() }
             .alert("Delete your account?", isPresented: $showingDeleteConfirmation) {
                 Button("Delete Account", role: .destructive) {
                     showingDeleteReauthentication = true
@@ -421,6 +449,32 @@ struct SafetySettingsView: View {
                 isDeleting = false
                 errorMessage = (error as? APIError)?.userMessage ?? "Your account could not be deleted. Please try again."
             }
+        }
+    }
+
+    private func loadMatchVisibility() async {
+        guard isLoadingMatchVisibility else { return }
+        do {
+            isVisibleInMatch = try await profileService.getMatchPreferences().visibleInMatch
+            matchVisibilityError = nil
+        } catch {
+            matchVisibilityError = (error as? APIError)?.userMessage ?? "Matching visibility could not be loaded."
+        }
+        isLoadingMatchVisibility = false
+    }
+
+    private func updateMatchVisibility(_ newValue: Bool) async {
+        guard !isLoadingMatchVisibility, !isSavingMatchVisibility, newValue != isVisibleInMatch else { return }
+        let previousValue = isVisibleInMatch
+        isVisibleInMatch = newValue
+        isSavingMatchVisibility = true
+        matchVisibilityError = nil
+        defer { isSavingMatchVisibility = false }
+        do {
+            isVisibleInMatch = try await profileService.updateMatchVisibility(newValue).visibleInMatch
+        } catch {
+            isVisibleInMatch = previousValue
+            matchVisibilityError = (error as? APIError)?.userMessage ?? "Matching visibility could not be saved."
         }
     }
 }

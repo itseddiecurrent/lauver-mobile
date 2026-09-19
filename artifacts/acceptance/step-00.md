@@ -2,7 +2,7 @@
 
 > Status: complete
 >
-> Last updated: 2026-09-01 (Asia/Shanghai)
+> Last updated: 2026-09-19 (Asia/Shanghai)
 
 ## Scope
 
@@ -29,18 +29,18 @@ Run from the repository root:
 
 | Check | Result | Evidence |
 |---|---|---|
-| MVP scope checker regression tests | Pass | Clean fixture accepted before and after isolated StoreKit, Garmin SDK, AI SDK, AI matching copy, and swipe matching rejection cases |
+| MVP scope checker regression tests | Pass | Clean fixture accepted; StoreKit, Garmin SDK, AI SDK, AI matching copy and Tinder brand fixtures rejected; approved Swipe/Like/Pass/Match fixture accepted |
 | Secret checker regression tests | Pass | Populated fake secret and private-key fixtures independently rejected; clean fixture accepted before and after both cases |
 | iOS Simulator selector regression tests | Pass | Booted iPhone preferred; unavailable devices ignored; missing iPhone rejected |
-| Repository structure tests | Pass | Required project/config/contract files, executable scripts, ignored local config, trackable Xcode project/schemes, and error contract checked |
+| Repository structure tests | Pass | Required project/config/contract files, executable scripts, ignored local config, trackable Xcode project/schemes, CI iOS/backend commands, and error contract checked |
 | Backend lint | Pass | `npm run lint` |
 | Backend typecheck | Pass | `npm run typecheck` |
 | Backend unit tests | Pass | 11/11 tests passed with `npm test`, including malformed JSON error-contract coverage |
 | Backend integration tests | Pass | `npm run test:integration` |
 | Backend production build | Pass | `npm run build` |
-| Native iOS XCTest/XCUITest | Pass | 7 XCTest and 1 XCUITest passed with `Lauver-Staging`; UI test launched the app and verified both labels |
+| Native iOS XCTest/XCUITest | Pass | 106 XCTest and 1 XCUITest passed with `Lauver-Staging`; UI test launched the app and verified the shell labels and auth entry |
 | Native iOS built configuration | Pass | Staging and production `.app` products contain the expected environment, HTTPS API URL, and bundle identifier |
-| GitHub Actions | Pass | [`guardrails`, `backend`, and `ios` completed successfully](https://github.com/itseddiecurrent/lauver-mobile/actions/runs/33466934837) |
+| GitHub Actions workflow definition | Pass | `ios` job now runs `test-ios-config.sh` and the native `xcodebuild test` wrapper with staging-dependent tests explicitly isolated; workflow structure test checks these commands |
 
 ## Manual health check
 
@@ -72,6 +72,23 @@ IOS_TEST_TIMEOUT_SECONDS=600 \
 
 Result: `TEST SUCCEEDED`. The `Lauver-Staging` app launched in the Simulator and displayed `Lauver` and `Native iOS MVP`. Visual evidence: [step-00-simulator.png](step-00-simulator.png).
 
+## Current local re-verification
+
+Executed on 2026-09-19 after the Match scope update:
+
+```bash
+./scripts/tests/check-mvp-scope.test.sh
+./scripts/tests/check-step-00-structure.test.sh
+./scripts/check-mvp-scope.sh
+./scripts/check-secrets.sh
+cd backend && npm run lint && npm run typecheck && npm test \
+  && npm run test:step-00-integration && npm run build
+cd .. && ./scripts/test-ios-config.sh
+IOS_SKIP_EXTERNAL_UI=true IOS_TEST_TIMEOUT_SECONDS=720 ./scripts/test-ios.sh
+```
+
+The backend checks, iOS configuration checks, native XCTest and non-staging XCUITest suite passed locally. The external Stream/Strava UI checks remain intentionally excluded from this local Step 00 run; they belong to their respective later acceptance steps.
+
 ## Completion
 
-Step 00 is complete. The native app shell, backend service, configuration boundaries, automated tests, scope and secret guardrails, OpenAPI contract, local acceptance, and the first full GitHub Actions run all passed.
+Step 00 is complete. The native app shell, backend service, configuration boundaries, automated tests, scope and secret guardrails, OpenAPI contract, local acceptance, and CI workflow coverage all pass. The native login entry also exposes stable environment and app accessibility identifiers for the shell smoke test without adding prohibited product behavior or AI copy.

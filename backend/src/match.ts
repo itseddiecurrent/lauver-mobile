@@ -51,6 +51,7 @@ export type MatchCandidate = {
   id: string;
   displayName: string;
   photoURL: string | null;
+  photos: Array<{ id: string; url: string; sortOrder: number; isPrimary: boolean }>;
   city: { name: string; regionCode: string | null; countryCode: string } | null;
   approximateDistanceKm: number | null;
   sports: Array<{ sport: string; paceValue: number | null; paceUnit: string | null }>;
@@ -76,6 +77,7 @@ type CandidateRow = {
   id: string;
   displayName: string;
   photoKey: string | null;
+  photoKeys: string[];
   cityName: string | null;
   regionCode: string | null;
   countryCode: string | null;
@@ -162,6 +164,7 @@ export class MatchService {
     const candidateQuery = Prisma.sql`
       WITH candidates AS (
         SELECT p.user_id AS id, p.display_name AS "displayName", p.photo_key AS "photoKey",
+          COALESCE(ARRAY(SELECT pp.object_key FROM profile_photos pp WHERE pp.user_id = p.user_id ORDER BY pp.sort_order), ARRAY[]::text[]) AS "photoKeys",
           p.city_name AS "cityName", p.region_code AS "regionCode", p.country_code AS "countryCode",
           p.updated_at AS "updatedAt", ${distanceExpression} AS distance,
           COALESCE(ARRAY(SELECT us.sport FROM user_sports us
@@ -175,7 +178,7 @@ export class MatchService {
           AND (${selectedDistance === null || viewer.cityLatitude === null || viewer.cityLongitude === null ? Prisma.sql`TRUE` : Prisma.sql`(${distanceExpression}) <= ${selectedDistance}::double precision`})
           ${sportFilter}
       )
-      SELECT c.id, c."displayName", c."photoKey", c."cityName", c."regionCode", c."countryCode", c.distance,
+      SELECT c.id, c."displayName", c."photoKey", c."photoKeys", c."cityName", c."regionCode", c."countryCode", c.distance,
         c."commonSports", to_char(c."updatedAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "updatedAt",
         (SELECT COALESCE(jsonb_agg(jsonb_build_object('sport', us.sport, 'paceValue', us.pace_value::double precision, 'paceUnit', us.pace_unit)), '[]'::jsonb)
           FROM user_sports us WHERE us.user_id = c.id) AS sports
@@ -235,13 +238,14 @@ export class MatchService {
   async list(userId: string): Promise<MatchSummary[]> {
     const matches = await this.client.match.findMany({ where: { OR: [{ lowerUserId: userId }, { higherUserId: userId }], unmatchedAt: null }, orderBy: { matchedAt: 'desc' } });
     const otherIDs = matches.map(match => match.lowerUserId === userId ? match.higherUserId : match.lowerUserId);
-    const profiles = await this.client.profile.findMany({ where: { userId: { in: otherIDs } }, include: { user: { select: { status: true, sports: true } } } });
+    const profiles = await this.client.profile.findMany({ where: { userId: { in: otherIDs } }, include: { photos: { orderBy: { sortOrder: 'asc' } }, user: { select: { status: true, sports: true } } } });
     const byID = new Map(profiles.map(profile => [profile.userId, profile]));
     return matches.flatMap(match => {
       const profile = byID.get(match.lowerUserId === userId ? match.higherUserId : match.lowerUserId);
       if (!profile || profile.user.status !== 'ACTIVE') return [];
       return [{ id: match.id, matchedAt: match.matchedAt.toISOString(), user: this.toCandidate({
         id: profile.userId, displayName: profile.displayName ?? 'Lauver member', photoKey: profile.photoKey,
+        photoKeys: profile.photos.map(photo => photo.objectKey),
         cityName: profile.cityName, regionCode: profile.regionCode, countryCode: profile.countryCode,
         distance: null, commonSports: [], updatedAt: profile.updatedAt.toISOString(),
         sports: profile.user.sports.map(sport => ({ sport: sport.sport, paceValue: sport.paceValue === null ? null : Number(sport.paceValue), paceUnit: sport.paceUnit })),
@@ -261,7 +265,13 @@ export class MatchService {
   }
 
   private toCandidate(row: CandidateRow, selectedSports: string[]): MatchCandidate {
-    return { id: row.id, displayName: row.displayName, photoURL: row.photoKey === null ? null : this.storage.publicURL(row.photoKey), city: row.cityName === null || row.countryCode === null ? null : { name: row.cityName, regionCode: row.regionCode, countryCode: row.countryCode }, approximateDistanceKm: row.distance === null ? null : Math.round(row.distance), sports: row.sports, commonSports: row.commonSports.filter(sport => selectedSports.includes(sport)) };
+    const photos = row.photoKeys.map((objectKey, index) => ({
+      id: `${row.id}-photo-${index}`,
+      url: this.storage.publicURL(objectKey),
+      sortOrder: index,
+      isPrimary: index === 0,
+    }));
+    return { id: row.id, displayName: row.displayName, photoURL: row.photoKey === null ? null : this.storage.publicURL(row.photoKey), photos, city: row.cityName === null || row.countryCode === null ? null : { name: row.cityName, regionCode: row.regionCode, countryCode: row.countryCode }, approximateDistanceKm: row.distance === null ? null : Math.round(row.distance), sports: row.sports, commonSports: row.commonSports.filter(sport => selectedSports.includes(sport)) };
   }
 
   private swipeResult(direction: 'like' | 'pass', matchId: string | null): SwipeResult { return { direction, matched: matchId !== null, matchId }; }

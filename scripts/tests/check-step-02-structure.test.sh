@@ -52,10 +52,14 @@ if [ "$user_defaults_files" != "$expected_user_defaults_file" ]; then
   exit 1
 fi
 
-if rg --quiet 'case (swipe|match)|"(Swipe|Match)"' "$repo_root/LauverNative/Lauver" --glob '*.swift'; then
-  echo "Step 02 structure check failed: Swipe/Match tabs are outside MVP scope" >&2
+if rg --quiet 'case swipe' "$repo_root/LauverNative/Lauver" --glob '*.swift'; then
+  echo "Step 02 structure check failed: Swipe tab is outside MVP scope" >&2
   exit 1
 fi
+
+rg --quiet 'case match' "$repo_root/LauverNative/Lauver/Core/Storage/UIStateStore.swift"
+rg --quiet 'match-review-settings' "$repo_root/LauverNative/Lauver/App/ContentView.swift"
+rg --quiet 'screen-match' "$repo_root/LauverNative/LauverUITests/LauverUITests.swift"
 
 if rg --quiet 'print\(|NSLog\(' \
   "$repo_root/LauverNative/Lauver/Core/Networking/APIClient.swift" \

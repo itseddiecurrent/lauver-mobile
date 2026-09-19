@@ -118,10 +118,44 @@ struct WorkoutProfile: Codable, Equatable, Identifiable {
     let displayName: String?
     let bio: String?
     let photoURL: URL?
+    let photos: [ProfilePhotoReference]
     let city: ProfileCity?
     let sports: [ProfileSport]
     let trainingTimes: [TrainingTime]
     let isComplete: Bool
+
+    init(id: String, displayName: String?, bio: String?, photoURL: URL?, photos: [ProfilePhotoReference] = [], city: ProfileCity?, sports: [ProfileSport], trainingTimes: [TrainingTime], isComplete: Bool) {
+        self.id = id
+        self.displayName = displayName
+        self.bio = bio
+        self.photoURL = photoURL
+        self.photos = photos
+        self.city = city
+        self.sports = sports
+        self.trainingTimes = trainingTimes
+        self.isComplete = isComplete
+    }
+
+    enum CodingKeys: String, CodingKey { case id, displayName, bio, photoURL, photos, city, sports, trainingTimes, isComplete }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
+        bio = try c.decodeIfPresent(String.self, forKey: .bio)
+        photoURL = try c.decodeIfPresent(URL.self, forKey: .photoURL)
+        photos = try c.decodeIfPresent([ProfilePhotoReference].self, forKey: .photos) ?? []
+        city = try c.decodeIfPresent(ProfileCity.self, forKey: .city)
+        sports = try c.decodeIfPresent([ProfileSport].self, forKey: .sports) ?? []
+        trainingTimes = try c.decodeIfPresent([TrainingTime].self, forKey: .trainingTimes) ?? []
+        isComplete = try c.decodeIfPresent(Bool.self, forKey: .isComplete) ?? false
+    }
+}
+
+struct ProfilePhotoReference: Codable, Equatable, Identifiable {
+    let id: String
+    let url: URL
+    let sortOrder: Int
+    let isPrimary: Bool
 }
 
 struct ProfileDraft: Equatable {
@@ -205,6 +239,21 @@ enum ProfilePhotoError: LocalizedError {
 }
 
 private struct ProfileEnvelope: Decodable { let profile: WorkoutProfile }
+struct MatchPreferences: Codable, Equatable {
+    let visibleInMatch: Bool
+    let gender: String?
+    let preferredGender: String
+    let maxDistanceKm: Int?
+    let sports: [String]
+}
+private struct MatchPreferencesEnvelope: Decodable { let preferences: MatchPreferences }
+private struct MatchPreferencesPayload: Encodable {
+    let visibleInMatch: Bool
+    let gender: String?
+    let preferredGender: String
+    let maxDistanceKm: Int?
+    let sports: [String]
+}
 private struct ProfileUpdatePayload: Encodable {
     let displayName: String?
     let bio: String?
@@ -273,7 +322,10 @@ private struct PhotoUploadResponse: Decodable {
 
 protocol ProfileServicing {
     func getOwnProfile() async throws -> WorkoutProfile
+    func previewOwnProfile() async throws -> WorkoutProfile
     func getProfile(userID: String) async throws -> WorkoutProfile
+    func getMatchPreferences() async throws -> MatchPreferences
+    func updateMatchVisibility(_ visible: Bool) async throws -> MatchPreferences
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile
     func deletePhoto() async throws
@@ -352,7 +404,7 @@ protocol EventsServicing {
     func reportEvent(id: String, reason: String, details: String?, targetType: String) async throws -> String
 }
 
-final class ProfileService: ProfileServicing, AccountDeletionServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing {
+final class ProfileService: ProfileServicing, AccountDeletionServicing, DiscoverServicing, SafetyServicing, StravaServicing, HealthWorkoutUploading, ChatServicing, EventsServicing, MatchServicing {
     private let client: APIClient
     private let authService: any AuthServicing
     private let sessionStore: any AuthSessionStoring
@@ -372,9 +424,74 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
         }
     }
 
+    func preferences() async throws -> MatchPreferences {
+        let envelope: MatchPreferencesEnvelope = try await authenticatedRequest { token in
+            APIRequest(path: "/v1/match/preferences", headers: Self.authorization(token))
+        }
+        return envelope.preferences
+    }
+
+    func updatePreferences(_ filters: MatchFilters, visibleInMatch: Bool) async throws -> MatchPreferences {
+        let current = try await preferences()
+        struct Payload: Encodable {
+            let visibleInMatch: Bool
+            let gender: String?
+            let preferredGender: String
+            let maxDistanceKm: Int?
+            let sports: [String]
+        }
+        let body = try encoder.encode(Payload(
+            visibleInMatch: visibleInMatch,
+            gender: current.gender,
+            preferredGender: filters.preferredGender,
+            maxDistanceKm: filters.maxDistanceKm,
+            sports: filters.sports.map(\.rawValue).sorted()
+        ))
+        let envelope: MatchPreferencesEnvelope = try await authenticatedRequest { token in
+            APIRequest(method: .patch, path: "/v1/match/preferences", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        }
+        return envelope.preferences
+    }
+
+    func candidates(filters: MatchFilters, cursor: String?) async throws -> MatchPage {
+        var components = URLComponents(); components.path = "/v1/match/candidates"
+        var query = [URLQueryItem(name: "limit", value: "20"), URLQueryItem(name: "gender", value: filters.preferredGender)]
+        query.append(URLQueryItem(name: "maxDistanceKm", value: filters.maxDistanceKm.map(String.init) ?? "unlimited"))
+        query.append(contentsOf: filters.sports.sorted { $0.rawValue < $1.rawValue }.map { URLQueryItem(name: "sport", value: $0.rawValue) })
+        if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
+        components.queryItems = query
+        return try await authenticatedRequest { token in APIRequest(path: components.string ?? "/v1/match/candidates", headers: Self.authorization(token)) }
+    }
+
+    func swipe(targetUserID: String, direction: String) async throws -> SwipeResult {
+        struct Payload: Encodable { let targetUserId: String; let direction: String }
+        let body = try encoder.encode(Payload(targetUserId: targetUserID, direction: direction))
+        return try await authenticatedRequest { token in APIRequest(method: .post, path: "/v1/match/swipes", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true) }
+    }
+
+    func matches() async throws -> [MatchSummary] {
+        struct Envelope: Decodable { let matches: [MatchSummary] }
+        return try await authenticatedRequest { token in
+            APIRequest<Envelope>(path: "/v1/matches", headers: Self.authorization(token))
+        }.matches
+    }
+
+    func unmatch(id: String) async throws {
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/matches/\(id)/unmatch", headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        }
+    }
+
     func getOwnProfile() async throws -> WorkoutProfile {
         let envelope: ProfileEnvelope = try await authenticatedRequest { token in
             APIRequest(path: "/v1/me", headers: Self.authorization(token))
+        }
+        return envelope.profile
+    }
+
+    func previewOwnProfile() async throws -> WorkoutProfile {
+        let envelope: ProfileEnvelope = try await authenticatedRequest { token in
+            APIRequest(path: "/v1/me/preview", headers: Self.authorization(token))
         }
         return envelope.profile
     }
@@ -385,6 +502,35 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
             APIRequest(path: "/v1/users/\(encodedID)", headers: Self.authorization(token))
         }
         return envelope.profile
+    }
+
+    func getMatchPreferences() async throws -> MatchPreferences {
+        let envelope: MatchPreferencesEnvelope = try await authenticatedRequest { token in
+            APIRequest(path: "/v1/match/preferences", headers: Self.authorization(token))
+        }
+        return envelope.preferences
+    }
+
+    func updateMatchVisibility(_ visible: Bool) async throws -> MatchPreferences {
+        let current = try await getMatchPreferences()
+        let payload = MatchPreferencesPayload(
+            visibleInMatch: visible,
+            gender: current.gender,
+            preferredGender: current.preferredGender,
+            maxDistanceKm: current.maxDistanceKm,
+            sports: current.sports
+        )
+        let body = try encoder.encode(payload)
+        let envelope: MatchPreferencesEnvelope = try await authenticatedRequest { token in
+            APIRequest(
+                method: .patch,
+                path: "/v1/match/preferences",
+                body: body,
+                headers: Self.jsonAuthorization(token),
+                allowsConnectionRetry: true
+            )
+        }
+        return envelope.preferences
     }
 
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile {
@@ -790,7 +936,16 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        results = Array(completer.results.prefix(12))
+        let candidates = Array(completer.results.prefix(12))
+        // MKLocalSearchCompleter also returns streets, POIs and buildings for
+        // address searches. Keep only results that resolve to one of the
+        // administrative levels we can safely persist.
+        Task { [weak self] in
+            guard let self else { return }
+            let filtered = await self.administrativeResults(from: candidates)
+            guard self.query == completer.queryFragment else { return }
+            self.results = filtered
+        }
         errorMessage = nil
     }
 
@@ -803,40 +958,25 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
         let response = try await MKLocalSearch(request: request).start()
         guard let item = response.mapItems.first else { throw CitySearchError.noResult }
         let placemark = item.placemark
-        let cityName = placemark.locality ?? placemark.subAdministrativeArea ?? completion.title
-        guard let countryCode = placemark.isoCountryCode, !cityName.isEmpty else {
+        let countryCode = placemark.isoCountryCode
+        let cityName = placemark.locality
+            ?? placemark.subAdministrativeArea
+            ?? placemark.administrativeArea
+            ?? placemark.country
+        guard let countryCode, let cityName, !cityName.isEmpty else {
             throw CitySearchError.noResult
         }
-        // Resolve the locality a second time as a city-only query. This avoids
-        // persisting a street/POI coordinate when a detailed completion is tapped.
-        let cityRequest = MKLocalSearch.Request()
-        cityRequest.naturalLanguageQuery = [cityName, placemark.administrativeArea, countryCode]
-            .compactMap { $0 }
-            .joined(separator: ", ")
-        cityRequest.resultTypes = .address
-        // Keep the normalization anchored to the result the user selected.
-        // Without a region MapKit may return the first same-named locality in
-        // another part of the country (for example, Nanjing for Shanghai).
-        cityRequest.region = MKCoordinateRegion(
-            center: placemark.coordinate,
-            latitudinalMeters: 150_000,
-            longitudinalMeters: 150_000
-        )
-        let cityResponse = try await MKLocalSearch(request: cityRequest).start()
-        guard let cityItem = cityResponse.mapItems.first(where: {
-            let localityMatches = $0.placemark.locality?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
-            let nameMatches = $0.name?.localizedCaseInsensitiveCompare(cityName) == .orderedSame
-            return (localityMatches || nameMatches) &&
-                $0.placemark.thoroughfare == nil && $0.placemark.subThoroughfare == nil
-        }) else {
-            throw CitySearchError.noResult
-        }
+        // Accept any MapKit result. MapKit may return a district, landmark,
+        // station, address, or a city itself; normalize it to the best city
+        // level fields available on the selected placemark. Do not perform a
+        // second "city-only" search: that search rejects valid places such as
+        // Shanghai when MapKit resolves the completion to a detailed result.
         return ProfileCity(
             name: cityName,
             regionCode: placemark.administrativeArea,
             countryCode: countryCode,
-            latitude: cityItem.placemark.coordinate.latitude,
-            longitude: cityItem.placemark.coordinate.longitude
+            latitude: placemark.coordinate.latitude,
+            longitude: placemark.coordinate.longitude
         )
     }
 
@@ -844,7 +984,10 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
         let location = try await currentLocation()
         let placemark = try await CLGeocoder().reverseGeocodeLocation(location).first
         guard let placemark else { throw CitySearchError.noResult }
-        let cityName = placemark.locality ?? placemark.subAdministrativeArea ?? placemark.administrativeArea
+        let cityName = placemark.locality
+            ?? placemark.subAdministrativeArea
+            ?? placemark.administrativeArea
+            ?? placemark.country
         guard let cityName, !cityName.isEmpty, let countryCode = placemark.isoCountryCode else {
             throw CitySearchError.noResult
         }
@@ -895,6 +1038,42 @@ final class CitySearchModel: NSObject, ObservableObject, @preconcurrency MKLocal
         }
     }
 
+    private func administrativeResults(from completions: [MKLocalSearchCompletion]) async -> [MKLocalSearchCompletion] {
+        await withTaskGroup(of: (Int, MKLocalSearchCompletion?).self, returning: [MKLocalSearchCompletion].self) { group in
+            for (index, completion) in completions.enumerated() {
+                group.addTask {
+                    do {
+                        let response = try await MKLocalSearch(request: MKLocalSearch.Request(completion: completion)).start()
+                        guard let placemark = response.mapItems.first?.placemark else { return (index, nil) }
+                        let administrativeNames = [
+                            placemark.locality,
+                            placemark.subAdministrativeArea,
+                            placemark.administrativeArea,
+                            placemark.country,
+                        ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        let title = completion.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let subtitleParts = completion.subtitle.split(separator: ",").map {
+                            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+                        }
+                        let matchesAdministrativeLevel = administrativeNames.contains(where: {
+                            $0.localizedCaseInsensitiveCompare(title) == .orderedSame
+                        }) || subtitleParts.contains(where: { part in
+                            administrativeNames.contains { $0.localizedCaseInsensitiveCompare(part) == .orderedSame }
+                        })
+                        return (index, matchesAdministrativeLevel ? completion : nil)
+                    } catch {
+                        return (index, nil)
+                    }
+                }
+            }
+            var indexed: [(Int, MKLocalSearchCompletion)] = []
+            for await (index, completion) in group {
+                if let completion { indexed.append((index, completion)) }
+            }
+            return indexed.sorted { $0.0 < $1.0 }.map(\.1)
+        }
+    }
+
     private func waitForAuthorization() async throws {
         if locationManager.authorizationStatus == .authorizedAlways || locationManager.authorizationStatus == .authorizedWhenInUse { return }
         try await withCheckedThrowingContinuation { continuation in
@@ -933,7 +1112,7 @@ enum CitySearchError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noResult: return "Select a city-level search result."
+        case .noResult: return "This place could not be normalized to a city. Try another search result."
         case .locationDisabled: return "Location Services are turned off. Enable them in Settings."
         case .locationDenied: return "Lauver needs location permission to identify your city."
         }

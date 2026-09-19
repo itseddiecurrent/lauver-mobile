@@ -265,9 +265,13 @@ export class ProfileService implements ProfileServicing {
       throw error;
     }
     if (committed === null && await this.#repository.findPhotoUpload(objectKey, userId) === null) {
-      // A first photo has no previous key, so a null result can still be success.
+      // A first photo has no previous key, and appended photos intentionally
+      // return no old primary key. In both cases the committed photo reference
+      // is the durable source of truth.
       const current = await this.#repository.findProfile(userId);
-      if (current?.photoKey !== finalObjectKey) {
+      const committedPhoto = current?.photoKey === finalObjectKey
+        || current?.photos?.some((photo) => photo.objectKey === finalObjectKey) === true;
+      if (!committedPhoto) {
         await Promise.allSettled([this.#storage.deleteObject(finalObjectKey)]);
         throw new ProfileError(422, 'invalid_photo_upload', 'The photo upload is invalid or expired');
       }

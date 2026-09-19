@@ -10,6 +10,7 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithCredential,
+  signInWithPopup,
 } from 'firebase/auth';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -78,16 +79,26 @@ export default function LoginScreen() {
 
   async function handleGoogle() {
     setError('');
+    setLoading(true);
     try {
-      const result = await promptAsync();
-      if (result?.type === 'success') {
-        const { id_token } = result.params;
-        const credential = GoogleAuthProvider.credential(id_token);
-        await signInWithCredential(firebaseAuth, credential);
-        // onAuthStateChanged handles the rest
+      if (Platform.OS === 'web') {
+        // Firebase owns the OAuth redirect on web, so no Google Cloud OAuth
+        // client ID is required in the Expo environment.
+        await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      } else {
+        const result = await promptAsync();
+        if (result?.type === 'success') {
+          const { id_token } = result.params;
+          const credential = GoogleAuthProvider.credential(id_token);
+          await signInWithCredential(firebaseAuth, credential);
+        }
       }
+      // The first Google sign-in creates the Firebase account automatically;
+      // subsequent sign-ins use the same button to restore it.
     } catch (e) {
       setError(friendlyError(e.code));
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -98,7 +109,7 @@ export default function LoginScreen() {
     android: !!GOOGLE_CLIENT_IDS.android,
     default: !!GOOGLE_CLIENT_IDS.web,
   });
-  const googleReady = googleConfigured && !!request;
+  const googleReady = Platform.OS === 'web' || (googleConfigured && !!request);
 
   return (
     <SafeAreaView style={styles.root}>
@@ -218,12 +229,17 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[styles.googleBtn, !googleReady && styles.btnDisabled]}
               onPress={handleGoogle}
-              disabled={!googleReady}
+              disabled={!googleReady || loading}
               activeOpacity={0.85}
             >
               <Text style={styles.googleIcon}>G</Text>
               <Text style={styles.googleBtnText}>Continue with Google</Text>
             </TouchableOpacity>
+            {!googleReady && (
+              <Text style={styles.googleHint}>
+                Google sign-in needs the Firebase Google OAuth client ID for this build.
+              </Text>
+            )}
           </View>
 
           <Text style={styles.footer}>
@@ -297,6 +313,7 @@ const styles = StyleSheet.create({
   },
   googleIcon:    { fontSize: 16, fontWeight: '900', color: '#4285F4' },
   googleBtnText: { fontSize: 15, fontWeight: '700', color: DARK },
+  googleHint:    { textAlign: 'center', fontSize: 11, color: '#999', marginTop: 8, lineHeight: 15 },
 
   footer: { textAlign: 'center', fontSize: 11, color: '#AAA', marginTop: 20, lineHeight: 16 },
 });

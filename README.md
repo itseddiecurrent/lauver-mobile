@@ -2,7 +2,7 @@
 
 This repository contains the legacy React Native prototype plus the new native iOS MVP and its Node.js backend. The marketing website at [lauver.ai](https://lauver.ai/) is maintained separately and is not rebuilt here.
 
-The authoritative MVP scope is in [`mvp.md`](mvp.md). The native implementation must not include AI features, Garmin sync, paid subscriptions, in-app purchases, or Tinder-style swipe/match behavior.
+The authoritative MVP scope is in [`mvp.md`](mvp.md). The native implementation must not include AI features, Garmin sync, paid subscriptions, or in-app purchases. Deterministic Match flows with Like/Pass and accessible Swipe actions are in MVP scope; Tinder branding and inaccessible card-only interactions are not.
 
 ## Repository layout
 
@@ -183,6 +183,12 @@ The iOS script prefers an already booted iPhone Simulator, then falls back to th
 The iOS target contains the public Sign in with Apple entitlement and uses the official AuthenticationServices control. It creates a new random nonce for every attempt, sends only Apple's signed proof and one-time code to the API, and stores the local credential identifier in Keychain solely for Apple credential-state checks.
 
 Apple auth is disabled by default on a new backend. For each environment, configure `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, and a separately generated `APPLE_TOKEN_ENCRYPTION_KEY` directly in Render, then set `APPLE_AUTH_ENABLED=true`. The native iOS flow does not supply a web redirect URI; the API validates its one-time code directly against Apple's token endpoint. Never put the p8 key, generated client secret, token-encryption key, or Apple refresh token in the iOS project.
+
+Google sign-in can use Firebase as the identity provider while Render continues issuing Lauver access and refresh sessions. Enable Google in Firebase Authentication, then configure the Firebase Admin service-account values only in Render: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` (escaped newlines are supported), with `FIREBASE_AUTH_ENABLED=true`. The client sends a Firebase Google ID token to `POST /v1/auth/google`; Render verifies it with the Firebase Admin SDK, links the verified Firebase UID to the local account, and issues the existing Lauver session. Firebase client configuration values are not sufficient for server verification and must not be used as server secrets.
+
+The Expo auth screen exposes the same `Continue with Google` entry in both `Sign In` and `Create Account` modes. On web it uses Firebase `signInWithPopup`; the first successful Google sign-in creates the Firebase account automatically and later attempts sign the same account in. Native Expo builds use `expo-auth-session` and require `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` or `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` in the local `.env`; these are public OAuth client IDs, not secrets. The Firebase Google provider must be enabled in Firebase Authentication, and the app's redirect URI must be registered in Google Cloud/Firebase.
+
+The native SwiftUI auth screen now has the same entry. It uses `ASWebAuthenticationSession` with PKCE, exchanges the Google authorization code for a Firebase ID token through Firebase Identity Toolkit, then calls `POST /v1/auth/google`; no Google client secret is shipped in the app. Before building the native target, set `FIREBASE_API_KEY`, `GOOGLE_IOS_CLIENT_ID` and `GOOGLE_REVERSED_CLIENT_ID` in `LauverNative/Config/Local.xcconfig` (copy from `Local.xcconfig.example`). Use the `API_KEY`, `CLIENT_ID` and `REVERSED_CLIENT_ID` values from `GoogleService-Info.plist`; the OAuth redirect is `REVERSED_CLIENT_ID:/oauthredirect`. Enable Google under Firebase Authentication. The first Google authorization creates the Firebase/Lauver account; later authorizations log in to it.
 
 ## Workout profiles, city privacy, and photos
 

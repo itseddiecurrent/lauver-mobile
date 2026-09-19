@@ -181,6 +181,10 @@ struct DiscoverView: View {
                 .accessibilityIdentifier("discover-load-more")
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(LauverDesign.ColorToken.background)
+        .tint(LauverDesign.ColorToken.accent)
         .navigationTitle("Discover")
         .accessibilityIdentifier("screen-discover")
         .toolbar {
@@ -278,6 +282,8 @@ private struct DiscoverFilterSheet: View {
                 }
                 Button("Reset filters") { filters = DiscoverFilters(); clearPace() }
             }
+            .scrollContentBackground(.hidden)
+            .background(LauverDesign.ColorToken.background)
             .navigationTitle("Filters")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

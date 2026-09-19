@@ -2,6 +2,7 @@ import Foundation
 
 enum AppTab: String, CaseIterable, Identifiable {
     case discover
+    case match
     case events
     case messages
     case profile
@@ -15,6 +16,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .discover: "safari"
+        case .match: "person.2"
         case .events: "calendar"
         case .messages: "message"
         case .profile: "person"

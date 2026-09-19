@@ -9,6 +9,7 @@ required_paths=(
   "$repo_root/backend/.env.example"
   "$repo_root/backend/package-lock.json"
   "$repo_root/backend/src/app.ts"
+  "$repo_root/backend/tests/step-00/healthz.integration.test.ts"
   "$repo_root/LauverNative/Config/Local.xcconfig.example"
   "$repo_root/LauverNative/Config/Shared.xcconfig"
   "$repo_root/LauverNative/Config/Staging.xcconfig"
@@ -18,6 +19,7 @@ required_paths=(
   "$repo_root/LauverNative/Lauver.xcodeproj/xcshareddata/xcschemes/Lauver-Staging.xcscheme"
   "$repo_root/LauverNative/Lauver.xcodeproj/xcshareddata/xcschemes/Lauver-Production.xcscheme"
   "$repo_root/openapi/mvp.yaml"
+  "$repo_root/.github/workflows/ci.yml"
 )
 
 for required_path in "${required_paths[@]}"; do
@@ -76,6 +78,15 @@ rg --quiet 'buildConfiguration="Staging"' \
 rg --quiet 'buildConfiguration="Production"' \
   "$repo_root/LauverNative/Lauver.xcodeproj/xcshareddata/xcschemes/Lauver-Production.xcscheme"
 rg --quiet 'required: \[code, message, requestId\]' "$repo_root/openapi/mvp.yaml"
+rg --quiet 'details:' "$repo_root/openapi/mvp.yaml"
 rg --quiet 'requestId: string' "$repo_root/backend/src/app.ts"
+rg --quiet "GET.*healthz|/healthz" "$repo_root/backend/tests/step-00/healthz.integration.test.ts"
+rg --quiet 'test:step-00-integration' "$repo_root/scripts/test-step-00.sh"
+rg --quiet 'npm run lint' "$repo_root/.github/workflows/ci.yml"
+rg --quiet 'npm test' "$repo_root/.github/workflows/ci.yml"
+rg --quiet 'xcodebuild -version' "$repo_root/.github/workflows/ci.yml"
+rg --quiet 'Run native iOS XCTest and XCUITest' "$repo_root/.github/workflows/ci.yml"
+rg --quiet 'IOS_STEP_00' "$repo_root/.github/workflows/ci.yml"
+rg --quiet 'only-testing:LauverTests' "$repo_root/scripts/test-ios.sh"
 
 echo "Step 00 repository structure tests passed."

@@ -105,8 +105,6 @@ final class LauverChatFactory: ViewFactory {
 struct MessagesView: View {
     @EnvironmentObject private var chat: ChatConnection
     let service: any ChatServicing
-    let discoverService: any DiscoverServicing
-    let safetyService: any SafetyServicing
     @State private var errorMessage: String?
     @State private var attempt = 0
 
@@ -118,16 +116,10 @@ struct MessagesView: View {
                 VStack { ErrorStateView(message: errorMessage, requestID: nil); RetryButton { attempt += 1 } }.padding()
             } else { ProgressView("Connecting to messages") }
         }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    NewMessageView(chatService: service, discoverService: discoverService, safetyService: safetyService)
-                } label: {
-                    Label("New message", systemImage: "square.and.pencil")
-                }
-                .accessibilityIdentifier("messages-new-message")
-            }
-        }
+        .background(LauverDesign.ColorToken.background)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(LauverDesign.ColorToken.accent)
         .accessibilityIdentifier("screen-messages")
         .task(id: attempt) {
             errorMessage = nil
@@ -322,7 +314,9 @@ struct LauverTextComposer: View {
                     .disabled(sending || pending != nil || text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || text.count > 2000)
                     .accessibilityIdentifier("chat-message-send")
             }
-        }.padding().background(LauverDesign.ColorToken.surface)
+        }
+        .padding()
+        .background(LauverDesign.ColorToken.surface)
     }
 
     @MainActor private func send() async {

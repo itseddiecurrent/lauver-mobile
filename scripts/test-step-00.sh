@@ -19,5 +19,5 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
   npm run build
 )
 
-"$repo_root/scripts/test-ios.sh"
+IOS_STEP_00=true IOS_SKIP_EXTERNAL_UI=true IOS_TEST_TIMEOUT_SECONDS=720 "$repo_root/scripts/test-ios.sh"
 "$repo_root/scripts/test-ios-config.sh"

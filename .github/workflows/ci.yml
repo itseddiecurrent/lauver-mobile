@@ -102,8 +102,16 @@ jobs:
 
   ios:
     runs-on: macos-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: Validate iOS CI scope
-        run: echo "iOS simulator build runs in the dedicated device workflow"
+        run: |
+          xcodebuild -version
+          ./scripts/test-ios-config.sh
+      - name: Run native iOS XCTest and XCUITest
+        env:
+          IOS_STEP_00: 'true'
+          IOS_SKIP_EXTERNAL_UI: 'true'
+          IOS_TEST_TIMEOUT_SECONDS: '720'
+        run: ./scripts/test-ios.sh

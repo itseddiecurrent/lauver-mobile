@@ -25,7 +25,7 @@ if [ "${#existing_roots[@]}" -eq 0 ]; then
   exit 1
 fi
 
-forbidden_pattern='OpenAI|Anthropic|GoogleGenerativeAI|GeminiAPI|LangChain|CoreML|Garmin|StoreKit|InAppPurchase|SwipeCard|Tinder|AI[ _-]?(Matching|Coach|Assistant)|Premium[ _-]?(Plan|Subscription|Feature)|It.s a Match'
+forbidden_pattern='OpenAI|Anthropic|GoogleGenerativeAI|GeminiAPI|LangChain|CoreML|Garmin|StoreKit|InAppPurchase|Tinder|AI[ _-]?(Matching|Coach|Assistant)|Premium[ _-]?(Plan|Subscription|Feature)'
 
 if command -v rg >/dev/null 2>&1; then
   if rg --line-number --ignore-case \

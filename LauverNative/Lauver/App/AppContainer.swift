@@ -5,6 +5,7 @@ struct AppContainer {
     let healthService: any HealthServicing
     let authService: any AuthServicing
     let discoverService: any DiscoverServicing
+    let matchService: any MatchServicing
     let profileService: any ProfileServicing
     let accountDeletionService: any AccountDeletionServicing
     let safetyService: any SafetyServicing
@@ -83,7 +84,12 @@ struct AppContainer {
             : HealthService(client: client)
         let authService: any AuthServicing = arguments.contains("-ui-testing-auth-flow")
             ? UITestAuthService()
-            : AuthService(client: client)
+            : AuthService(
+                client: client,
+                firebaseAPIKey: configuration.firebaseAPIKey,
+                googleIOSClientID: configuration.googleIOSClientID,
+                googleReversedClientID: configuration.googleReversedClientID
+            )
         // All authenticated features must share refresh-token rotation state.
         let liveProfileService = ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
         let profileService: any ProfileServicing = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
@@ -91,6 +97,7 @@ struct AppContainer {
             : liveProfileService
         let testSafetyService = UITestSafetyService()
         let testEventsService = UITestEventsService()
+        let testMatchService = UITestMatchService()
 
         return AppContainer(
             configuration: configuration,
@@ -98,6 +105,9 @@ struct AppContainer {
             authService: authService,
             discoverService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
                 ? UITestDiscoverService(safetyService: testSafetyService)
+                : liveProfileService,
+            matchService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+                ? testMatchService
                 : liveProfileService,
             profileService: profileService,
             accountDeletionService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
@@ -119,6 +129,24 @@ struct AppContainer {
             uiStateStore: uiStateStore
         )
     }
+}
+
+private final class UITestMatchService: MatchServicing {
+    private var enabled = false
+    private var liked = false
+    private let candidate = MatchCandidate(
+        id: "ui-test-match-partner", displayName: "Match Partner", photoURL: nil,
+        city: MatchCity(name: "Shanghai", regionCode: "SH", countryCode: "CN"),
+        approximateDistanceKm: 8,
+        sports: [ProfileSport(sport: .running, paceValue: 5.5, paceUnit: "min/km")],
+        commonSports: [.running]
+    )
+    func preferences() async throws -> MatchPreferences { MatchPreferences(visibleInMatch: enabled, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: []) }
+    func updatePreferences(_ filters: MatchFilters, visibleInMatch: Bool) async throws -> MatchPreferences { enabled = visibleInMatch; return MatchPreferences(visibleInMatch: enabled, gender: nil, preferredGender: filters.preferredGender, maxDistanceKm: filters.maxDistanceKm, sports: filters.sports.map(\.rawValue)) }
+    func candidates(filters: MatchFilters, cursor: String?) async throws -> MatchPage { MatchPage(users: liked ? [] : [candidate], nextCursor: nil) }
+    func swipe(targetUserID: String, direction: String) async throws -> SwipeResult { liked = true; return SwipeResult(direction: direction, matched: direction == "like", matchId: direction == "like" ? "ui-test-match" : nil) }
+    func matches() async throws -> [MatchSummary] { liked ? [MatchSummary(id: "ui-test-match", matchedAt: "just now", user: candidate)] : [] }
+    func unmatch(id: String) async throws { liked = false }
 }
 
 private struct UITestAccountDeletionService: AccountDeletionServicing {
@@ -182,9 +210,16 @@ private final class UITestProfileService: ProfileServicing {
     )
 
     func getOwnProfile() async throws -> WorkoutProfile { profile }
+    func previewOwnProfile() async throws -> WorkoutProfile { profile }
     func getProfile(userID: String) async throws -> WorkoutProfile {
         _ = userID
         return profile
+    }
+    func getMatchPreferences() async throws -> MatchPreferences {
+        MatchPreferences(visibleInMatch: false, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: [])
+    }
+    func updateMatchVisibility(_ visible: Bool) async throws -> MatchPreferences {
+        MatchPreferences(visibleInMatch: visible, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: [])
     }
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile {
         profile = WorkoutProfile(
@@ -223,6 +258,10 @@ private struct UITestAuthService: AuthServicing {
 
     func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
         session(email: credential.email ?? "runner@privaterelay.appleid.com")
+    }
+
+    func signInWithGoogle() async throws -> AuthSession {
+        session(email: "runner@example.com")
     }
 
     func refresh(refreshToken: String) async throws -> AuthSession {

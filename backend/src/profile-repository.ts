@@ -213,16 +213,25 @@ export class PrismaProfileRepository implements ProfileRepository {
       const upload = await transaction.profilePhotoUpload.findFirst({ where: { objectKey, userId } });
       if (upload === null) return null;
       const existing = await transaction.profile.findUnique({ where: { userId } });
-      const oldKey = existing?.photoKey ?? null;
-      await transaction.profile.upsert({
-        where: { userId },
-        create: { userId, photoKey: finalObjectKey },
-        update: { photoKey: finalObjectKey },
-      });
       const count = await transaction.profilePhoto.count({ where: { userId } });
       if (count === 0) {
+        const oldKey = existing?.photoKey ?? null;
+        await transaction.profile.upsert({
+          where: { userId },
+          create: { userId, photoKey: finalObjectKey },
+          update: { photoKey: finalObjectKey },
+        });
         await transaction.profilePhoto.create({ data: { userId, objectKey: finalObjectKey, sortOrder: 0, isPrimary: true } });
+        if (oldKey !== null && oldKey !== finalObjectKey) {
+          await transaction.photoCleanupJob.upsert({
+            where: { objectKey: oldKey },
+            create: { objectKey: oldKey },
+            update: { nextAttempt: new Date() },
+          });
+        }
       } else if (count < 9) {
+        // Additional photos must not replace or clean up the existing primary.
+        // `profiles.photo_key` remains the canonical first photo key.
         await transaction.profilePhoto.create({ data: { userId, objectKey: finalObjectKey, sortOrder: count, isPrimary: false } });
       } else {
         throw new Error('photo_limit_reached');
@@ -238,14 +247,7 @@ export class PrismaProfileRepository implements ProfileRepository {
           update: { nextAttempt: new Date() },
         });
       }
-      if (oldKey !== null && oldKey !== finalObjectKey) {
-        await transaction.photoCleanupJob.upsert({
-          where: { objectKey: oldKey },
-          create: { objectKey: oldKey },
-          update: { nextAttempt: new Date() },
-        });
-      }
-      return oldKey;
+      return count === 0 ? existing?.photoKey ?? null : null;
     });
   }
 

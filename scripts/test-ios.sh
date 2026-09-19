@@ -26,22 +26,43 @@ echo "Testing Lauver-Staging on iOS Simulator $SIMULATOR_UDID"
 skip_external_ui=()
 if [ "${IOS_SKIP_EXTERNAL_UI:-false}" = "true" ]; then
   skip_external_ui=(
+    -skip-testing:LauverUITests/LauverUITests/testLiveStreamChatConnectsOnDevice
     -skip-testing:LauverUITests/LauverUITests/testProfileReportAndBlockCanBeUnblockedFromSettings
     -skip-testing:LauverUITests/LauverUITests/testConnectedAppsShowsStravaSummariesAndConfirmsDisconnect
   )
   echo "Skipping staging-dependent external UI tests"
 fi
 
-xcodebuild test \
-  -project "$project" \
-  -scheme Lauver-Staging \
-  -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-  -destination-timeout 60 \
-  -parallel-testing-enabled NO \
-  -test-timeouts-enabled YES \
-  -default-test-execution-time-allowance 180 \
-  -maximum-test-execution-time-allowance 300 \
-  "${skip_external_ui[@]}" &
+only_testing=()
+if [ "${IOS_STEP_00:-false}" = "true" ]; then
+  only_testing=(
+    -only-testing:LauverTests
+    -only-testing:LauverUITests/LauverUITests/testAppLaunchesWithStagingConfigurationAndAuthEntry
+  )
+  echo "Running Step 00 native smoke tests only"
+fi
+
+test_args=(
+  test
+  -project "$project"
+  -scheme Lauver-Staging
+  -destination "platform=iOS Simulator,id=$SIMULATOR_UDID"
+  -destination-timeout 60
+  -parallel-testing-enabled NO
+  -test-timeouts-enabled YES
+  -default-test-execution-time-allowance 180
+  -maximum-test-execution-time-allowance 300
+)
+
+if [ "${#only_testing[@]}" -gt 0 ]; then
+  test_args+=("${only_testing[@]}")
+fi
+if [ "${#skip_external_ui[@]}" -gt 0 ]; then
+  test_args+=("${skip_external_ui[@]}")
+fi
+
+xcodebuild "${test_args[@]}" \
+  &
 test_pid=$!
 
 watchdog_pid=''

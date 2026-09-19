@@ -24,6 +24,7 @@ for required_path in "${required_paths[@]}"; do
 done
 
 rg --quiet "'/v1/me'" "$repo_root/backend/src/profile-routes.ts"
+rg --quiet "'/v1/me/preview'" "$repo_root/backend/src/profile-routes.ts"
 rg --quiet "'/v1/users/:userId'" "$repo_root/backend/src/profile-routes.ts"
 rg --quiet "'/v1/me/photo/upload-url'" "$repo_root/backend/src/profile-routes.ts"
 rg --quiet 'cityLatitude' "$repo_root/backend/prisma/schema.prisma"

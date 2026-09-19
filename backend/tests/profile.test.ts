@@ -25,6 +25,12 @@ class MemoryProfileRepository implements ProfileRepository {
 
   replacePhoto(userId: string, objectKey: string | null): Promise<string | null> {
     const oldKey = this.profile?.photoKey ?? null;
+    if (objectKey === null) {
+      for (const photo of this.profile?.photos ?? []) this.cleanup.add(photo.objectKey);
+      this.profile = { ...(this.profile ?? emptyStoredProfile(userId)), photoKey: null, photos: [] };
+      if (oldKey !== null) this.cleanup.add(oldKey);
+      return Promise.resolve(oldKey);
+    }
     this.profile = { ...(this.profile ?? emptyStoredProfile(userId)), photoKey: objectKey };
     if (oldKey !== null && oldKey !== objectKey) this.cleanup.add(oldKey);
     return Promise.resolve(oldKey);
@@ -56,7 +62,23 @@ class MemoryProfileRepository implements ProfileRepository {
     if (upload?.userId !== userId) return Promise.resolve(null);
     this.uploads.delete(objectKey);
     this.cleanup.add(objectKey);
-    return this.replacePhoto(userId, finalObjectKey);
+    const profile = this.profile ?? emptyStoredProfile(userId);
+    const photos = profile.photos ?? [];
+    if (photos.length === 0) {
+      const oldKey = profile.photoKey;
+      this.profile = {
+        ...profile,
+        photoKey: finalObjectKey,
+        photos: [{ id: 'photo-1', objectKey: finalObjectKey, sortOrder: 0, isPrimary: true }],
+      };
+      if (oldKey !== null && oldKey !== finalObjectKey) this.cleanup.add(oldKey);
+      return Promise.resolve(oldKey);
+    }
+    this.profile = {
+      ...profile,
+      photos: [...photos, { id: `photo-${photos.length + 1}`, objectKey: finalObjectKey, sortOrder: photos.length, isPrimary: false }],
+    };
+    return Promise.resolve(null);
   }
 
   discardPhotoUpload(objectKey: string, userId: string): Promise<void> {
@@ -263,13 +285,33 @@ describe('ProfileService', () => {
     });
     storage.objects.set(replacement.objectKey, { bytes: image, contentType: 'image/png' });
     await service.completePhotoUpload('user-1', replacement.objectKey);
-    await expect(service.completePhotoUpload('user-1', upload.objectKey))
-      .rejects.toMatchObject({ code: 'invalid_photo_upload' });
-    expect(storage.objects.size).toBe(1);
+    const retriedAfterAppend = await service.completePhotoUpload('user-1', upload.objectKey);
+    expect(retriedAfterAppend.photoURL).toBe(first.photoURL);
+    expect(retriedAfterAppend.photos).toHaveLength(2);
+    expect(storage.objects.size).toBe(2);
     await service.deletePhoto('user-1');
     await expect(service.completePhotoUpload('user-1', replacement.objectKey))
       .rejects.toMatchObject({ code: 'invalid_photo_upload' });
     expect(storage.objects.size).toBe(0);
+  });
+
+  it('preserves existing profile photos when appending another photo', async () => {
+    const repository = new MemoryProfileRepository();
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const image = await pngImage(300, 200);
+
+    for (const name of ['first.png', 'second.png']) {
+      const upload = await service.createPhotoUpload({
+        userId: 'user-1', fileName: name, contentType: 'image/png', byteSize: image.length,
+      });
+      storage.objects.set(upload.objectKey, { bytes: image, contentType: 'image/png' });
+      await service.completePhotoUpload('user-1', upload.objectKey);
+    }
+
+    expect(repository.profile?.photos?.map(photo => photo.sortOrder)).toEqual([0, 1]);
+    expect(repository.profile?.photos?.map(photo => photo.objectKey)).toHaveLength(2);
+    expect(storage.deleted.filter(key => key.startsWith('profile-photos/'))).toHaveLength(0);
   });
 
   it('concurrent completion retries preserve a single final object', async () => {

@@ -215,7 +215,12 @@ struct ConnectedAppsView: View {
                     }.accessibilityIdentifier("connected-apps-healthkit")
                 }
             }.padding(LauverDesign.Spacing.large)
-        }.background(LauverDesign.ColorToken.background).navigationTitle("Connected Apps")
+        }
+        .background(LauverDesign.ColorToken.background)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(LauverDesign.ColorToken.accent)
+        .navigationTitle("Connected Apps")
     }
 }
 
@@ -262,7 +267,12 @@ struct StravaConnectionView: View {
                     Button("Check Connection") { Task { await model.load() } }.disabled(model.isWorking)
                 }
             }.padding(LauverDesign.Spacing.large)
-        }.background(LauverDesign.ColorToken.background).navigationTitle("Strava")
+        }
+        .background(LauverDesign.ColorToken.background)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(LauverDesign.ColorToken.accent)
+        .navigationTitle("Strava")
         .task { await model.load() }
         .refreshable { if model.connection?.status == .connected { await model.refresh() } else { await model.load() } }
         .onChange(of: scenePhase) { phase in if phase == .active { Task { await model.load() } } }
@@ -463,6 +473,13 @@ struct AppleHealthView: View {
             ForEach(model.workouts) { workout in
                 safetyCard { Text(workout.sport.capitalized).font(.headline); Text("\(workout.durationSeconds / 60) min").font(.subheadline); Text(workout.startedAt).font(.caption).foregroundStyle(.secondary) }
             }
-        }.padding(LauverDesign.Spacing.large) }.background(LauverDesign.ColorToken.background).navigationTitle("Apple Health")
+        }
+        .padding(LauverDesign.Spacing.large)
+        }
+        .background(LauverDesign.ColorToken.background)
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .tint(LauverDesign.ColorToken.accent)
+        .navigationTitle("Apple Health")
     }
 }

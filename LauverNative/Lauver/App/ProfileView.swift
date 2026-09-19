@@ -30,7 +30,7 @@ final class ProfileViewModel: ObservableObject {
         }
     }
 
-    func save(draft: ProfileDraft, photo: ProfilePhoto?) async -> Bool {
+    func save(draft: ProfileDraft, photos: [ProfilePhoto]) async -> Bool {
         guard !isSaving else { return false }
         isSaving = true
         errorMessage = nil
@@ -38,7 +38,7 @@ final class ProfileViewModel: ObservableObject {
         defer { isSaving = false }
         do {
             profile = try await service.updateProfile(draft)
-            if let photo {
+            for photo in photos {
                 profile = try await service.uploadPhoto(photo)
             }
             return true
@@ -46,6 +46,12 @@ final class ProfileViewModel: ObservableObject {
             capture(error)
             return false
         }
+    }
+
+    // Keep the original single-photo call shape source-compatible for callers
+    // that predate the multi-photo editor.
+    func save(draft: ProfileDraft, photo: ProfilePhoto) async -> Bool {
+        await save(draft: draft, photos: [photo])
     }
 
     func deletePhoto() async {
@@ -89,6 +95,8 @@ final class ProfileViewModel: ObservableObject {
 struct OwnProfileView: View {
     @StateObject private var viewModel: ProfileViewModel
     @State private var editingProfile: WorkoutProfile?
+    @State private var showingPreview = false
+    private let profileService: any ProfileServicing
     let signOut: () -> Void
     let accountDeletionService: any AccountDeletionServicing
     let safetyService: any SafetyServicing
@@ -97,6 +105,7 @@ struct OwnProfileView: View {
 
     init(service: any ProfileServicing, accountDeletionService: any AccountDeletionServicing, safetyService: any SafetyServicing, stravaService: any StravaServicing, healthUploader: (any HealthWorkoutUploading)? = nil, signOut: @escaping () -> Void) {
         _viewModel = StateObject(wrappedValue: ProfileViewModel(service: service))
+        self.profileService = service
         self.signOut = signOut
         self.accountDeletionService = accountDeletionService
         self.safetyService = safetyService
@@ -126,9 +135,11 @@ struct OwnProfileView: View {
             }
         }
         .navigationTitle("Profile")
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .accessibilityIdentifier("screen-profile")
         .toolbar {
-            NavigationLink { SafetySettingsView(service: safetyService, stravaService: stravaService, accountDeletionService: accountDeletionService, healthUploader: healthUploader, signOut: signOut) } label: {
+            NavigationLink { SafetySettingsView(service: safetyService, profileService: profileService, stravaService: stravaService, accountDeletionService: accountDeletionService, healthUploader: healthUploader, signOut: signOut) } label: {
                 Label("Settings", systemImage: "gearshape")
             }.accessibilityIdentifier("profile-settings")
         }
@@ -136,12 +147,27 @@ struct OwnProfileView: View {
         .sheet(item: $editingProfile) { profile in
             EditProfileView(profile: profile, viewModel: viewModel)
         }
+        .sheet(isPresented: $showingPreview) { ProfilePreviewScreen(service: profileService) }
     }
 
     private func profileContent(_ profile: WorkoutProfile) -> some View {
         ScrollView {
             VStack(spacing: LauverDesign.Spacing.large) {
                 ProfileAvatar(photoURL: profile.photoURL, size: 112)
+                if profile.photos.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: LauverDesign.Spacing.small) {
+                            ForEach(profile.photos) { photo in
+                                AsyncImage(url: photo.url) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: { Color.secondary.opacity(0.12) }
+                                .frame(width: 76, height: 76)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .accessibilityLabel(photo.isPrimary ? "Primary profile photo" : "Profile photo")
+                            }
+                        }
+                    }
+                }
 
                 VStack(spacing: LauverDesign.Spacing.small) {
                     Text(profile.displayName ?? "Your workout profile")
@@ -196,12 +222,15 @@ struct OwnProfileView: View {
                 }
 
                 Button("Edit Profile") { editingProfile = profile }
-                    .buttonStyle(.borderedProminent)
-                    .tint(LauverDesign.ColorToken.accent)
+                    .buttonStyle(LauverPrimaryButtonStyle())
                     .accessibilityIdentifier("profile-edit")
 
+                Button("Preview My Profile") { showingPreview = true }
+                    .buttonStyle(LauverSecondaryButtonStyle())
+                    .accessibilityIdentifier("profile-preview")
+
                 Button("Sign Out", action: signOut)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(LauverSecondaryButtonStyle())
                     .accessibilityIdentifier("auth-sign-out")
 
                 OwnStravaActivitiesView(service: stravaService)
@@ -209,6 +238,25 @@ struct OwnProfileView: View {
             .padding(LauverDesign.Spacing.large)
         }
         .refreshable { await viewModel.load() }
+        .background(LauverDesign.ColorToken.background)
+    }
+}
+
+private struct ProfilePreviewScreen: View {
+    let service: any ProfileServicing
+    @State private var profile: WorkoutProfile?
+    @State private var error: String?
+
+    var body: some View {
+        Group {
+            if let profile { OtherProfileView(profile: profile) }
+            else if let error { ErrorStateView(message: error, requestID: nil) }
+            else { LoadingStateView(title: "Loading preview") }
+        }
+        .task {
+            do { profile = try await service.previewOwnProfile() }
+            catch let caught { error = (caught as? LocalizedError)?.errorDescription ?? "Preview unavailable" }
+        }
     }
 }
 
@@ -217,8 +265,8 @@ private struct EditProfileView: View {
     @ObservedObject var viewModel: ProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ProfileDraft
-    @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var selectedPhoto: ProfilePhoto?
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var selectedPhotos: [ProfilePhoto] = []
     @State private var selectedPhotoImage: Image?
     @State private var currentPhotoURL: URL?
     @State private var showingCitySearch = false
@@ -244,8 +292,8 @@ private struct EditProfileView: View {
                         } else {
                             ProfileAvatar(photoURL: currentPhotoURL, size: 72)
                         }
-                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                            Label(currentPhotoURL == nil ? "Choose photo" : "Replace photo", systemImage: "photo")
+                        PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: max(1, 9 - profile.photos.count), matching: .images) {
+                            Label("Add photos", systemImage: "photo.on.rectangle.angled")
                         }
                         .accessibilityIdentifier("profile-photo-picker")
                     }
@@ -334,12 +382,15 @@ private struct EditProfileView: View {
             }
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(LauverDesign.ColorToken.background)
+            .tint(LauverDesign.ColorToken.accent)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(viewModel.isSaving ? "Saving…" : "Save") {
                         Task {
-                            if await viewModel.save(draft: draft, photo: selectedPhoto) { dismiss() }
+                            if await viewModel.save(draft: draft, photos: selectedPhotos) { dismiss() }
                         }
                     }
                     .disabled(viewModel.isSaving)
@@ -352,16 +403,19 @@ private struct EditProfileView: View {
                     showingCitySearch = false
                 }
             }
-            .onChange(of: selectedPhotoItem) { _, item in
-                guard let item else { return }
+            .onChange(of: selectedPhotoItems) { _, items in
+                guard !items.isEmpty else { return }
                 Task {
+                    var loadedPhotos: [ProfilePhoto] = []
                     do {
-                        guard let data = try await item.loadTransferable(type: Data.self) else {
-                            throw ProfilePhotoError.invalidImage
+                        for item in items {
+                            guard let data = try await item.loadTransferable(type: Data.self) else {
+                                throw ProfilePhotoError.invalidImage
+                            }
+                            loadedPhotos.append(try ProfilePhoto.processedJPEG(from: data))
                         }
-                        let photo = try ProfilePhoto.processedJPEG(from: data)
-                        selectedPhoto = photo
-                        if let image = UIImage(data: photo.data) { selectedPhotoImage = Image(uiImage: image) }
+                        selectedPhotos = loadedPhotos
+                        if let first = loadedPhotos.first, let image = UIImage(data: first.data) { selectedPhotoImage = Image(uiImage: image) }
                     } catch {
                         viewModel.showLocalError((error as? LocalizedError)?.errorDescription ?? "Photo selection failed.")
                     }
@@ -469,11 +523,29 @@ private struct CitySearchView: View {
 
 struct OtherProfileView: View {
     let profile: WorkoutProfile
+    @State private var selectedPhoto: ProfilePhotoReference?
 
     var body: some View {
         ScrollView {
             VStack(spacing: LauverDesign.Spacing.large) {
                 ProfileAvatar(photoURL: profile.photoURL, size: 112)
+                if profile.photos.count > 1 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(profile.photos) { photo in
+                                Button { selectedPhoto = photo } label: {
+                                    AsyncImage(url: photo.url) { image in image.resizable().scaledToFill() }
+                                    placeholder: { Color.secondary.opacity(0.12) }
+                                    .frame(width: 76, height: 76)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("View profile photo \(photo.sortOrder + 1)")
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("profile-photo-gallery")
+                }
                 Text(profile.displayName ?? "Workout partner").font(.title2.bold())
                 if let city = profile.city {
                     Label("\(city.name), \(city.countryCode)", systemImage: "mappin.and.ellipse")
@@ -496,7 +568,55 @@ struct OtherProfileView: View {
             .padding()
         }
         .navigationTitle("Profile")
+        .toolbarBackground(LauverDesign.ColorToken.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .background(LauverDesign.ColorToken.background)
+        .fullScreenCover(item: $selectedPhoto) { photo in
+            ProfilePhotoViewer(photos: profile.photos, initialPhoto: photo)
+        }
+    }
+}
+
+private struct ProfilePhotoViewer: View {
+    @Environment(\.dismiss) private var dismiss
+    let photos: [ProfilePhotoReference]
+    let initialPhoto: ProfilePhotoReference
+    @State private var selectedID: String
+
+    init(photos: [ProfilePhotoReference], initialPhoto: ProfilePhotoReference) {
+        self.photos = photos
+        self.initialPhoto = initialPhoto
+        _selectedID = State(initialValue: initialPhoto.id)
+    }
+
+    var body: some View {
+        NavigationStack {
+            TabView(selection: $selectedID) {
+                ForEach(photos) { photo in
+                    AsyncImage(url: photo.url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else if phase.error != nil {
+                            Image(systemName: "photo").font(.largeTitle).foregroundStyle(.secondary)
+                        } else {
+                            ProgressView()
+                        }
+                    }
+                    .tag(photo.id)
+                    .padding()
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .background(Color.black)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .toolbarBackground(.black, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+        .accessibilityIdentifier("profile-photo-viewer")
     }
 }
 
@@ -536,8 +656,6 @@ private final class OtherProfileViewModel: ObservableObject {
 }
 
 struct OtherProfileScreen: View {
-    @EnvironmentObject private var chat: ChatConnection
-    private let chatService: (any ChatServicing)?
     @StateObject private var viewModel: OtherProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
@@ -556,7 +674,6 @@ struct OtherProfileScreen: View {
     init(userID: String, service: any ProfileServicing, safetyService: any SafetyServicing) {
         _viewModel = StateObject(wrappedValue: OtherProfileViewModel(userID: userID, service: service))
         self.userID = userID
-        self.chatService = service as? any ChatServicing
         self.safetyService = safetyService
     }
 
@@ -581,12 +698,6 @@ struct OtherProfileScreen: View {
         .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await viewModel.load() } } }
         .toolbar {
             if viewModel.profile != nil {
-                if let chatService {
-                    NavigationLink {
-                        DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: userID)
-                    } label: { Label("Message", systemImage: "message") }
-                    .accessibilityIdentifier("profile-message")
-                }
                 Menu {
                     Button("Report User", systemImage: "flag") { reportMode = .report }.accessibilityIdentifier("profile-report")
                     Button("Report and Block", systemImage: "shield") { reportMode = .reportAndBlock }.accessibilityIdentifier("profile-report-block")
@@ -594,6 +705,19 @@ struct OtherProfileScreen: View {
                         .accessibilityIdentifier("profile-block")
                 } label: { Label(isBlocking ? "Blocking…" : "Safety", systemImage: "ellipsis.circle") }
                 .disabled(isBlocking).accessibilityIdentifier("profile-safety-menu")
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            if viewModel.profile != nil {
+                Label("You can message this person after a mutual Match.", systemImage: "person.2")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(.bar)
+                    .accessibilityIdentifier("profile-match-required")
             }
         }
         .alert("Block this user?", isPresented: $confirmBlock) {

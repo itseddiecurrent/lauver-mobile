@@ -244,6 +244,7 @@ private final class TestAuthService: AuthServicing {
         appleCredential = credential
         return Self.session
     }
+    func signInWithGoogle() async throws -> AuthSession { try loginResult.get() }
 
     func refresh(refreshToken: String) async throws -> AuthSession {
         refreshedToken = refreshToken

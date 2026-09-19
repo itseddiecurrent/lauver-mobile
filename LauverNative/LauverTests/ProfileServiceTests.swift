@@ -80,6 +80,37 @@ final class ProfileServiceTests: XCTestCase {
         try await service.deleteAccount(currentPassword: "test-password")
     }
 
+    func testMatchVisibilityReadsAndPersistsWithExistingPreferences() async throws {
+        var requestCount = 0
+        ProfileURLProtocolStub.requestHandler = { request in
+            requestCount += 1
+            if requestCount <= 2 {
+                XCTAssertEqual(request.url?.path, "/v1/match/preferences")
+                XCTAssertEqual(request.httpMethod, "GET")
+                return Self.response(request, status: 200, body: """
+                {"preferences":{"visibleInMatch":false,"gender":null,"preferredGender":"all","maxDistanceKm":25,"sports":["running"]}}
+                """)
+            }
+            XCTAssertEqual(request.url?.path, "/v1/match/preferences")
+            XCTAssertEqual(request.httpMethod, "PATCH")
+            let body = try XCTUnwrap(Self.bodyData(request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["visibleInMatch"] as? Bool, true)
+            XCTAssertEqual(json["preferredGender"] as? String, "all")
+            XCTAssertEqual(json["maxDistanceKm"] as? Int, 25)
+            XCTAssertEqual(json["sports"] as? [String], ["running"])
+            return Self.response(request, status: 200, body: """
+            {"preferences":{"visibleInMatch":true,"gender":null,"preferredGender":"all","maxDistanceKm":25,"sports":["running"]}}
+            """)
+        }
+
+        let initialPreferences = try await service.getMatchPreferences()
+        XCTAssertFalse(initialPreferences.visibleInMatch)
+        let updatedPreferences = try await service.updateMatchVisibility(true)
+        XCTAssertTrue(updatedPreferences.visibleInMatch)
+        XCTAssertEqual(requestCount, 3)
+    }
+
     func testStravaStartDoesNotAutomaticallyReplayLostResponse() async {
         var attempts = 0
         ProfileURLProtocolStub.requestHandler = { _ in attempts += 1; throw URLError(.networkConnectionLost) }
@@ -528,6 +559,7 @@ private final class ProfileTestAuthService: AuthServicing {
     func register(email: String, password: String) async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func login(email: String, password: String) async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession { throw URLError(.unsupportedURL) }
+    func signInWithGoogle() async throws -> AuthSession { throw URLError(.unsupportedURL) }
     func refresh(refreshToken: String) async throws -> AuthSession {
         self.refreshToken = refreshToken
         refreshCalls += 1
@@ -747,7 +779,10 @@ private final class ProfileViewModelTestService: ProfileServicing {
         if let loadError { throw loadError }
         return currentProfile
     }
+    func previewOwnProfile() async throws -> WorkoutProfile { currentProfile }
     func getProfile(userID: String) async throws -> WorkoutProfile { currentProfile }
+    func getMatchPreferences() async throws -> MatchPreferences { MatchPreferences(visibleInMatch: false, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: []) }
+    func updateMatchVisibility(_ visible: Bool) async throws -> MatchPreferences { MatchPreferences(visibleInMatch: visible, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: []) }
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile { currentProfile }
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile { uploadedProfile }
     func deletePhoto() async throws {}

@@ -20,8 +20,9 @@ final class DesignSystemTests: XCTestCase {
     }
 
     func testMVPContainsOnlyApprovedTabs() {
-        XCTAssertEqual(AppTab.allCases.map(\.rawValue), ["discover", "events", "messages", "profile"])
+        XCTAssertEqual(AppTab.allCases.map(\.rawValue), ["discover", "match", "events", "messages", "profile"])
         XCTAssertFalse(AppTab.allCases.map(\.rawValue).contains("swipe"))
-        XCTAssertFalse(AppTab.allCases.map(\.rawValue).contains("match"))
+        XCTAssertEqual(AppTab.match.title, "Match")
+        XCTAssertEqual(AppTab.match.systemImage, "person.2")
     }
 }

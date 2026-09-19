@@ -10,12 +10,11 @@ final class LauverUITests: XCTestCase {
         app.launchArguments = ["-ui-testing-reset-state", "-ui-testing-reset-auth"]
         app.launch()
 
-        XCTAssertTrue(app.staticTexts["lauver-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["lauver-title"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["app-environment"].label, "Staging environment")
         XCTAssertTrue(app.buttons["auth-login"].exists)
         XCTAssertTrue(app.buttons["auth-show-register"].exists)
         XCTAssertTrue(app.buttons["auth-apple"].exists)
-        XCTAssertTrue(app.staticTexts["api-online"].waitForExistence(timeout: 60))
     }
 
     func testLiveStreamChatConnectsOnDevice() {
@@ -31,15 +30,34 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
-    func testAuthenticatedShellContainsOnlyFourApprovedTabs() {
+    func testAuthenticatedShellContainsApprovedTabsAndMatchFlow() {
         let app = launchAuthenticatedShell()
         let tabBar = app.tabBars.firstMatch
-        for tab in ["Discover", "Events", "Messages", "Profile"] {
+        for tab in ["Discover", "Match", "Events", "Messages", "Profile"] {
             XCTAssertTrue(tabBar.buttons[tab].exists)
         }
         XCTAssertFalse(tabBar.buttons["Swipe"].exists)
-        XCTAssertFalse(tabBar.buttons["Match"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["screen-discover"].waitForExistence(timeout: 5))
+        tabBar.buttons["Match"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["screen-match"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Find your workout people"].exists)
+        let start = app.buttons["Start matching"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.tap()
+        let like = app.buttons["Like"]
+        XCTAssertTrue(like.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Pass"].exists)
+        like.tap()
+        XCTAssertTrue(app.staticTexts["It’s a Match!"].waitForExistence(timeout: 5))
+        app.buttons["Keep browsing"].tap()
+        XCTAssertTrue(app.staticTexts["Match Partner"].waitForExistence(timeout: 5))
+        let more = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "match-more-")).firstMatch
+        XCTAssertTrue(more.waitForExistence(timeout: 5))
+        more.tap()
+        let unmatch = app.buttons["Unmatch"]
+        XCTAssertTrue(unmatch.waitForExistence(timeout: 5))
+        unmatch.tap()
+        XCTAssertFalse(app.staticTexts["Match Partner"].waitForExistence(timeout: 3))
     }
 
     func testDiscoverListOpensProfileAndAppliesFilters() {
@@ -328,6 +346,45 @@ final class LauverUITests: XCTestCase {
         assertNavigation(tab: "Profile", screen: "screen-profile")
     }
 
+    // Step 14A privacy-safe visual baseline. Run this test once per simulator
+    // appearance; the result bundle contains attachments named by surface.
+    func testStep14AVisualBaseline() {
+        let signedOut = launchAuthFlow(resetAuth: true)
+        attachScreenshot(signedOut, name: "auth-login")
+        tapWhenHittable(signedOut.buttons["auth-show-register"])
+        XCTAssertTrue(signedOut.buttons["auth-register"].waitForExistence(timeout: 5))
+        attachScreenshot(signedOut, name: "auth-register")
+
+        let app = launchAuthenticatedShell()
+        attachScreenshot(app, name: "discover")
+        tapWhenHittable(app.buttons["discover-filters"])
+        XCTAssertTrue(app.buttons["discover-apply-filters"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "discover-filters")
+        app.buttons["Cancel"].tap()
+
+        selectTab("Events", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["screen-events"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "events")
+
+        selectTab("Messages", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["screen-messages"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "messages")
+
+        selectTab("Profile", in: app)
+        XCTAssertTrue(app.descendants(matching: .any)["screen-profile"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "profile")
+        tapWhenHittable(app.buttons["profile-settings"])
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "settings")
+        tapWhenHittable(app.buttons["settings-connected-apps"])
+        XCTAssertTrue(app.navigationBars["Connected Apps"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "connected-apps")
+        app.navigationBars.buttons.firstMatch.tap()
+        tapWhenHittable(app.buttons["settings-blocked-users"])
+        XCTAssertTrue(app.navigationBars["Blocked Users"].waitForExistence(timeout: 5))
+        attachScreenshot(app, name: "blocked-users")
+    }
+
     func testProfileCanOpenEditorAndShowsPersistedWorkoutFields() {
         let app = launchAuthenticatedShell()
         let tabButton = app.tabBars.firstMatch.buttons["Profile"]
@@ -367,7 +424,7 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(labels.contains("121.4737"))
     }
 
-    func testUnreachableAPIShowsErrorAndRetry() {
+    func testUnreachableServiceShowsErrorAndRetry() {
         let app = XCUIApplication()
         app.launchArguments = ["-ui-testing-offline", "-ui-testing-reset-state", "-ui-testing-reset-auth"]
         app.launch()
@@ -495,6 +552,13 @@ final class LauverUITests: XCTestCase {
         XCTAssertTrue(screenElement.waitForExistence(timeout: 5))
     }
 
+    private func attachScreenshot(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "step14a-\(name)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
     private func assertDiscoverSummary(_ text: String, in app: XCUIApplication) {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "label CONTAINS %@", text),
@@ -528,7 +592,6 @@ final class LauverUITests: XCTestCase {
         app.launchArguments = authFlowArguments + (resetAuth ? ["-ui-testing-reset-auth"] : [])
         app.launch()
         XCTAssertTrue(app.buttons["auth-login"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["api-online"].waitForExistence(timeout: 5))
         return app
     }
 

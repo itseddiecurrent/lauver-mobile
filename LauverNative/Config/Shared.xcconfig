@@ -6,3 +6,10 @@ IPHONEOS_DEPLOYMENT_TARGET = 17.0
 SWIFT_VERSION = 5.0
 CODE_SIGN_STYLE = Automatic
 DEVELOPMENT_TEAM =
+
+// Public Firebase web API key and Google iOS OAuth client ID. These are not
+// server secrets; provide real values in Local.xcconfig or the environment
+// specific config before enabling the native Google button.
+FIREBASE_API_KEY =
+GOOGLE_IOS_CLIENT_ID =
+GOOGLE_REVERSED_CLIENT_ID =

@@ -19,6 +19,7 @@ enum LauverDesign {
         static let elevated = adaptive(light: 0xFFFFFF, dark: 0x2C2825)
         static let text = adaptive(light: 0x1C1A18, dark: 0xEDE9E3)
         static let textSecondary = adaptive(light: 0x555555, dark: 0xB0A498)
+        static let textMuted = adaptive(light: 0x999999, dark: 0x9A8E84)
         static let divider = adaptive(light: 0xD9D0C7, dark: 0x2E2A26)
         static let danger = Color.red
 
@@ -96,5 +97,44 @@ struct RetryButton: View {
             .buttonStyle(.borderedProminent)
             .tint(LauverDesign.ColorToken.accent)
             .accessibilityIdentifier(StateComponentIdentifiers.retry)
+    }
+}
+
+struct LauverPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.bold))
+            .foregroundStyle(Color.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(
+                LauverDesign.ColorToken.accent.opacity(configuration.isPressed ? 0.82 : 1),
+                in: RoundedRectangle(cornerRadius: 14)
+            )
+            .shadow(color: LauverDesign.ColorToken.accent.opacity(0.25), radius: 8, y: 4)
+            .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+struct LauverSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.semibold))
+            .foregroundStyle(LauverDesign.ColorToken.text)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 13)
+            .background(
+                LauverDesign.ColorToken.elevated.opacity(configuration.isPressed ? 0.7 : 1),
+                in: RoundedRectangle(cornerRadius: LauverDesign.Radius.button)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: LauverDesign.Radius.button)
+                    .stroke(LauverDesign.ColorToken.divider, lineWidth: 1)
+            }
+            .opacity(isEnabled ? 1 : 0.5)
     }
 }
