@@ -66,9 +66,9 @@ final class ProfileViewModel: ObservableObject {
         errorMessage = nil
         requestID = nil
         defer { isSaving = false }
+        var edits = photoEdits
         do {
             profile = try await service.updateProfile(draft)
-            var edits = photoEdits
             let pending = edits.filter { edit in
                 edit.upload != nil && edit.uploadedPhotoID == nil && (retryOnlyID == nil || edit.id == retryOnlyID)
             }
@@ -144,7 +144,11 @@ final class ProfileViewModel: ObservableObject {
             return ProfilePhotoSaveOutcome(saved: !failed, edits: edits)
         } catch {
             capture(error)
-            var failedEdits = photoEdits
+            // Keep successful upload/confirm results when a later operation
+            // (for example photo reordering) fails. Retrying from the original
+            // edits would upload those photos again and can hit the 9-photo
+            // limit even though the first attempt already committed them.
+            var failedEdits = edits
             if error is APIError {
                 for index in failedEdits.indices where failedEdits[index].upload != nil && failedEdits[index].uploadedPhotoID == nil {
                     failedEdits[index].isUploading = false

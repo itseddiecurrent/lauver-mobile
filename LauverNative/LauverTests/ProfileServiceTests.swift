@@ -670,6 +670,32 @@ private final class SafetyViewModelTestService: SafetyServicing {
 
 @MainActor
 final class ProfileViewModelCancellationTests: XCTestCase {
+    func testRetryAfterReorderFailureDoesNotReuploadCommittedPhotos() async throws {
+        let service = ProfileViewModelTestService()
+        let model = ProfileViewModel(service: service)
+        await model.load()
+        let draft = ProfileDraft(profile: try XCTUnwrap(model.profile))
+        let photos = [
+            ProfilePhoto(data: Data([1]), fileName: "one.jpg", contentType: "image/jpeg"),
+            ProfilePhoto(data: Data([2]), fileName: "two.jpg", contentType: "image/jpeg"),
+        ]
+        let edits = photos.map { ProfilePhotoEdit(id: UUID().uuidString, existing: nil, replacementOf: nil, upload: $0) }
+        service.reorderError = APIError.server(statusCode: 500, requestID: nil)
+
+        let firstAttempt = await model.savePhotoEdits(draft: draft, photoEdits: edits)
+
+        XCTAssertFalse(firstAttempt.saved)
+        XCTAssertEqual(service.uploadCount, 2)
+        XCTAssertTrue(firstAttempt.edits.allSatisfy { $0.uploadedPhotoID != nil })
+
+        service.reorderError = nil
+        let retry = await model.savePhotoEdits(draft: draft, photoEdits: firstAttempt.edits)
+
+        XCTAssertTrue(retry.saved)
+        XCTAssertEqual(service.uploadCount, 2)
+        XCTAssertEqual(service.reorderCount, 2)
+    }
+
     func testCancelledReloadKeepsTheUploadedPhotoWithoutAnError() async throws {
         let service = ProfileViewModelTestService()
         let model = ProfileViewModel(service: service)
@@ -772,6 +798,9 @@ private final class ProfileViewModelTestService: ProfileServicing {
     var loadError: Error?
     var loadHandler: (() async throws -> WorkoutProfile)?
     var loadCount = 0
+    var uploadCount = 0
+    var reorderCount = 0
+    var reorderError: Error?
 
     func getOwnProfile() async throws -> WorkoutProfile {
         loadCount += 1
@@ -785,5 +814,18 @@ private final class ProfileViewModelTestService: ProfileServicing {
     func updateMatchVisibility(_ visible: Bool) async throws -> MatchPreferences { MatchPreferences(visibleInMatch: visible, gender: nil, preferredGender: "all", maxDistanceKm: 25, sports: []) }
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile { currentProfile }
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile { uploadedProfile }
+    func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
+        requests.map { PhotoUploadTicket(clientID: $0.clientID, objectKey: "object-\($0.clientID)", uploadURL: URL(string: "https://photos.example.test/upload")!, requiredHeaders: [:]) }
+    }
+    func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
+        uploadCount += 1
+        return PhotoUploadResult(profile: uploadedProfile, photoID: "photo-\(uploadCount)")
+    }
+    func deletePhoto(photoID: String) async throws {}
+    func reorderPhotos(_ photoIDs: [String]) async throws -> WorkoutProfile {
+        reorderCount += 1
+        if let reorderError { throw reorderError }
+        return uploadedProfile
+    }
     func deletePhoto() async throws {}
 }
