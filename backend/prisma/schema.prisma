@@ -270,9 +270,26 @@ model Profile {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  photos        ProfilePhoto[]
 
   @@index([isComplete])
   @@map("profiles")
+}
+
+model ProfilePhoto {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  objectKey  String   @map("object_key") @db.VarChar(512)
+  sortOrder  Int      @map("sort_order") @db.SmallInt
+  isPrimary  Boolean  @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  profile    Profile  @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([userId, objectKey])
+  @@unique([userId, sortOrder])
+  @@index([userId, sortOrder])
+  @@map("profile_photos")
 }
 
 model UserSport {

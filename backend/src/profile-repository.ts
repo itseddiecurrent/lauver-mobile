@@ -23,9 +23,11 @@ export type StoredProfile = {
   cityLatitude: number | null;
   cityLongitude: number | null;
   isComplete: boolean;
+  photos?: StoredPhoto[];
   sports: StoredSport[];
   trainingTimes: StoredTrainingTime[];
 };
+export type StoredPhoto = { id: string; objectKey: string; sortOrder: number; isPrimary: boolean };
 
 export type ProfileReplacement = Omit<StoredProfile, 'photoKey'>;
 
@@ -33,6 +35,9 @@ export interface ProfileRepository {
   findProfile(userId: string, requireActiveUser?: boolean, viewerId?: string): Promise<StoredProfile | null>;
   replaceProfile(profile: ProfileReplacement): Promise<StoredProfile>;
   replacePhoto(userId: string, objectKey: string | null): Promise<string | null>;
+  listPhotos?(userId: string): Promise<StoredPhoto[]>;
+  deletePhotoById?(userId: string, photoId: string): Promise<string | null>;
+  reorderPhotos?(userId: string, photoIds: string[]): Promise<void>;
   createPhotoUpload(input: {
     objectKey: string;
     userId: string;
@@ -67,6 +72,7 @@ export class PrismaProfileRepository implements ProfileRepository {
         ...(viewerId !== undefined ? { user: visibleUserWhere(viewerId) } : requireActiveUser ? { user: { status: 'ACTIVE' } } : {}),
       },
       include: {
+        photos: { orderBy: { sortOrder: 'asc' } },
         user: {
           include: {
             sports: { orderBy: { sport: 'asc' } },
@@ -76,7 +82,7 @@ export class PrismaProfileRepository implements ProfileRepository {
       },
     });
     if (profile === null) return null;
-    return toStoredProfile(profile, profile.user.sports, profile.user.trainingTimes);
+    return toStoredProfile(profile, profile.user.sports, profile.user.trainingTimes, profile.photos);
   }
 
   async replaceProfile(profile: ProfileReplacement): Promise<StoredProfile> {
@@ -127,7 +133,7 @@ export class PrismaProfileRepository implements ProfileRepository {
         });
       }
       const result = await transaction.profile.findUniqueOrThrow({ where: { userId: profile.userId } });
-      return toStoredProfile(result, profile.sports, profile.trainingTimes);
+      return toStoredProfile(result, profile.sports, profile.trainingTimes, await transaction.profilePhoto.findMany({ where: { userId: profile.userId }, orderBy: { sortOrder: 'asc' } }));
     });
   }
 
@@ -135,6 +141,7 @@ export class PrismaProfileRepository implements ProfileRepository {
     return this.#client.$transaction(async (transaction) => {
       const existing = await transaction.profile.findUnique({ where: { userId } });
       const oldKey = existing?.photoKey ?? null;
+      if (objectKey === null) await transaction.profilePhoto.deleteMany({ where: { userId } });
       await transaction.profile.upsert({
         where: { userId },
         create: { userId, photoKey: objectKey },
@@ -148,6 +155,35 @@ export class PrismaProfileRepository implements ProfileRepository {
         });
       }
       return oldKey;
+    });
+  }
+
+  async listPhotos(userId: string): Promise<StoredPhoto[]> {
+    return this.#client.profilePhoto.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' }, select: { id: true, objectKey: true, sortOrder: true, isPrimary: true } });
+  }
+
+  async deletePhotoById(userId: string, photoId: string): Promise<string | null> {
+    return this.#client.$transaction(async (tx) => {
+      const photo = await tx.profilePhoto.findFirst({ where: { id: photoId, userId } });
+      if (!photo) return null;
+      await tx.profilePhoto.delete({ where: { id: photo.id } });
+      const remaining = await tx.profilePhoto.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } });
+      await Promise.all(remaining.map((item, index) => tx.profilePhoto.update({ where: { id: item.id }, data: { sortOrder: index, isPrimary: index === 0 } })));
+      await tx.profile.update({ where: { userId }, data: { photoKey: remaining[0]?.objectKey ?? null } });
+      await tx.photoCleanupJob.create({ data: { objectKey: photo.objectKey } }).catch(() => undefined);
+      return photo.objectKey;
+    });
+  }
+
+  async reorderPhotos(userId: string, photoIds: string[]): Promise<void> {
+    await this.#client.$transaction(async (tx) => {
+      const photos = await tx.profilePhoto.findMany({ where: { userId }, select: { id: true } });
+      if (photos.length !== photoIds.length || photos.some((p) => !photoIds.includes(p.id))) throw new Error('invalid_photo_order');
+      for (const [index, id] of photoIds.entries()) {
+        await tx.profilePhoto.update({ where: { id }, data: { sortOrder: index, isPrimary: index === 0 } });
+      }
+      const first = await tx.profilePhoto.findFirst({ where: { userId, sortOrder: 0 } });
+      await tx.profile.update({ where: { userId }, data: { photoKey: first?.objectKey ?? null } });
     });
   }
 
@@ -183,12 +219,15 @@ export class PrismaProfileRepository implements ProfileRepository {
         create: { userId, photoKey: finalObjectKey },
         update: { photoKey: finalObjectKey },
       });
+      const count = await transaction.profilePhoto.count({ where: { userId } });
+      if (count === 0) {
+        await transaction.profilePhoto.create({ data: { userId, objectKey: finalObjectKey, sortOrder: 0, isPrimary: true } });
+      } else if (count < 9) {
+        await transaction.profilePhoto.create({ data: { userId, objectKey: finalObjectKey, sortOrder: count, isPrimary: false } });
+      } else {
+        throw new Error('photo_limit_reached');
+      }
       await transaction.profilePhotoUpload.delete({ where: { objectKey } });
-      await transaction.photoCleanupJob.upsert({
-        where: { objectKey },
-        create: { objectKey },
-        update: { nextAttempt: new Date() },
-      });
       if (oldKey !== null && oldKey !== finalObjectKey) {
         await transaction.photoCleanupJob.upsert({
           where: { objectKey: oldKey },
@@ -255,6 +294,7 @@ function toStoredProfile(
   profile: ProfileRow,
   sports: Array<{ sport: string; paceValue: Prisma.Decimal | number | null; paceUnit: string | null }>,
   trainingTimes: StoredTrainingTime[],
+  photos: Array<{ id: string; objectKey: string; sortOrder: number; isPrimary: boolean }> = [],
 ): StoredProfile {
   return {
     userId: profile.userId,
@@ -267,6 +307,7 @@ function toStoredProfile(
     cityLatitude: profile.cityLatitude?.toNumber() ?? null,
     cityLongitude: profile.cityLongitude?.toNumber() ?? null,
     isComplete: profile.isComplete,
+    photos: photos.map(({ id, objectKey, sortOrder, isPrimary }) => ({ id, objectKey, sortOrder, isPrimary })),
     sports: sports.map((sport) => ({
       sport: sport.sport,
       paceValue: sport.paceValue instanceof Prisma.Decimal ? sport.paceValue.toNumber() : sport.paceValue,

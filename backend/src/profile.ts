@@ -46,6 +46,7 @@ export type ProfileResponse = {
   displayName: string | null;
   bio: string | null;
   photoURL: string | null;
+  photos: Array<{ id: string; url: string; sortOrder: number; isPrimary: boolean }>;
   city: {
     name: string;
     regionCode: string | null;
@@ -74,6 +75,7 @@ export class ProfileError extends Error {
 
 export interface ProfileServicing {
   getOwnProfile(userId: string): Promise<ProfileResponse>;
+  getOwnProfilePreview(userId: string): Promise<ProfileResponse>;
   getPublicProfile(userId: string, viewerId: string): Promise<ProfileResponse>;
   updateProfile(userId: string, patch: ProfilePatch): Promise<ProfileResponse>;
   createPhotoUpload(input: {
@@ -89,6 +91,8 @@ export interface ProfileServicing {
   }>;
   completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse>;
   deletePhoto(userId: string): Promise<void>;
+  deletePhotoById?(userId: string, photoId: string): Promise<void>;
+  reorderPhotos?(userId: string, photoIds: string[]): Promise<ProfileResponse>;
   processPhotoCleanup(): Promise<void>;
 }
 
@@ -113,6 +117,13 @@ export class ProfileService implements ProfileServicing {
   async getOwnProfile(userId: string): Promise<ProfileResponse> {
     const profile = await this.#repository.findProfile(userId);
     return this.#response(profile ?? emptyProfile(userId), true);
+  }
+
+  async getOwnProfilePreview(userId: string): Promise<ProfileResponse> {
+    const profile = await this.#repository.findProfile(userId);
+    // Reuse the public projection and deliberately omit coordinates, even for
+    // the owner. This keeps Preview My Profile in lockstep with other-user UI.
+    return this.#response(profile ?? emptyProfile(userId), false);
   }
 
   async getPublicProfile(userId: string, viewerId: string): Promise<ProfileResponse> {
@@ -243,6 +254,10 @@ export class ProfileService implements ProfileServicing {
     try {
       committed = await this.#repository.commitPhotoUpload(objectKey, userId, finalObjectKey);
     } catch (error) {
+      if (error instanceof Error && error.message === 'photo_limit_reached') {
+        await Promise.allSettled([this.#storage.deleteObject(objectKey), this.#storage.deleteObject(finalObjectKey), this.#repository.discardPhotoUpload(objectKey, userId)]);
+        throw new ProfileError(422, 'photo_limit_reached', 'You can publish up to 9 profile photos');
+      }
       // Another completion may have committed this same upload concurrently.
       const current = await this.#repository.findProfile(userId);
       if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
@@ -264,6 +279,22 @@ export class ProfileService implements ProfileServicing {
   async deletePhoto(userId: string): Promise<void> {
     await this.#repository.replacePhoto(userId, null);
     await this.processPhotoCleanup();
+  }
+
+  async deletePhotoById(userId: string, photoId: string): Promise<void> {
+    if (this.#repository.deletePhotoById === undefined) {
+      throw new ProfileError(501, 'photo_operation_unavailable', 'Photo management is unavailable');
+    }
+    const key = await this.#repository.deletePhotoById(userId, photoId);
+    if (key !== null) await this.processPhotoCleanup();
+  }
+
+  async reorderPhotos(userId: string, photoIds: string[]): Promise<ProfileResponse> {
+    if (this.#repository.reorderPhotos === undefined) {
+      throw new ProfileError(501, 'photo_operation_unavailable', 'Photo management is unavailable');
+    }
+    await this.#repository.reorderPhotos(userId, photoIds);
+    return this.getOwnProfile(userId);
   }
 
   async processPhotoCleanup(): Promise<void> {
@@ -296,6 +327,12 @@ export class ProfileService implements ProfileServicing {
       displayName: profile.displayName,
       bio: profile.bio,
       photoURL: profile.photoKey === null ? null : this.#storage.publicURL(profile.photoKey),
+      photos: (profile.photos ?? []).map((photo) => ({
+        id: photo.id,
+        url: this.#storage.publicURL(photo.objectKey),
+        sortOrder: photo.sortOrder,
+        isPrimary: photo.isPrimary,
+      })),
       city: profile.cityName === null || profile.countryCode === null
         ? null
         : {
@@ -319,6 +356,7 @@ function emptyProfile(userId: string): StoredProfile {
     displayName: null,
     bio: null,
     photoKey: null,
+    photos: [],
     cityName: null,
     regionCode: null,
     countryCode: null,

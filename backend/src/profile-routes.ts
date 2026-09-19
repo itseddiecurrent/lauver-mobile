@@ -43,6 +43,7 @@ const photoUploadSchema = z.object({
   byteSize: z.number().int().positive().max(5 * 1_024 * 1_024),
 }).strict();
 const photoCompleteSchema = z.object({ objectKey: z.string().min(1).max(512) }).strict();
+const photoReorderSchema = z.object({ photoIds: z.array(z.uuid()).min(1).max(9) }).strict();
 const userIDSchema = z.uuid();
 
 export type ProfileRouteDependencies = {
@@ -54,6 +55,11 @@ export type ProfileRouteDependencies = {
 export function installProfileRoutes(app: Express, dependencies: ProfileRouteDependencies): void {
   app.get('/v1/me', authenticated(dependencies.authService, async (user, _request, response) => {
     response.status(200).json({ profile: await dependencies.profileService.getOwnProfile(user.id) });
+  }));
+
+  app.get('/v1/me/preview', authenticated(dependencies.authService, async (user, _request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.status(200).json({ profile: await dependencies.profileService.getOwnProfilePreview(user.id) });
   }));
 
   app.patch('/v1/me', authenticated(dependencies.authService, async (user, request, response) => {
@@ -92,6 +98,22 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
   app.delete('/v1/me/photo', authenticated(dependencies.authService, async (user, _request, response) => {
     await dependencies.profileService.deletePhoto(user.id);
     response.status(204).send();
+  }));
+
+  app.delete('/v1/me/photos/:photoId', authenticated(dependencies.authService, async (user, request, response) => {
+    const photoID = userIDSchema.safeParse(request.params.photoId);
+    if (!photoID.success || dependencies.profileService.deletePhotoById === undefined) {
+      validationResponse(response);
+      return;
+    }
+    await dependencies.profileService.deletePhotoById(user.id, photoID.data);
+    response.status(204).send();
+  }));
+
+  app.patch('/v1/me/photos/order', authenticated(dependencies.authService, async (user, request, response) => {
+    const body = parseBody(photoReorderSchema, request, response);
+    if (body === null || dependencies.profileService.reorderPhotos === undefined) return;
+    response.status(200).json({ profile: await dependencies.profileService.reorderPhotos(user.id, body.photoIds) });
   }));
 }
 
