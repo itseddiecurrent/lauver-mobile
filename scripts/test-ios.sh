@@ -52,6 +52,7 @@ test_args=(
   -test-timeouts-enabled YES
   -default-test-execution-time-allowance 180
   -maximum-test-execution-time-allowance 300
+  ONLY_ACTIVE_ARCH=YES
 )
 
 if [ "${#only_testing[@]}" -gt 0 ]; then
