@@ -87,7 +87,7 @@ afterAll(async () => {
     SELECT user_id FROM auth_identities WHERE
       (provider='EMAIL' AND provider_subject=ANY($1::text[])) OR
       (provider='APPLE' AND provider_subject='integration-apple-subject')
-  )`, [['integration-runner@example.com', 'integration-profile@example.com', 'integration-photo-retry@example.com']]);
+  )`, [['integration-runner@example.com', 'integration-profile@example.com', 'integration-photo-retry@example.com', 'integration-photo-order@example.com']]);
   await database.disconnect();
   await sqlClient.end();
 });
@@ -434,5 +434,57 @@ describe('PostgreSQL integration', () => {
     expect(deleted.status).toBe(204);
     expect((await complete()).status).toBe(422);
     expect(objects.size).toBe(0);
+  });
+
+  it('reorders profile photos without violating the per-user sort order constraint', async () => {
+    const registration = await request(profileApp).post('/v1/auth/register').send({
+      email: 'integration-photo-order@example.com', password: 'IntegrationPhotoOrder9',
+    });
+    expect(registration.status).toBe(201);
+    const accessToken = (registration.body as { accessToken: string }).accessToken;
+    const user = await sqlClient.query<{ id: string }>(
+      `SELECT u.id
+       FROM users u
+       JOIN auth_identities ai ON ai.user_id = u.id
+       WHERE ai.provider = 'EMAIL' AND ai.provider_subject = $1`,
+      ['integration-photo-order@example.com'],
+    );
+    const userID = user.rows[0]?.id;
+    expect(userID).toBeDefined();
+
+    await sqlClient.query(
+      `INSERT INTO profiles(user_id, photo_key, updated_at) VALUES($1, $2, CURRENT_TIMESTAMP)`,
+      [userID, 'profile-photos/order-first.jpg'],
+    );
+    await sqlClient.query(
+      `INSERT INTO profile_photos(user_id, object_key, sort_order, is_primary, updated_at)
+       VALUES
+         ($1, 'profile-photos/order-first.jpg', 0, true, CURRENT_TIMESTAMP),
+         ($1, 'profile-photos/order-second.jpg', 1, false, CURRENT_TIMESTAMP)`,
+      [userID],
+    );
+    const photos = await sqlClient.query<{ id: string }>(
+      `SELECT id FROM profile_photos WHERE user_id = $1 ORDER BY sort_order`,
+      [userID],
+    );
+    const firstID = photos.rows[0]?.id;
+    const secondID = photos.rows[1]?.id;
+    expect(firstID).toBeDefined();
+    expect(secondID).toBeDefined();
+
+    const response = await request(profileApp)
+      .patch('/v1/me/photos/order')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ photoIds: [secondID, firstID] });
+
+    expect(response.status).toBe(200);
+    const saved = await sqlClient.query<{ id: string; sort_order: number; is_primary: boolean }>(
+      `SELECT id, sort_order, is_primary FROM profile_photos WHERE user_id = $1 ORDER BY sort_order`,
+      [userID],
+    );
+    expect(saved.rows).toEqual([
+      { id: secondID, sort_order: 0, is_primary: true },
+      { id: firstID, sort_order: 1, is_primary: false },
+    ]);
   });
 });
