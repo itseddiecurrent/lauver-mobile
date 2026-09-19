@@ -438,7 +438,19 @@ describe('PostgreSQL integration', () => {
   });
 
   it('reorders profile photos without violating the per-user sort order constraint', async () => {
-    const registration = await request(profileApp).post('/v1/auth/register').send({
+    const orderStorage: ProfilePhotoStorage = {
+      createUploadURL: () => Promise.resolve('https://uploads.example.test/order'),
+      readObject: () => Promise.resolve(null),
+      writeObject: () => Promise.resolve(),
+      deleteObject: () => Promise.resolve(),
+      publicURL: (objectKey) => `https://photos.example.test/${objectKey}`,
+    };
+    const orderApp = createTestApp({
+      database,
+      authService,
+      profileService: new ProfileService({ repository: database.profileRepository, storage: orderStorage }),
+    });
+    const registration = await request(orderApp).post('/v1/auth/register').send({
       email: 'integration-photo-order@example.com', password: 'IntegrationPhotoOrder9',
     });
     expect(registration.status).toBe(201);
@@ -467,7 +479,7 @@ describe('PostgreSQL integration', () => {
       [firstID, secondID, userID],
     );
 
-    const response = await request(profileApp)
+    const response = await request(orderApp)
       .patch('/v1/me/photos/order')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ photoIds: [secondID, firstID] });
