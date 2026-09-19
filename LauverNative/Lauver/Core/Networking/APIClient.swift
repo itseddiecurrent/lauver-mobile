@@ -209,7 +209,6 @@ final class APIClient {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-diagnose-network") {
             transportLogger.debug("LauverTransport \(message, privacy: .public)")
-            print("LauverTransport \(message)")
         }
         #endif
     }
