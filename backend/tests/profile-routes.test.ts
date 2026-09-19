@@ -141,6 +141,7 @@ describe('profile routes', () => {
 
     expect(response.status).toBe(429);
     expect(response.headers['retry-after']).toMatch(/^\d+$/);
-    expect(response.body.retryAfter).toBe(Number(response.headers['retry-after']));
+    const body = response.body as { retryAfter: number };
+    expect(body.retryAfter).toBe(Number(response.headers['retry-after']));
   });
 });
