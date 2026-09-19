@@ -228,6 +228,16 @@ export class PrismaProfileRepository implements ProfileRepository {
         throw new Error('photo_limit_reached');
       }
       await transaction.profilePhotoUpload.delete({ where: { objectKey } });
+      // The temporary upload must be removed after the durable profile photo
+      // is committed. Keep this as a cleanup job so a lost response or a
+      // concurrent completion cannot leave the upload object behind.
+      if (objectKey !== finalObjectKey) {
+        await transaction.photoCleanupJob.upsert({
+          where: { objectKey },
+          create: { objectKey },
+          update: { nextAttempt: new Date() },
+        });
+      }
       if (oldKey !== null && oldKey !== finalObjectKey) {
         await transaction.photoCleanupJob.upsert({
           where: { objectKey: oldKey },
