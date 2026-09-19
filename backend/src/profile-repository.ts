@@ -167,9 +167,13 @@ export class PrismaProfileRepository implements ProfileRepository {
       const photo = await tx.profilePhoto.findFirst({ where: { id: photoId, userId } });
       if (!photo) return null;
       await tx.profilePhoto.delete({ where: { id: photo.id } });
-      const remaining = await tx.profilePhoto.findMany({ where: { userId }, orderBy: { sortOrder: 'asc' } });
-      await Promise.all(remaining.map((item, index) => tx.profilePhoto.update({ where: { id: item.id }, data: { sortOrder: index, isPrimary: index === 0 } })));
-      await tx.profile.update({ where: { userId }, data: { photoKey: remaining[0]?.objectKey ?? null } });
+      // Deletion intentionally leaves sort_order gaps. The editor sends one
+      // final reorder after uploads finish, avoiding an O(n) renumbering pass
+      // and the unique-key collisions that pass can cause.
+      const first = await tx.profilePhoto.findFirst({ where: { userId }, orderBy: { sortOrder: 'asc' } });
+      await tx.profilePhoto.updateMany({ where: { userId }, data: { isPrimary: false } });
+      if (first) await tx.profilePhoto.update({ where: { id: first.id }, data: { isPrimary: true } });
+      await tx.profile.update({ where: { userId }, data: { photoKey: first?.objectKey ?? null } });
       await tx.photoCleanupJob.create({ data: { objectKey: photo.objectKey } }).catch(() => undefined);
       return photo.objectKey;
     });

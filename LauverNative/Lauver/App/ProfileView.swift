@@ -59,7 +59,8 @@ final class ProfileViewModel: ObservableObject {
     func savePhotoEdits(
         draft: ProfileDraft,
         photoEdits: [ProfilePhotoEdit],
-        retryOnlyID: String? = nil
+        retryOnlyID: String? = nil,
+        deletedPhotoIDs: Set<String> = []
     ) async -> ProfilePhotoSaveOutcome {
         guard !isSaving else { return ProfilePhotoSaveOutcome(saved: false, edits: photoEdits) }
         isSaving = true
@@ -69,6 +70,9 @@ final class ProfileViewModel: ObservableObject {
         var edits = photoEdits
         do {
             profile = try await service.updateProfile(draft)
+            for photoID in deletedPhotoIDs {
+                try await service.deletePhoto(photoID: photoID)
+            }
             let pending = edits.filter { edit in
                 edit.upload != nil && edit.uploadedPhotoID == nil && (retryOnlyID == nil || edit.id == retryOnlyID)
             }
@@ -80,33 +84,27 @@ final class ProfileViewModel: ObservableObject {
                 edits[index].uploadError = nil
             }
 
-            var next = 0
-            let concurrency = min(4, pending.count)
-            await withTaskGroup(of: (String, Result<PhotoUploadResult, Error>).self) { group in
-                func addNext() {
-                    guard next < pending.count else { return }
-                    let edit = pending[next]
-                    next += 1
-                    guard let ticket = ticketByID[edit.id], let photo = edit.upload else { return addNext() }
-                    group.addTask {
-                        do { return (edit.id, .success(try await self.service.uploadPhoto(photo, using: ticket))) }
-                        catch { return (edit.id, .failure(error)) }
-                    }
+            // Confirm one photo at a time. Each successful confirmation returns
+            // a durable photo ID before the next upload starts, so the final
+            // order request only contains committed IDs and a retry never
+            // re-uploads a photo that already succeeded.
+            for edit in pending {
+                guard let index = edits.firstIndex(where: { $0.id == edit.id }) else { continue }
+                edits[index].isUploading = true
+                edits[index].uploadError = nil
+                guard let ticket = ticketByID[edit.id], let photo = edit.upload else {
+                    edits[index].isUploading = false
+                    edits[index].uploadError = "Photo upload failed."
+                    continue
                 }
-                for _ in 0..<concurrency { addNext() }
-                while let (editID, result) = await group.next() {
-                    if let index = edits.firstIndex(where: { $0.id == editID }) {
-                        edits[index].isUploading = false
-                        switch result {
-                        case let .success(upload):
-                            edits[index].uploadedPhotoID = upload.photoID
-                            edits[index].uploadError = upload.photoID == nil ? "Photo confirmation failed." : nil
-                        case let .failure(error):
-                            edits[index].uploadError = (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
-                        }
-                    }
-                    addNext()
+                do {
+                    let upload = try await service.uploadPhoto(photo, using: ticket)
+                    edits[index].uploadedPhotoID = upload.photoID
+                    edits[index].uploadError = upload.photoID == nil ? "Photo confirmation failed." : nil
+                } catch {
+                    edits[index].uploadError = (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
                 }
+                edits[index].isUploading = false
             }
 
             let originalIDs = Set((profile?.photos ?? []).map(\.id))
@@ -114,13 +112,13 @@ final class ProfileViewModel: ObservableObject {
                 if edit.uploadedPhotoID == nil { return edit.existing?.id ?? edit.replacementOf }
                 return edit.existing?.id
             })
-            let removedIDs = originalIDs.subtracting(retainedExistingIDs)
+            let removedIDs = originalIDs.subtracting(retainedExistingIDs).subtracting(deletedPhotoIDs)
             for photoID in removedIDs {
                 try await service.deletePhoto(photoID: photoID)
             }
 
             let orderedIDs = edits.compactMap { edit in
-                edit.uploadedPhotoID ?? edit.existing?.id ?? (edit.uploadError != nil ? edit.replacementOf : nil)
+                edit.uploadedPhotoID ?? edit.existing?.id
             }
             if !orderedIDs.isEmpty {
                 profile = try await service.reorderPhotos(orderedIDs)
@@ -379,6 +377,7 @@ private struct EditProfileView: View {
     @State private var draft: ProfileDraft
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
     @State private var editorPhotos: [ProfilePhotoEdit]
+    @State private var pendingDeletedPhotoIDs: Set<String> = []
     @State private var replacementTargetID: String?
     @State private var showingCitySearch = false
 
@@ -421,7 +420,8 @@ private struct EditProfileView: View {
                                                 let outcome = await viewModel.savePhotoEdits(
                                                     draft: draft,
                                                     photoEdits: editorPhotos,
-                                                    retryOnlyID: photo.id
+                                                    retryOnlyID: photo.id,
+                                                    deletedPhotoIDs: pendingDeletedPhotoIDs
                                                 )
                                                 editorPhotos = outcome.edits
                                             }
@@ -538,9 +538,16 @@ private struct EditProfileView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(viewModel.isSaving ? "Saving…" : "Save") {
                         Task {
-                            let outcome = await viewModel.savePhotoEdits(draft: draft, photoEdits: editorPhotos)
+                            let outcome = await viewModel.savePhotoEdits(
+                                draft: draft,
+                                photoEdits: editorPhotos,
+                                deletedPhotoIDs: pendingDeletedPhotoIDs
+                            )
                             editorPhotos = outcome.edits
-                            if outcome.saved { dismiss() }
+                            if outcome.saved {
+                                pendingDeletedPhotoIDs.removeAll()
+                                dismiss()
+                            }
                         }
                     }
                     .disabled(viewModel.isSaving)
@@ -570,10 +577,13 @@ private struct EditProfileView: View {
                         if let targetID, let replacement = loadedPhotos.first,
                            let index = editorPhotos.firstIndex(where: { $0.id == targetID }) {
                             let old = editorPhotos[index]
+                            if let oldPhotoID = old.uploadedPhotoID ?? old.existing?.id ?? old.replacementOf {
+                                pendingDeletedPhotoIDs.insert(oldPhotoID)
+                            }
                             editorPhotos[index] = ProfilePhotoEdit(
                                 id: UUID().uuidString,
                                 existing: nil,
-                                replacementOf: old.existing?.id ?? old.replacementOf,
+                                replacementOf: nil,
                                 upload: replacement
                             )
                         } else {
@@ -618,6 +628,9 @@ private struct EditProfileView: View {
 
     private func deleteEditorPhoto(_ photo: ProfilePhotoEdit) {
         guard let index = editorPhotos.firstIndex(where: { $0.id == photo.id }) else { return }
+        if let photoID = photo.uploadedPhotoID ?? photo.existing?.id ?? photo.replacementOf {
+            pendingDeletedPhotoIDs.insert(photoID)
+        }
         editorPhotos.remove(at: index)
     }
 
