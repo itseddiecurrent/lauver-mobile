@@ -179,6 +179,14 @@ export class PrismaProfileRepository implements ProfileRepository {
     await this.#client.$transaction(async (tx) => {
       const photos = await tx.profilePhoto.findMany({ where: { userId }, select: { id: true } });
       if (photos.length !== photoIds.length || photos.some((p) => !photoIds.includes(p.id))) throw new Error('invalid_photo_order');
+
+      // sort_order is unique per user. Move every row out of the final
+      // range first so swapping/reordering cannot collide with a row that
+      // still has one of the target sort_order values.
+      await Promise.all(photoIds.map((id, index) => tx.profilePhoto.update({
+        where: { id },
+        data: { sortOrder: -(index + 1), isPrimary: false },
+      })));
       for (const [index, id] of photoIds.entries()) {
         await tx.profilePhoto.update({ where: { id }, data: { sortOrder: index, isPrimary: index === 0 } });
       }

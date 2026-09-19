@@ -653,7 +653,8 @@ PATCH  /v1/me
 GET    /v1/users/:userId
 GET    /v1/me/preview
 GET    /v1/users/:userId/activities?limit=10
-POST   /v1/me/photos/upload-url
+POST   /v1/me/photo/upload-url
+POST   /v1/me/photos/upload-urls
 POST   /v1/me/photos/:photoId/confirm
 PATCH  /v1/me/photos/order
 DELETE /v1/me/photos/:photoId
@@ -666,7 +667,7 @@ POST   /v1/matches/:matchId/unmatch
 PATCH  /v1/me/match-preferences
 ```
 
-照片上传契约：`POST /v1/me/photos/upload-url` 只创建带过期时间的 pending photo 和一次性上传凭证，并返回 `photoId`、预签名 URL、允许的 MIME、最大字节数和 `expiresAt`；客户端直接上传 object storage 后调用 confirm。confirm 必须幂等，且只有 confirm 成功后照片才进入公开 Profile projection。`PATCH /v1/me/photos/order` 接收完整的已发布 `photoId` 顺序，服务端校验不重复、属于当前用户、数量不超过 9，并在事务中重排和保证唯一主照片。
+照片上传契约：`POST /v1/me/photo/upload-url` 只创建带过期时间的 pending photo 和一次性上传凭证，并返回预签名 URL、允许的 MIME、最大字节数和 `expiresIn`；批量接口 `POST /v1/me/photos/upload-urls` 一次最多申请 9 个 URL，响应以 `clientID` 对应每张照片。客户端直接上传 object storage 后调用 confirm。confirm 必须幂等，且只有 confirm 成功后照片才进入公开 Profile projection。上传客户端保留并发上传，但并发上限为 4；服务端限流按“照片批次”计数，单张兼容接口与批量接口共用同一批次额度。429 必须返回 `Retry-After`（秒）和 `retryAfter`，客户端保留已成功照片、逐张显示失败并支持单张 Retry，不将整批标为不可恢复失败。`PATCH /v1/me/photos/order` 接收完整的已发布 `photoId` 顺序，服务端校验不重复、属于当前用户、数量不超过 9，并在事务中重排和保证唯一主照片。
 
 ### Strava / HealthKit
 
@@ -972,7 +973,7 @@ xcodebuild test \
 
 ### Step 05：Workout Profile、Photo 与 City Location
 
-**状态：✅ 已完成。** Profile 范围扩展、最多 9 张照片、排序/主照片、Profile Preview、城市隐私和 Match 可见性相关实现已完成；本地验证通过，CI 已通过，Render staging 已成功运行。
+**状态：🟡 代码完成，staging 照片存储验收待完成（2026-09-19）。** Profile 范围扩展、最多 9 张照片、排序/主照片、Profile Preview、城市隐私和 Match 可见性相关实现已完成；批量上传代码已推送并通过 CI，但 Render staging 的 Supabase Storage 配置尚未完成真机验证。
 
 **当前进度（2026-09-19）：**
 
@@ -981,7 +982,12 @@ xcodebuild test \
 - ✅ 上传、confirm 幂等、替换、删除、排序、过期上传和孤儿对象清理已完成；并发 confirm 遗留临时对象的问题已在 commit `7a0ee34` 修复并 push；
 - ✅ Backend lint、typecheck 和本地 175 个测试通过；Staging 真机包已编译并安装到连接的 iPhone 17e；
 - ✅ `7a0ee34` 推送后的 PostgreSQL integration CI 已通过，Render staging 已成功运行；
-- ⏳ iPhone 上仍需人工确认登录测试账号后的 Profile Preview 实际显示，作为设备端最终体验记录，不阻塞后端部署。
+- ✅ 新增 `POST /v1/me/photos/upload-urls`，一次最多申请 9 个 upload URL；单张兼容接口与批量接口共用照片批次限流，并返回 `Retry-After`；后端提交为 `8f184d7`，CI 修复提交为 `292f7d9`；
+- ✅ 客户端保留并发上传但限制为 4 个并发，成功照片保留，失败照片可逐张 Retry，并解析 429 的等待秒数；Backend CI、guardrails CI 和 iOS CI 均已通过；
+- ✅ staging 已能识别批量上传路由（未认证请求返回 401 而非 404）；
+- ⏳ Render staging 仍需确认 `PROFILE_PHOTO_STORAGE_ENABLED=true`、Supabase S3 endpoint/region/access keys、`OBJECT_STORAGE_FORCE_PATH_STYLE=true` 和 public URL；当前真机上传返回 503 `photo_storage_unavailable`；
+- ⏳ 完成 Supabase Storage 配置后，需在 iPhone 17e 上重新验收登录 → Edit Profile → 上传/替换/排序/删除、最多 9 张和失败 Retry；
+- ⏳ iPhone 上仍需人工确认登录测试账号后的 Profile Preview 实际显示，作为设备端最终体验记录。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 
@@ -1085,7 +1091,7 @@ xcodebuild test \
 8. 15 次 Like 后第 16 次被拒绝，UTC 日期切换后恢复额度；
 9. 筛选条件重启 App 后保持，候选加载失败时 Retry 不会重复记录 Like/Pass。
 
-**通过标准：** 双方明确 Like 是创建私聊的唯一用户关系入口；所有关系权限由后端强制执行。
+**通过标准：** 用户可在真实 iPhone 与 staging 完成 Profile 编辑、最多 9 张照片上传/排序/删除/Retry 和 Preview；双方明确 Like 是创建私聊的唯一用户关系入口；所有关系权限由后端强制执行。
 
 ### Step 06B：Native Match UI、Swipe 与 Profile Preview
 

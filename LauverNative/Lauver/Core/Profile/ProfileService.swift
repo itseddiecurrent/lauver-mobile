@@ -222,6 +222,23 @@ struct ProfilePhoto: Equatable {
     }
 }
 
+struct PhotoUploadResult {
+    let profile: WorkoutProfile
+    let photoID: String?
+}
+
+struct PhotoUploadRequest {
+    let clientID: String
+    let photo: ProfilePhoto
+}
+
+struct PhotoUploadTicket {
+    let clientID: String
+    let objectKey: String
+    let uploadURL: URL
+    let requiredHeaders: [String: String]
+}
+
 private extension Int {
     var cgFloat: CGFloat { CGFloat(self) }
 }
@@ -319,6 +336,14 @@ private struct PhotoUploadResponse: Decodable {
     let expiresIn: Int
     let requiredHeaders: [String: String]
 }
+private struct PhotoUploadBatchResponse: Decodable { let uploads: [PhotoUploadResponseWithClientID] }
+private struct PhotoUploadResponseWithClientID: Decodable {
+    let clientID: String
+    let objectKey: String
+    let uploadURL: URL
+    let expiresIn: Int
+    let requiredHeaders: [String: String]
+}
 
 protocol ProfileServicing {
     func getOwnProfile() async throws -> WorkoutProfile
@@ -329,6 +354,38 @@ protocol ProfileServicing {
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile
     func deletePhoto() async throws
+    func uploadPhotoWithReference(_ photo: ProfilePhoto) async throws -> PhotoUploadResult
+    func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket]
+    func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult
+    func deletePhoto(photoID: String) async throws
+    func reorderPhotos(_ photoIDs: [String]) async throws -> WorkoutProfile
+}
+
+extension ProfileServicing {
+    func uploadPhotoWithReference(_ photo: ProfilePhoto) async throws -> PhotoUploadResult {
+        PhotoUploadResult(profile: try await uploadPhoto(photo), photoID: nil)
+    }
+
+    func deletePhoto(photoID: String) async throws {
+        _ = photoID
+        try await deletePhoto()
+    }
+
+    func reorderPhotos(_ photoIDs: [String]) async throws -> WorkoutProfile {
+        _ = photoIDs
+        return try await getOwnProfile()
+    }
+
+    func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
+        requests.map {
+            PhotoUploadTicket(clientID: $0.clientID, objectKey: "", uploadURL: URL(string: "https://invalid.example")!, requiredHeaders: [:])
+        }
+    }
+
+    func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
+        _ = ticket
+        return try await uploadPhotoWithReference(photo)
+    }
 }
 
 protocol AccountDeletionServicing {
@@ -549,6 +606,10 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
     }
 
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile {
+        try await uploadPhotoWithReference(photo).profile
+    }
+
+    func uploadPhotoWithReference(_ photo: ProfilePhoto) async throws -> PhotoUploadResult {
         let body = try encoder.encode(PhotoUploadPayload(
             fileName: photo.fileName,
             contentType: photo.contentType,
@@ -579,13 +640,70 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
                 allowsConnectionRetry: true
             )
         }
-        return envelope.profile
+        let uploadStem = URL(fileURLWithPath: upload.objectKey).deletingPathExtension().lastPathComponent
+        let photoID = envelope.profile.photos.first {
+            $0.url.deletingPathExtension().lastPathComponent == uploadStem
+        }?.id
+        return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
+    }
+
+    func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
+        struct Payload: Encodable {
+            let photos: [Item]
+            struct Item: Encodable {
+                let clientID: String
+                let fileName: String
+                let contentType: String
+                let byteSize: Int
+            }
+        }
+        let body = try encoder.encode(Payload(photos: requests.map {
+            Payload.Item(clientID: $0.clientID, fileName: $0.photo.fileName, contentType: $0.photo.contentType, byteSize: $0.photo.data.count)
+        }))
+        let response: PhotoUploadBatchResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/me/photos/upload-urls", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        }
+        return response.uploads.map {
+            PhotoUploadTicket(clientID: $0.clientID, objectKey: $0.objectKey, uploadURL: $0.uploadURL, requiredHeaders: $0.requiredHeaders)
+        }
+    }
+
+    func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
+        try await client.upload(data: photo.data, to: ticket.uploadURL, contentType: photo.contentType, requiredHeaders: ticket.requiredHeaders)
+        let completeBody = try encoder.encode(PhotoCompletePayload(objectKey: ticket.objectKey))
+        let envelope: ProfileEnvelope = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/me/photo/complete", body: completeBody, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        }
+        let uploadStem = URL(fileURLWithPath: ticket.objectKey).deletingPathExtension().lastPathComponent
+        let photoID = envelope.profile.photos.first { $0.url.deletingPathExtension().lastPathComponent == uploadStem }?.id
+        return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
     }
 
     func deletePhoto() async throws {
         let _: EmptyResponse = try await authenticatedRequest { token in
             APIRequest(method: .delete, path: "/v1/me/photo", headers: Self.authorization(token))
         }
+    }
+
+    func deletePhoto(photoID: String) async throws {
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .delete, path: "/v1/me/photos/\(photoID)", headers: Self.authorization(token))
+        }
+    }
+
+    func reorderPhotos(_ photoIDs: [String]) async throws -> WorkoutProfile {
+        struct Payload: Encodable { let photoIds: [String] }
+        let body = try encoder.encode(Payload(photoIds: photoIDs))
+        let envelope: ProfileEnvelope = try await authenticatedRequest { token in
+            APIRequest(
+                method: .patch,
+                path: "/v1/me/photos/order",
+                body: body,
+                headers: Self.jsonAuthorization(token),
+                allowsConnectionRetry: true
+            )
+        }
+        return envelope.profile
     }
 
     func deleteAccount(currentPassword: String) async throws {

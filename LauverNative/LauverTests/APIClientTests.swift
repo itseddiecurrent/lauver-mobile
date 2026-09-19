@@ -106,7 +106,7 @@ final class APIClientTests: XCTestCase {
                 statusCode: statusCode,
                 body: statusCode == 409
                     ? #"{"code":"registration_unavailable","message":"Registration could not be completed","requestId":"conflict-id"}"#
-                    : #"{"code":"rate_limited","message":"Too many requests","requestId":"rate-id"}"#
+                    : #"{"code":"rate_limited","message":"Too many requests","retryAfter":7,"requestId":"rate-id"}"#
             )
         }
 
@@ -116,7 +116,7 @@ final class APIClientTests: XCTestCase {
             requestID: "conflict-id"
         ))
         statusCode = 429
-        await assertError(.rateLimited(message: "Too many requests", requestID: "rate-id"))
+        await assertError(.rateLimited(message: "Too many requests", retryAfter: 7, requestID: "rate-id"))
     }
 
     func testMaps404WithPublicMessageAndRequestID() async {

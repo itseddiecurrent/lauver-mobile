@@ -34,7 +34,15 @@ struct APIRequest<Response: Decodable> {
 struct APIErrorPayload: Codable, Equatable {
     let code: String
     let message: String
+    let retryAfter: Int?
     let requestId: String?
+
+    init(code: String, message: String, retryAfter: Int? = nil, requestId: String? = nil) {
+        self.code = code
+        self.message = message
+        self.retryAfter = retryAfter
+        self.requestId = requestId
+    }
 }
 
 struct EmptyResponse: Decodable, Equatable {}
@@ -46,7 +54,7 @@ enum APIError: Error, Equatable {
     case validation(code: String, message: String, requestID: String?)
     case notFound(code: String, message: String, requestID: String?)
     case conflict(code: String, message: String, requestID: String?)
-    case rateLimited(message: String, requestID: String?)
+    case rateLimited(message: String, retryAfter: Int?, requestID: String?)
     case server(statusCode: Int, requestID: String?)
     case transport(URLError.Code)
     case decoding
@@ -57,7 +65,7 @@ enum APIError: Error, Equatable {
              let .validation(_, _, requestID),
              let .notFound(_, _, requestID),
              let .conflict(_, _, requestID),
-             let .rateLimited(_, requestID),
+             let .rateLimited(_, _, requestID),
              let .server(_, requestID):
             requestID
         case .invalidRequest, .invalidResponse, .transport, .decoding:
@@ -75,8 +83,8 @@ enum APIError: Error, Equatable {
             message
         case let .conflict(_, message, _):
             message
-        case let .rateLimited(message, _):
-            message
+        case let .rateLimited(message, retryAfter, _):
+            if let retryAfter { "\(message) Try again in \(retryAfter) seconds." } else { message }
         case .server:
             "The service is temporarily unavailable."
         case .transport(.notConnectedToInternet):
@@ -201,6 +209,7 @@ final class APIClient {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-diagnose-network") {
             transportLogger.debug("LauverTransport \(message, privacy: .public)")
+            print("LauverTransport \(message)")
         }
         #endif
     }
@@ -295,6 +304,7 @@ final class APIClient {
             let payload = try? decoder.decode(APIErrorPayload.self, from: data)
             throw APIError.rateLimited(
                 message: payload?.message ?? "Too many requests. Try again later.",
+                retryAfter: payload?.retryAfter ?? httpResponse.value(forHTTPHeaderField: "Retry-After").flatMap(Int.init),
                 requestID: payload?.requestId ?? requestID
             )
         case 500...599:

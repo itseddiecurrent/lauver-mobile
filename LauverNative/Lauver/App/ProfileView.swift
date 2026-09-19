@@ -1,6 +1,21 @@
 import PhotosUI
 import SwiftUI
 
+struct ProfilePhotoEdit: Identifiable {
+    var id: String
+    var existing: ProfilePhotoReference?
+    var replacementOf: String?
+    var upload: ProfilePhoto?
+    var uploadedPhotoID: String?
+    var uploadError: String?
+    var isUploading = false
+}
+
+struct ProfilePhotoSaveOutcome {
+    let saved: Bool
+    let edits: [ProfilePhotoEdit]
+}
+
 @MainActor
 final class ProfileViewModel: ObservableObject {
     @Published private(set) var profile: WorkoutProfile?
@@ -31,20 +46,113 @@ final class ProfileViewModel: ObservableObject {
     }
 
     func save(draft: ProfileDraft, photos: [ProfilePhoto]) async -> Bool {
-        guard !isSaving else { return false }
+        let edits = photos.map { photo in
+            ProfilePhotoEdit(id: UUID().uuidString, existing: nil, replacementOf: nil, upload: photo)
+        }
+        return await save(draft: draft, photoEdits: edits)
+    }
+
+    func save(draft: ProfileDraft, photoEdits: [ProfilePhotoEdit]) async -> Bool {
+        await savePhotoEdits(draft: draft, photoEdits: photoEdits).saved
+    }
+
+    func savePhotoEdits(
+        draft: ProfileDraft,
+        photoEdits: [ProfilePhotoEdit],
+        retryOnlyID: String? = nil
+    ) async -> ProfilePhotoSaveOutcome {
+        guard !isSaving else { return ProfilePhotoSaveOutcome(saved: false, edits: photoEdits) }
         isSaving = true
         errorMessage = nil
         requestID = nil
         defer { isSaving = false }
         do {
             profile = try await service.updateProfile(draft)
-            for photo in photos {
-                profile = try await service.uploadPhoto(photo)
+            var edits = photoEdits
+            let pending = edits.filter { edit in
+                edit.upload != nil && edit.uploadedPhotoID == nil && (retryOnlyID == nil || edit.id == retryOnlyID)
             }
-            return true
+            let requests = pending.map { PhotoUploadRequest(clientID: $0.id, photo: $0.upload!) }
+            let tickets = requests.isEmpty ? [] : try await service.createPhotoUploadTickets(requests)
+            let ticketByID = Dictionary(uniqueKeysWithValues: tickets.map { ($0.clientID, $0) })
+            for index in edits.indices where ticketByID[edits[index].id] != nil {
+                edits[index].isUploading = true
+                edits[index].uploadError = nil
+            }
+
+            var next = 0
+            let concurrency = min(4, pending.count)
+            await withTaskGroup(of: (String, Result<PhotoUploadResult, Error>).self) { group in
+                func addNext() {
+                    guard next < pending.count else { return }
+                    let edit = pending[next]
+                    next += 1
+                    guard let ticket = ticketByID[edit.id], let photo = edit.upload else { return addNext() }
+                    group.addTask {
+                        do { return (edit.id, .success(try await self.service.uploadPhoto(photo, using: ticket))) }
+                        catch { return (edit.id, .failure(error)) }
+                    }
+                }
+                for _ in 0..<concurrency { addNext() }
+                while let (editID, result) = await group.next() {
+                    if let index = edits.firstIndex(where: { $0.id == editID }) {
+                        edits[index].isUploading = false
+                        switch result {
+                        case let .success(upload):
+                            edits[index].uploadedPhotoID = upload.photoID
+                            edits[index].uploadError = upload.photoID == nil ? "Photo confirmation failed." : nil
+                        case let .failure(error):
+                            edits[index].uploadError = (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
+                        }
+                    }
+                    addNext()
+                }
+            }
+
+            let originalIDs = Set((profile?.photos ?? []).map(\.id))
+            let retainedExistingIDs = Set(edits.compactMap { edit in
+                if edit.uploadedPhotoID == nil { return edit.existing?.id ?? edit.replacementOf }
+                return edit.existing?.id
+            })
+            let removedIDs = originalIDs.subtracting(retainedExistingIDs)
+            for photoID in removedIDs {
+                try await service.deletePhoto(photoID: photoID)
+            }
+
+            let orderedIDs = edits.compactMap { edit in
+                edit.uploadedPhotoID ?? edit.existing?.id ?? (edit.uploadError != nil ? edit.replacementOf : nil)
+            }
+            if !orderedIDs.isEmpty {
+                profile = try await service.reorderPhotos(orderedIDs)
+            } else {
+                profile = try await service.getOwnProfile()
+            }
+
+            if let freshProfile = profile {
+                for index in edits.indices {
+                    guard let photoID = edits[index].uploadedPhotoID,
+                          let fresh = freshProfile.photos.first(where: { $0.id == photoID }) else { continue }
+                    edits[index].id = fresh.id
+                    edits[index].existing = fresh
+                    edits[index].replacementOf = nil
+                    edits[index].upload = nil
+                    edits[index].uploadedPhotoID = nil
+                }
+            }
+            let failed = edits.contains { $0.uploadError != nil }
+            if failed { errorMessage = "Some photos could not be uploaded. Retry them individually." }
+            return ProfilePhotoSaveOutcome(saved: !failed, edits: edits)
         } catch {
             capture(error)
-            return false
+            var failedEdits = photoEdits
+            if error is APIError {
+                for index in failedEdits.indices where failedEdits[index].upload != nil && failedEdits[index].uploadedPhotoID == nil {
+                    failedEdits[index].isUploading = false
+                    failedEdits[index].uploadError = (error as? APIError)?.userMessage ?? "Photo upload failed."
+                }
+                errorMessage = "Some photos could not be uploaded. Retry them individually."
+            }
+            return ProfilePhotoSaveOutcome(saved: false, edits: failedEdits)
         }
     }
 
@@ -266,47 +374,83 @@ private struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: ProfileDraft
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var selectedPhotos: [ProfilePhoto] = []
-    @State private var selectedPhotoImage: Image?
-    @State private var currentPhotoURL: URL?
+    @State private var editorPhotos: [ProfilePhotoEdit]
+    @State private var replacementTargetID: String?
     @State private var showingCitySearch = false
 
     init(profile: WorkoutProfile, viewModel: ProfileViewModel) {
         self.profile = profile
         self.viewModel = viewModel
         _draft = State(initialValue: ProfileDraft(profile: profile))
-        _currentPhotoURL = State(initialValue: profile.photoURL)
+        _editorPhotos = State(initialValue: profile.photos.map {
+            ProfilePhotoEdit(id: $0.id, existing: $0, replacementOf: nil, upload: nil)
+        })
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Photo") {
-                    HStack(spacing: LauverDesign.Spacing.medium) {
-                        if let selectedPhotoImage {
-                            selectedPhotoImage
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 72, height: 72)
-                                .clipShape(Circle())
-                        } else {
-                            ProfileAvatar(photoURL: currentPhotoURL, size: 72)
-                        }
-                        PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: max(1, 9 - profile.photos.count), matching: .images) {
-                            Label("Add photos", systemImage: "photo.on.rectangle.angled")
-                        }
-                        .accessibilityIdentifier("profile-photo-picker")
-                    }
-                    if currentPhotoURL != nil {
-                        Button("Delete current photo", role: .destructive) {
-                            Task {
-                                await viewModel.deletePhoto()
-                                if viewModel.profile?.photoURL == nil { currentPhotoURL = nil }
+                Section {
+                    if editorPhotos.isEmpty {
+                        Text("Add at least one photo to complete your profile.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(Array(editorPhotos.enumerated()), id: \.element.id) { index, photo in
+                            HStack(spacing: LauverDesign.Spacing.medium) {
+                                photoThumbnail(photo)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(index == 0 ? "Primary photo" : "Photo \(index + 1)")
+                                        .font(.subheadline.weight(.semibold))
+                                    HStack(spacing: LauverDesign.Spacing.small) {
+                                        Button("Replace") { replacementTargetID = photo.id }
+                                            .accessibilityIdentifier("profile-photo-replace-\(photo.id)")
+                                        Button("Delete", role: .destructive) { deleteEditorPhoto(photo) }
+                                            .accessibilityIdentifier("profile-photo-delete-\(photo.id)")
+                                    }
+                                    .font(.caption)
+                                    if let uploadError = photo.uploadError {
+                                        Text(uploadError)
+                                            .font(.caption2)
+                                            .foregroundStyle(.red)
+                                        Button("Retry") {
+                                            Task {
+                                                let outcome = await viewModel.savePhotoEdits(
+                                                    draft: draft,
+                                                    photoEdits: editorPhotos,
+                                                    retryOnlyID: photo.id
+                                                )
+                                                editorPhotos = outcome.edits
+                                            }
+                                        }
+                                        .font(.caption.weight(.semibold))
+                                        .accessibilityIdentifier("profile-photo-retry-\(photo.id)")
+                                    }
+                                }
+                                Spacer()
                             }
                         }
-                        .disabled(viewModel.isSaving)
-                        .accessibilityIdentifier("profile-photo-delete")
+                        .onMove { source, destination in
+                            editorPhotos.move(fromOffsets: source, toOffset: destination)
+                        }
                     }
+
+                    PhotosPicker(
+                        selection: $selectedPhotoItems,
+                        maxSelectionCount: replacementTargetID == nil ? max(0, 9 - editorPhotos.count) : 1,
+                        matching: .images
+                    ) {
+                        Label(replacementTargetID == nil ? "Add photos" : "Choose replacement", systemImage: "photo.on.rectangle.angled")
+                    }
+                    .disabled(replacementTargetID == nil && editorPhotos.count >= 9)
+                    .accessibilityIdentifier("profile-photo-picker")
+                } header: {
+                    HStack {
+                        Text("Photos")
+                        Spacer()
+                        EditButton()
+                    }
+                } footer: {
+                    Text("Up to 9 photos. Drag to reorder; the first photo is primary.")
                 }
 
                 Section("Basics") {
@@ -390,7 +534,9 @@ private struct EditProfileView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(viewModel.isSaving ? "Saving…" : "Save") {
                         Task {
-                            if await viewModel.save(draft: draft, photos: selectedPhotos) { dismiss() }
+                            let outcome = await viewModel.savePhotoEdits(draft: draft, photoEdits: editorPhotos)
+                            editorPhotos = outcome.edits
+                            if outcome.saved { dismiss() }
                         }
                     }
                     .disabled(viewModel.isSaving)
@@ -405,6 +551,9 @@ private struct EditProfileView: View {
             }
             .onChange(of: selectedPhotoItems) { _, items in
                 guard !items.isEmpty else { return }
+                let targetID = replacementTargetID
+                replacementTargetID = nil
+                selectedPhotoItems = []
                 Task {
                     var loadedPhotos: [ProfilePhoto] = []
                     do {
@@ -414,14 +563,58 @@ private struct EditProfileView: View {
                             }
                             loadedPhotos.append(try ProfilePhoto.processedJPEG(from: data))
                         }
-                        selectedPhotos = loadedPhotos
-                        if let first = loadedPhotos.first, let image = UIImage(data: first.data) { selectedPhotoImage = Image(uiImage: image) }
+                        if let targetID, let replacement = loadedPhotos.first,
+                           let index = editorPhotos.firstIndex(where: { $0.id == targetID }) {
+                            let old = editorPhotos[index]
+                            editorPhotos[index] = ProfilePhotoEdit(
+                                id: UUID().uuidString,
+                                existing: nil,
+                                replacementOf: old.existing?.id ?? old.replacementOf,
+                                upload: replacement
+                            )
+                        } else {
+                            editorPhotos.append(contentsOf: loadedPhotos.map { photo in
+                                ProfilePhotoEdit(id: UUID().uuidString, existing: nil, replacementOf: nil, upload: photo)
+                            })
+                        }
                     } catch {
                         viewModel.showLocalError((error as? LocalizedError)?.errorDescription ?? "Photo selection failed.")
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func photoThumbnail(_ photo: ProfilePhotoEdit) -> some View {
+        if let upload = photo.upload, let image = UIImage(data: upload.data) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else if let existing = photo.existing {
+            AsyncImage(url: existing.url) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else if phase.error != nil {
+                    Image(systemName: "photo").foregroundStyle(.secondary)
+                } else {
+                    ProgressView()
+                }
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            Image(systemName: "photo")
+                .frame(width: 64, height: 64)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func deleteEditorPhoto(_ photo: ProfilePhotoEdit) {
+        guard let index = editorPhotos.firstIndex(where: { $0.id == photo.id }) else { return }
+        editorPhotos.remove(at: index)
     }
 
     private func binding(for sport: WorkoutSport) -> Binding<Bool> {
