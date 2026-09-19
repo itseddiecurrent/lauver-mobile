@@ -256,6 +256,7 @@ struct ContentView: View {
     private let safetyService: any SafetyServicing
     private let eventsService: any EventsServicing
     private let stravaService: any StravaServicing
+    private let filterStore: any MatchFilterStoring
 
     init(container: AppContainer) {
         discoverService = container.discoverService
@@ -265,6 +266,7 @@ struct ContentView: View {
         safetyService = container.safetyService
         eventsService = container.eventsService
         stravaService = container.stravaService
+        filterStore = container.uiStateStore
         _viewModel = StateObject(wrappedValue: AppViewModel(
             configuration: container.configuration,
             healthService: container.healthService,
@@ -282,7 +284,7 @@ struct ContentView: View {
             case .signedOut:
                 LoginPlaceholderView(viewModel: viewModel)
             case .authenticated:
-                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, accountDeletionService: accountDeletionService, discoverService: discoverService, matchService: matchService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing)
+                AuthenticatedShellView(viewModel: viewModel, profileService: profileService, accountDeletionService: accountDeletionService, discoverService: discoverService, matchService: matchService, safetyService: safetyService, eventsService: eventsService, stravaService: stravaService, chatService: profileService as? any ChatServicing, filterStore: filterStore)
             }
         }
         .task {
@@ -578,6 +580,7 @@ private struct AuthenticatedShellView: View {
     let eventsService: any EventsServicing
     let stravaService: any StravaServicing
     let chatService: (any ChatServicing)?
+    let filterStore: any MatchFilterStoring
     @StateObject private var chat = ChatConnection()
 
 
@@ -590,7 +593,7 @@ private struct AuthenticatedShellView: View {
             .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
 
             NavigationStack {
-                MatchView(matchService: matchService, profileService: profileService, safetyService: safetyService, chatService: chatService)
+                MatchView(matchService: matchService, profileService: profileService, safetyService: safetyService, chatService: chatService, filterStore: filterStore)
             }
             .tag(AppTab.match)
             .tabItem { Label(AppTab.match.title, systemImage: AppTab.match.systemImage) }

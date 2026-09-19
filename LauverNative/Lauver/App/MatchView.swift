@@ -84,14 +84,14 @@ final class MatchViewModel: ObservableObject {
     @Published var toast: MatchSummary?
     @Published var needsOnboarding = false
     private let service: any MatchServicing
-    private let defaults: UserDefaults
+    private let filterStore: any MatchFilterStoring
     private var nextCursor: String?
     private var generation = 0
 
-    init(service: any MatchServicing, defaults: UserDefaults = .standard) {
+    init(service: any MatchServicing, filterStore: any MatchFilterStoring = UIStateStore()) {
         self.service = service
-        self.defaults = defaults
-        if let data = defaults.data(forKey: "match.filters"), let saved = try? JSONDecoder().decode(MatchFilters.self, from: data) {
+        self.filterStore = filterStore
+        if let data = filterStore.matchFiltersData, let saved = try? JSONDecoder().decode(MatchFilters.self, from: data) {
             filters = saved
         } else { filters = MatchFilters(maxDistanceKm: 25) }
     }
@@ -116,7 +116,7 @@ final class MatchViewModel: ObservableObject {
 
     func apply(_ filters: MatchFilters) async {
         self.filters = filters
-        if let data = try? JSONEncoder().encode(filters) { defaults.set(data, forKey: "match.filters") }
+        if let data = try? JSONEncoder().encode(filters) { filterStore.matchFiltersData = data }
         candidates = []; nextCursor = nil; hasLoaded = false
         generation += 1
         await load()
@@ -163,11 +163,13 @@ struct MatchView: View {
     let matchService: any MatchServicing
     let safetyService: any SafetyServicing
     let chatService: (any ChatServicing)?
+    let filterStore: any MatchFilterStoring
     @State private var showingFilters = false
 
-    init(matchService: any MatchServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing, chatService: (any ChatServicing)?) {
+    init(matchService: any MatchServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing, chatService: (any ChatServicing)?, filterStore: any MatchFilterStoring) {
         self.matchService = matchService; self.profileService = profileService; self.safetyService = safetyService; self.chatService = chatService
-        _model = StateObject(wrappedValue: MatchViewModel(service: matchService))
+        self.filterStore = filterStore
+        _model = StateObject(wrappedValue: MatchViewModel(service: matchService, filterStore: filterStore))
     }
 
     var body: some View {

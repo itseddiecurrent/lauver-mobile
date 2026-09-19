@@ -15,7 +15,7 @@ struct AppContainer {
     let appleUserIdentifierStore: any AppleUserIdentifierStoring
     let appleCredentialStateChecker: any AppleCredentialStateChecking
     let tokenStore: any SecureTokenStoring
-    let uiStateStore: any UIStateStoring
+    let uiStateStore: UIStateStore
 
     static func live(
         bundle: Bundle = .main,

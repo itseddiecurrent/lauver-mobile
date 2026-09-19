@@ -24,14 +24,19 @@ enum AppTab: String, CaseIterable, Identifiable {
     }
 }
 
+protocol MatchFilterStoring: AnyObject {
+    var matchFiltersData: Data? { get set }
+}
+
 protocol UIStateStoring: AnyObject {
     var selectedTab: AppTab { get set }
     func reset()
 }
 
-final class UIStateStore: UIStateStoring {
+final class UIStateStore: UIStateStoring, MatchFilterStoring {
     private enum Keys {
         static let selectedTab = "ui.selectedTab"
+        static let matchFilters = "ui.match.filters"
     }
 
     private let defaults: UserDefaults
@@ -50,7 +55,13 @@ final class UIStateStore: UIStateStoring {
         }
     }
 
+    var matchFiltersData: Data? {
+        get { defaults.data(forKey: Keys.matchFilters) }
+        set { defaults.set(newValue, forKey: Keys.matchFilters) }
+    }
+
     func reset() {
         defaults.removeObject(forKey: Keys.selectedTab)
+        defaults.removeObject(forKey: Keys.matchFilters)
     }
 }
