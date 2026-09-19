@@ -1018,7 +1018,7 @@ xcodebuild test \
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：🟡 进行中（2026-09-19）。** 原有列表筛选、分页和真机 Discover 证据仍有效；已补齐公开 Profile 多照片浏览，并移除未 Match 前的 Direct Message 绕过入口。Preview 已具备，Match 状态入口、Like/Pass、互相 Match 后的 Message 入口和 Match 候选隔离仍待 Step 06A/06B 完成后重新验收。
+**状态：🟡 进行中（2026-09-19）。** Discover 的列表筛选、分页、公开 Profile 多照片浏览和未 Match 前的 Direct Message 隔离已完成；Match 数据层已由 Step 06A 完成，原生 Match UI 仍由 Step 06B 负责最终真机验收。
 
 **依赖：** Step 05。
 
@@ -1089,7 +1089,12 @@ xcodebuild test \
 
 ### Step 06B：Native Match UI、Swipe 与 Profile Preview
 
-**状态：🟡 进行中（原生主流程已实现，真实照片与消息摘要验收待补）。** 原生 Match 入口、opt-in onboarding、候选卡、Like/Pass 按钮与同源 Swipe 手势、Filter Sheet 本地持久化、互相 Like Match Toast、Say Hi、Keep browsing、Unmatch confirmation、Retry/错误/空状态和 Profile Preview 已接入。候选/Match 数据现已返回最多 9 张公开照片并支持卡片缩略图与全屏分页浏览；未 Match 的 Profile 不提供 Message 入口。两个 staging 测试账号已完成登录 → 开启 Match → 候选 → 双向 Like → Match → Unmatch 的真实 API 验收，之后已恢复为不可见。9 张 Picsum 照片验收暴露出旧 staging 后端“追加照片会清理上一张主图”的 bug，已在本地修复并加入回归测试；staging 测试照片已清理，需部署修复后重跑。尚未完成：真实两账户 iPhone UI 验收、部署后 9 张照片全链路截图、Stream 最后一条消息/未读数接入 Match 列表，以及 VoiceOver/Dynamic Type 的设备证据。
+**状态：🟡 进行中（2026-09-19；主流程已实现，发布验收证据待补）。** 原生 Match 入口、opt-in onboarding、候选卡、Like/Pass 按钮与同源 Swipe 手势、Filter Sheet 本地持久化、互相 Like Match Toast、Say Hi、Keep browsing、Unmatch confirmation、Retry/错误/空状态和 Profile Preview 已接入。候选/Match 数据现已返回最多 9 张公开照片并支持卡片缩略图与全屏分页浏览；未 Match 的 Profile 不提供 Message 入口。两个 staging 测试账号已完成登录 → 开启 Match → 候选 → 双向 Like → Match → Unmatch 的真实 API 验收，之后已恢复为不可见。9 张 Picsum 照片导致的旧 staging 主图清理 bug 已修复、加入回归测试并已部署到 Render；CI 和 Render 部署均已成功。尚未完成：
+
+1. 用两个测试账号在部署后的 staging 上重新执行 Match 全链路，并保留真实 iPhone 操作证据；
+2. 用 9 张 Picsum 照片完成上传、排序、主照片、删除和 Profile Preview 的部署后截图，并验证第 10 张被拒绝；
+3. 接入并验收 Matches 列表的 Stream 最后一条消息、未读数、打开 Chat 后清零和稳定排序；当前 UI 仍显示 `No messages yet` 占位；
+4. 在真实 iPhone 上完成 VoiceOver、Dynamic Type、浅色/深色和小屏/大屏操作证据。
 
 **依赖：** Step 02、Step 05、Step 06A、Step 14A。
 
