@@ -1050,7 +1050,7 @@ xcodebuild test \
 
 ### Step 06A：Match 数据模型、Like/Pass 与候选 API
 
-**状态：🟡 进行中（2026-09-19）。** 已按 SwiftUI/Express/PostgreSQL/Stream 架构完成 Match migration、偏好/候选/Like/Pass/Match/Unmatch API、签名 cursor、Block/visibility/completeness 检查、每日 15 次 UTC Like 限额、并发幂等和 Direct Chat mutual-Match gate，并补充 PostgreSQL integration test。当前 Supabase `public` schema 已成功部署全部 16 个 Prisma migrations，旧 Expo 表已保留在 `legacy_expo` schema，未写入测试 fixture；本地 `lauver_test` migration-from-zero、69 项 integration tests 和 96 项 Step 06/06A API 验收已通过，验收临时账户已全部清理。Render staging 双账户验收已尝试，但当前外部 PostgreSQL IP allowlist 拒绝连接，未创建 staging fixture；解除 allowlist 后需重跑。原生 Match UI、真机验收属于 Step 06B。证据见 `artifacts/acceptance/step-06a-20260919.md`。
+**状态：🟢 API 功能验收完成（2026-09-19）。** 已按 SwiftUI/Express/PostgreSQL/Stream 架构完成 Match migration、偏好/候选/Like/Pass/Match/Unmatch API、签名 cursor、Block/visibility/completeness 检查、每日 15 次 UTC Like 限额、并发幂等和 Direct Chat mutual-Match gate，并补充 PostgreSQL integration test。当前 Supabase `public` schema 已成功部署全部 16 个 Prisma migrations，旧 Expo 表已保留在 `legacy_expo` schema，未写入测试 fixture；本地 `lauver_test` migration-from-zero、69 项 integration tests、96 项本地 API 验收和 96 项 Render staging API 验收均已通过，所有验收临时账户已清理。原生 Match UI、真机验收属于 Step 06B。证据见 `artifacts/acceptance/step-06a-20260919.md`。
 
 **依赖：** Step 05、Step 06。
 
