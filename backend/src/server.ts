@@ -22,6 +22,7 @@ import { EventService } from './events.js';
 import { AdminService } from './admin.js';
 import { AccountDeletionService } from './account-deletion.js';
 import { FirebaseAdminTokenVerifier } from './firebase-auth.js';
+import { MatchService } from './match.js';
 import type { AccountDeletionCleanup } from './account-deletion.js';
 
 const config = loadConfig();
@@ -131,6 +132,7 @@ const server = createServer(
       config.authRateLimitMaxAttempts,
     ),
     discoverService: new DiscoverService(database.discoverRepository, photoStorage, config.authAccessTokenSecret),
+    matchService: new MatchService(database.client, photoStorage, config.authAccessTokenSecret),
     profileService,
     stravaService,
     healthKitService: new HealthKitService(database.client),

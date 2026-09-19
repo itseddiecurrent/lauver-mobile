@@ -2,11 +2,13 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { config as loadEnvironment } from 'dotenv';
 import { Client } from 'pg';
 
 import { validateTestDatabaseURL } from './test-database-safety.js';
 
 const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+loadEnvironment({ path: path.join(backendRoot, '.env'), quiet: true });
 
 function runNodeModule(modulePath: string, arguments_: string[], environment: NodeJS.ProcessEnv): void {
   const result = spawnSync(process.execPath, [modulePath, ...arguments_], {
@@ -36,7 +38,7 @@ async function resetPublicSchema(databaseURL: string): Promise<void> {
 
 async function main(): Promise<void> {
   const databaseURL = validateTestDatabaseURL(
-    process.env.TEST_DATABASE_URL,
+    process.env.TEST_DATABASE_LOCAL ?? process.env.TEST_DATABASE_URL,
     process.env.ALLOW_REMOTE_TEST_DATABASE_RESET === 'true',
   );
   const environment = {

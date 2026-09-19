@@ -25,6 +25,7 @@ import { EventError, installEventRoutes } from './events.js';
 import type { EventService } from './events.js';
 import { installAdminRoutes, type AdminService } from './admin.js';
 import { installAccountDeletionRoutes, type AccountDeletionServicing } from './account-deletion.js';
+import { installMatchRoutes, type MatchService } from './match.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -61,6 +62,7 @@ export type AppDependencies = {
   eventService?: EventService;
   adminService?: AdminService;
   accountDeletionService?: AccountDeletionServicing;
+  matchService?: MatchService;
 };
 
 class CorsOriginError extends Error {
@@ -150,6 +152,7 @@ export function createApp(dependencies: AppDependencies): Express {
     rateLimiter: dependencies.authRateLimiter,
   });
   installDiscoverRoutes(app, dependencies);
+  if (dependencies.matchService) installMatchRoutes(app, { authService: dependencies.authService, matchService: dependencies.matchService });
   installSafetyRoutes(app, dependencies);
   if (dependencies.stravaService) installStravaRoutes(app, { authService: dependencies.authService, stravaService: dependencies.stravaService });
   if (dependencies.healthKitService) installHealthKitRoutes(app, { authService: dependencies.authService, service: dependencies.healthKitService });

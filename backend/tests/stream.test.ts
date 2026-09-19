@@ -20,6 +20,7 @@ const b = 'e1800000-0000-4000-8000-000000000002';
 function fixture(blocked = false) {
   const database = { $executeRaw: vi.fn(), $queryRaw: vi.fn(), $transaction: vi.fn(), user: { count: vi.fn().mockResolvedValue(2), findMany: vi.fn().mockResolvedValue([{ id: a, profile: { displayName: 'A' } }, { id: b, profile: null }]) },
     profile: { findUnique: vi.fn().mockResolvedValue({ displayName: 'A' }) },
+    match: { findFirst: vi.fn().mockResolvedValue({ id: 'match-1' }) },
     block: { findFirst: vi.fn().mockResolvedValue(blocked ? { blockerId: b } : null) },
     event: { findUnique: vi.fn(), findMany: vi.fn() }, eventAttendee: { deleteMany: vi.fn(), create: vi.fn() } };
   database.$transaction.mockImplementation((fn: (tx: unknown) => unknown) => fn(database));
@@ -40,6 +41,13 @@ describe('Stream chat ownership and canonical channels', () => {
     await expect(service.direct(a, a)).rejects.toMatchObject({ statusCode: 422 });
     await expect(service.direct(a, b)).rejects.toMatchObject({ statusCode: 403 });
     expect(database.block.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { OR: [{ blockerId: a, blockedId: b }, { blockerId: b, blockedId: a }] } }));
+    expect(sdk.create).not.toHaveBeenCalled();
+    expect(sdk.upsertUsers).not.toHaveBeenCalled();
+  });
+  it('requires an active mutual Match before opening a direct channel', async () => {
+    const { service, database } = fixture();
+    database.match.findFirst.mockResolvedValue(null);
+    await expect(service.direct(a, b)).rejects.toMatchObject({ statusCode: 403, code: 'chat_requires_match' });
     expect(sdk.create).not.toHaveBeenCalled();
     expect(sdk.upsertUsers).not.toHaveBeenCalled();
   });

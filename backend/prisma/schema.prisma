@@ -63,6 +63,11 @@ model User {
   healthWorkouts   HealthWorkout[]
   createdEvents    Event[]              @relation("EventCreator")
   eventAttendances EventAttendee[]
+  outgoingSwipes   Swipe[]              @relation("SwipeActor")
+  incomingSwipes   Swipe[]              @relation("SwipeTarget")
+  lowerMatches     Match[]              @relation("MatchLowerUser")
+  higherMatches    Match[]              @relation("MatchHigherUser")
+  unmatchedMatches Match[]              @relation("MatchUnmatchedBy")
 
   @@map("users")
 }
@@ -267,6 +272,11 @@ model Profile {
   cityLatitude  Decimal? @map("city_latitude") @db.Decimal(9, 6)
   cityLongitude Decimal? @map("city_longitude") @db.Decimal(9, 6)
   isComplete    Boolean  @default(false) @map("is_complete")
+  visibleInMatch Boolean  @default(false) @map("visible_in_match")
+  gender         String?  @db.VarChar(24)
+  matchPrefGender String  @default("all") @map("match_pref_gender") @db.VarChar(24)
+  matchPrefDistanceKm Int? @default(25) @map("match_pref_distance_km")
+  matchPrefSports String[] @default([]) @map("match_pref_sports")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -274,6 +284,43 @@ model Profile {
 
   @@index([isComplete])
   @@map("profiles")
+}
+
+enum SwipeDirection {
+  PASS
+  LIKE
+}
+
+model Swipe {
+  actorId   String         @map("actor_id") @db.Uuid
+  targetId  String         @map("target_id") @db.Uuid
+  direction SwipeDirection
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  actor     User           @relation("SwipeActor", fields: [actorId], references: [id], onDelete: Cascade)
+  target    User           @relation("SwipeTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([actorId, targetId])
+  @@index([actorId, direction, createdAt])
+  @@index([targetId, direction])
+  @@map("swipes")
+}
+
+model Match {
+  id            String    @id @default(uuid()) @db.Uuid
+  lowerUserId   String    @map("lower_user_id") @db.Uuid
+  higherUserId  String    @map("higher_user_id") @db.Uuid
+  matchedAt     DateTime  @default(now()) @map("matched_at") @db.Timestamptz(3)
+  unmatchedBy   String?   @map("unmatched_by") @db.Uuid
+  unmatchedAt   DateTime? @map("unmatched_at") @db.Timestamptz(3)
+  lowerUser     User      @relation("MatchLowerUser", fields: [lowerUserId], references: [id], onDelete: Cascade)
+  higherUser    User      @relation("MatchHigherUser", fields: [higherUserId], references: [id], onDelete: Cascade)
+  unmatchedUser User?     @relation("MatchUnmatchedBy", fields: [unmatchedBy], references: [id], onDelete: SetNull)
+
+  @@unique([lowerUserId, higherUserId])
+  @@index([lowerUserId, unmatchedAt, matchedAt])
+  @@index([higherUserId, unmatchedAt, matchedAt])
+  @@map("matches")
 }
 
 model ProfilePhoto {

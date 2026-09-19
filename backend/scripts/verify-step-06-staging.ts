@@ -152,13 +152,14 @@ async function seed(client: Client, fixtures: Fixture[], passwordHash: string): 
       FROM jsonb_to_recordset($1::jsonb) AS f(id text,"identityId" text,email text)`, [data]);
     await client.query(`INSERT INTO password_credentials(identity_id,password_hash)
       SELECT "identityId"::uuid,"passwordHash" FROM jsonb_to_recordset($1::jsonb) AS f("identityId" text,"passwordHash" text)`, [data]);
-    await client.query(`INSERT INTO profiles(user_id,display_name,bio,city_name,country_code,city_latitude,city_longitude,is_complete,updated_at)
+    await client.query(`INSERT INTO profiles(user_id,display_name,bio,city_name,country_code,city_latitude,city_longitude,is_complete,visible_in_match,updated_at)
       SELECT id::uuid,'Step 06 '||label,'Disposable Discover acceptance fixture',
         CASE WHEN longitude IS NOT NULL THEN 'Step 06 Test City' END,
         CASE WHEN longitude IS NOT NULL THEN 'CN' END,
         CASE WHEN longitude IS NOT NULL THEN 0 END,
-        CASE WHEN longitude IS NOT NULL THEN longitude+70 END,complete,"updatedAt"::timestamp
-      FROM jsonb_to_recordset($1::jsonb) AS f(id text,label text,longitude numeric,complete boolean,"updatedAt" text)`, [data]);
+        CASE WHEN longitude IS NOT NULL THEN longitude+70 END,complete,
+        false,"updatedAt"::timestamp
+      FROM jsonb_to_recordset($1::jsonb) AS f(id text,label text,longitude numeric,complete boolean,status text,"updatedAt" text)`, [data]);
     await client.query(`INSERT INTO user_sports(user_id,sport,pace_value,pace_unit,updated_at)
       SELECT id::uuid,sport,pace,unit,'2026-01-01'::timestamp
       FROM jsonb_to_recordset($1::jsonb) AS f(id text,sport text,pace numeric,unit text)`, [data]);
@@ -233,7 +234,52 @@ export async function runAcceptance(options: AcceptanceOptions): Promise<{ check
       }, session.accessToken);
       check(patched.status === 200, 'viewer-complete-profile');
       const find = (label: string) => fixtures.find((f) => f.label === label)!;
+
+      const matchPreferences = { visibleInMatch: true, gender: null, preferredGender: 'all', maxDistanceKm: null, sports: [] };
+      const defaultMatchPreferences = await call('GET', '/v1/match/preferences', undefined, session.accessToken);
+      check(defaultMatchPreferences.status === 200 && (defaultMatchPreferences.body as { preferences: { visibleInMatch: boolean } }).preferences.visibleInMatch === false, 'match-defaults-to-opted-out');
+      check((await call('GET', '/v1/match/candidates', undefined, session.accessToken)).status === 403, 'match-browsing-requires-opt-in');
+      await client.query("UPDATE profiles SET visible_in_match = true WHERE user_id <> $1::uuid AND is_complete AND user_id IN (SELECT id FROM users WHERE status = 'ACTIVE')", [viewer.id]);
+
+      const secondLogin = await call('POST', '/v1/auth/login', { email: find('b').email, password });
+      check(secondLogin.status === 200, 'match-second-user-login');
+      const secondSession = secondLogin.body as Session;
+      check(secondSession.user.id === find('b').id, 'match-second-user-id');
+      check((await call('PATCH', '/v1/match/preferences', matchPreferences, session.accessToken)).status === 200, 'match-viewer-opt-in');
+      check((await call('PATCH', '/v1/match/preferences', matchPreferences, secondSession.accessToken)).status === 200, 'match-target-opt-in');
       await client.query('INSERT INTO blocks(blocker_id,blocked_id) VALUES($1,$2),($3,$1)', [viewer.id, find('blocked-out').id, find('blocked-in').id]);
+      const candidates = await call('GET', '/v1/match/candidates?limit=50', undefined, session.accessToken);
+      check(candidates.status === 200 && (candidates.body as Page).users.some(user => user.id === find('b').id), 'match-candidate-visible-after-opt-in');
+
+      const firstLike = await call('POST', '/v1/match/swipes', { targetUserId: find('b').id, direction: 'like' }, session.accessToken);
+      check(firstLike.status === 200 && !(firstLike.body as { matched: boolean }).matched, 'match-one-sided-like');
+      const repeatedLike = await call('POST', '/v1/match/swipes', { targetUserId: find('b').id, direction: 'like' }, session.accessToken);
+      check(repeatedLike.status === 200 && !(repeatedLike.body as { matched: boolean }).matched, 'match-like-is-idempotent');
+      const reciprocalLike = await call('POST', '/v1/match/swipes', { targetUserId: viewer.id, direction: 'like' }, secondSession.accessToken);
+      const matchID = (reciprocalLike.body as { matchId: string | null }).matchId;
+      check(reciprocalLike.status === 200 && (reciprocalLike.body as { matched: boolean }).matched && matchID !== null, 'match-mutual-like-creates-match');
+      const viewerMatches = await call('GET', '/v1/matches', undefined, session.accessToken);
+      check(viewerMatches.status === 200 && (viewerMatches.body as { matches: Array<{ id: string }> }).matches.length === 1, 'match-list-contains-one-match');
+      check((await call('POST', `/v1/matches/${matchID}/unmatch`, undefined, session.accessToken)).status === 204, 'match-unmatch');
+      const afterUnmatch = await call('GET', '/v1/matches', undefined, session.accessToken);
+      check(afterUnmatch.status === 200 && (afterUnmatch.body as { matches: unknown[] }).matches.length === 0, 'match-unmatch-removes-active-match');
+      const restored = await call('POST', '/v1/match/swipes', { targetUserId: find('b').id, direction: 'like' }, session.accessToken);
+      check(restored.status === 409, 'match-unmatched-pair-cannot-be-restored');
+      check((await call('POST', '/v1/match/swipes', { targetUserId: find('blocked-in').id, direction: 'like' }, session.accessToken)).status === 403, 'match-block-is-bidirectional');
+
+      const optedOut = await call('PATCH', '/v1/match/preferences', { ...matchPreferences, visibleInMatch: false }, session.accessToken);
+      check(optedOut.status === 200, 'match-viewer-opt-out');
+      check((await call('GET', '/v1/match/candidates', undefined, session.accessToken)).status === 403, 'match-opt-out-hides-candidate-pool');
+      check((await call('POST', '/v1/match/swipes', { targetUserId: find('b').id, direction: 'like' }, session.accessToken)).status === 403, 'match-opt-out-blocks-like');
+      check((await call('PATCH', '/v1/match/preferences', matchPreferences, session.accessToken)).status === 200, 'match-viewer-rejoins-pool');
+      const likeTargets = fixtures.filter(f => f.id !== viewer.id && f.label !== 'b' && !f.label.startsWith('blocked-') && f.status === 'ACTIVE' && f.complete).slice(0, 14);
+      for (const targetFixture of likeTargets) {
+        check((await call('POST', '/v1/match/swipes', { targetUserId: targetFixture.id, direction: 'like' }, session.accessToken)).status === 200, `match-like-quota-${targetFixture.label}`);
+      }
+      const quotaExceeded = await call('POST', '/v1/match/swipes', { targetUserId: find('page-14').id, direction: 'like' }, session.accessToken);
+      check(quotaExceeded.status === 429, 'match-sixteenth-like-is-rejected');
+      await client.query("UPDATE profiles SET updated_at = '2026-01-01'::timestamp WHERE user_id = $1::uuid", [find('b').id]);
+
       // HTTP pagination can outlast the database's idle-connection limit.
       // Close the fixture connection and use a fresh connection for cleanup.
       await client.end();
@@ -312,6 +358,7 @@ export async function runAcceptance(options: AcceptanceOptions): Promise<{ check
     }
   } catch (error) {
     failure = error;
+    if (error instanceof Error && /^[a-z0-9_-]+$/.test(error.message)) output(`FAIL ${error.message}`);
     output('FAIL acceptance; cleaning this run');
   } finally {
     const cleanupClient = new Client({ ...connectionOptions, application_name: 'lauver-step06-verifier-cleanup' });

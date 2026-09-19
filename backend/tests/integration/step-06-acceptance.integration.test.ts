@@ -9,6 +9,7 @@ import { runAcceptance } from '../../scripts/verify-step-06-staging.js';
 import { AuthService, NoopPasswordResetDelivery } from '../../src/auth.js';
 import { createDatabase } from '../../src/database.js';
 import { DiscoverService } from '../../src/discover.js';
+import { MatchService } from '../../src/match.js';
 import { ProfileService } from '../../src/profile.js';
 import { UnavailableProfilePhotoStorage } from '../../src/object-storage.js';
 import { createTestApp } from '../helpers/test-app.js';
@@ -18,6 +19,7 @@ const database = createDatabase(databaseURL);
 const sql = new Client({ connectionString: databaseURL });
 const storage = new UnavailableProfilePhotoStorage();
 const discovery = new DiscoverService(database.discoverRepository, storage, 'acceptance-integration-cursor-secret');
+const matching = new MatchService(database.client, storage, 'acceptance-integration-match-secret');
 const auth = new AuthService({ repository: database.authRepository, passwordResetDelivery: new NoopPasswordResetDelivery(),
   accessTokenSecret: 'acceptance-integration-auth-secret-at-least-32', accessTokenTTLSeconds: 900,
   refreshTokenTTLSeconds: 2592000, passwordResetTTLSeconds: 900,
@@ -31,6 +33,7 @@ beforeAll(async () => {
   await sql.query("INSERT INTO users(id,updated_at) VALUES($1,'2026-01-01')", [sentinel]);
   server = createServer(createTestApp({ database, authService: auth,
     profileService: new ProfileService({ repository: database.profileRepository, storage }),
+    matchService: matching,
     discoverService: { discover: (userId, query) => failDiscovery
       ? Promise.reject(new Error('Injected API failure')) : discovery.discover(userId, query) },
   }));

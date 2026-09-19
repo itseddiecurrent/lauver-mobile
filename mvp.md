@@ -15,8 +15,8 @@
 MVP 的核心用户价值是：
 
 1. 用户建立清晰的运动资料；
-2. 用明确、可解释的手动筛选发现附近运动伙伴；
-3. 私聊潜在训练伙伴；
+2. 用明确、可解释的筛选和主动 Like/Pass 发现附近运动伙伴；
+3. 只有双方互相 Like 后才能建立一对一私聊；
 4. 创建、浏览和加入公开训练活动；
 5. 在活动参与者群聊中完成训练协调；
 6. 用举报、拉黑和后台审核形成基本安全闭环。
@@ -32,11 +32,12 @@ MVP 的核心用户价值是：
 - ❌ 任何 AI 功能，包括 AI 匹配、推荐模型、LLM 助手、AI 教练、Embedding 或 AI 内容审核；
 - ❌ Garmin 官方 API、Garmin OAuth 或 Garmin 同步；
 - ❌ 付费订阅、Premium、Paywall、StoreKit 和 In-App Purchase；
-- ❌ Tinder 式左右滑动、Like、互相 Match 或卡片堆叠交互；
+- ❌ AI 匹配、兼容度分数、行为学习排序或自动推荐；
+- ❌ 强制使用 Tinder 品牌、文案、视觉资产或不可访问的卡片交互；
 - ❌ 重建 lauver.ai Landing Page；
 - ❌ “Coming soon” 形式的 AI、Garmin 或 Premium 入口。
 
-Discover 只能使用确定性的普通筛选和排序：运动类型、城市级距离、配速区间。界面使用列表和筛选 Sheet，不使用滑动匹配。
+Discover 和 Match 只能使用确定性的普通筛选和排序：运动类型、城市级距离、配速区间、共同运动和 Profile 更新时间。Match 可以提供 Swipe、Like 和 Pass，但必须同时提供明确的按钮、无障碍操作和错误恢复；不使用 AI 匹配。
 
 所有 AI、Garmin 和付费能力统一记录在 Version 2 Backlog 中，但不进入 MVP target。
 
@@ -46,11 +47,13 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 
 - 新用户能用 Email/Password 或 Sign in with Apple 创建账户并恢复登录状态；
 - 用户能在 App 内永久删除账户，而不需要发邮件或联系客服；
-- 用户能完成资料、上传照片并用运动/半径/配速筛选其他用户；
+- 用户能完成资料、上传最多 9 张照片，并从公开视图预览自己的 Profile，再用运动/半径/配速筛选其他用户；
+- 用户可以选择进入 Match 候选池，并通过 Like/Pass 浏览候选人；
+- 只有双方互相 Like 后才会创建唯一 Match 和一对一聊天入口；
 - 用户能连接 Strava、看到最近活动、刷新数据并彻底断开；
 - 用户可以选择不启用 HealthKit，且 App 其他功能完全正常；
 - 用户主动启用 HealthKit 后，能导入已授权的 Workout 摘要；
-- 两个未互相拉黑的用户能创建一对一私聊并实时收发文本；
+- 两个已互相 Like 且未互相拉黑的用户能创建一对一私聊并实时收发文本；
 - 用户能在 Profile、Chat 和 Event 三处提交举报并拉黑用户；
 - 用户能创建公开活动、浏览活动、加入/退出活动，并进入参与者群聊；
 - 管理员能在后台查看举报、记录处理结果、暂停用户或下架活动；
@@ -86,7 +89,7 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 1. 立即禁用账户和所有 session；
 2. 如果使用 Sign in with Apple，服务端调用 Apple token revocation；
 3. 如果连接 Strava，服务端撤销 Strava token；
-4. 删除或匿名化 Stream 用户、Direct Chat 和相关消息数据；
+4. 删除或匿名化 Swipe、Match、Stream 用户、Direct Chat 和相关消息数据；
 5. 删除资料照片、活动、参与记录和其他个人数据；
 6. 删除或匿名化用户创建的公开活动，规则必须写入 Privacy Policy；
 7. 保留的安全审计记录只能最小化、匿名化并遵守已公开的保留政策；
@@ -97,6 +100,7 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - Email 注册/登录、Apple 登录、退出、token 刷新和密码重置均有成功与失败测试；
 - Apple 登录不能使用未验证的客户端 user ID；
 - 删除账户后旧 access/refresh token 全部失效；
+- 删除账户后本人发出的 Swipe、Like、Pass、Match 关系及 Match 偏好不再可被其他用户读取；
 - 被删除用户不能再次通过旧 Apple/Email session 恢复账户；
 - App 内删除入口最多从 Settings 两次点击可达。
 
@@ -176,7 +180,8 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 #### 字段
 
 - Display name；
-- Profile photo；
+- Profile photos：最多 9 张，可上传、排序、替换和删除；
+- Preview My Profile：以其他用户可见的公开视图预览自己的 Profile；
 - Bio（短文本）；
 - Sports tags（多选）；
 - 每个运动可填写可选的自报 pace；
@@ -184,6 +189,10 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - Preferred training times：weekday + morning / midday / evening；
 - City-level location；
 - 是否公开最近 Strava 活动。
+- 是否加入 Match 候选池（默认关闭，用户主动 opt-in）；
+- Match 偏好：运动类型、最大城市级距离和必要的候选条件；
+- Match 偏好还包括可选的展示性别筛选：All / Male / Female / Other；用户可以随时修改，不得因为未填写该筛选而被默认排除；
+- Match Profile 是否允许被 Like；
 
 #### 位置隐私
 
@@ -192,24 +201,45 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - Discover 用城市中心点计算近似距离；
 - API 不向其他用户返回经纬度，只返回城市和近似距离；
 - 不要求持续定位或精确 GPS 权限；
+- Match 首次 onboarding 可以解释距离筛选用途，但不得强制申请精确定位；用户拒绝定位权限或无法获取位置时，仍可使用 Match，候选距离显示为不可用并按确定性备用排序处理；
 - Event venue 是用户明确选择的公开活动地点，与 Profile 城市数据分开保存。
 
-#### 照片
+#### 照片与 Profile Preview
 
 - 使用 `PhotosPicker`，允许裁剪和压缩；
+- 编辑页以 9 个固定 photo slot 展示已发布照片和空位；最多保存 9 张已确认上传的 Profile 照片，至少 1 张作为主照片；
+- 第 1 张照片默认为主照片；删除主照片时，如果仍有其他照片，服务端自动把排序后的第一张提升为主照片；删除最后一张照片时，Profile 变为 incomplete，不能进入 Discover/Match；
+- 用户可以拖动排序、替换单张和删除单张；
+- 上传过程中显示单张进度、失败状态和单张重试；选择多张照片时，每张独立上传和确认，不因一张失败而回滚其他成功照片；
+- 正在上传或失败的临时对象不计入已发布照片，也不占用新的永久 photo slot；但服务端必须拒绝同一用户同时创建超过 9 个有效上传任务，并通过过期清理释放未完成任务；
+- 替换照片先完成新照片上传和校验，再原子切换 `photoId`；切换失败时保留旧照片可见，不得出现空 slot；
+- Other Profile 和 Match 卡片只显示已发布照片，不显示未完成上传的临时对象；
+- Profile 页面提供 `Preview My Profile`；预览读取服务端生成的公开 Profile projection，必须与 Other Profile 使用同一个字段过滤器和照片排序规则；
+- Preview 中可以浏览自己的全部已发布照片，显示主照片标识和公开字段，但不提供 Like、Pass、Message 或 Report 等针对自己的操作；
+- Preview 不得显示精确经纬度、内部 ID、审核字段、私密设置、Match 偏好或未公开集成数据。
 - 后端签发上传 URL 或接收 multipart upload；
 - 文件放 S3-compatible object storage，不能放 Render 临时文件系统；
 - 只允许 JPEG/HEIC/PNG，验证 MIME、尺寸和文件大小；
-- 更新或删除头像时清理旧对象。
+- 客户端在上传完成后必须调用 confirm endpoint，服务端重新验证 object metadata、owner、尺寸、MIME 和 checksum 后才将照片设为 published；
+- 更新或删除照片时清理旧对象；删除账户时清理全部照片对象；清理失败进入幂等重试队列，但对象在清理前不可被公开 URL 访问。
 
 #### 验收
 
 - Profile 可保存、重新打开并正确回填；
+- Profile 最多保存 9 张照片，排序和主照片状态重开后保持一致；
+- 第 10 张照片、超过 9 个有效上传任务、未确认 object、非本人 object 和非法文件均被服务端拒绝；
+- 上传成功但 confirm 响应丢失时，重复 confirm 必须幂等；取消、失败或过期上传不会出现在 Profile/Preview/Discover 中；
+- `Preview My Profile` 与 Other Profile 使用同一公开字段规则，不泄露私密数据，并支持浏览全部已发布照片；
 - pace 对不同运动使用正确单位与输入校验；
 - 其他用户永远拿不到 Profile 的经纬度；
 - 空资料不会进入 Discover，UI 明确提示缺少的必填项。
+- 未主动加入 Match 候选池的用户不会出现在 Match 候选人中；
+- Match 偏好和可见性修改可保存、重新打开并正确回填；
+- Profile 关闭 Match 可见性后，新的候选查询和新的 Like 请求都会被服务端拒绝或排除。
 
 ### F5. Discover：普通筛选列表
+
+**状态：✅ 原有列表功能已验收；Match 联动待完成。** 现有列表、Profile、Block 和 Report 功能保持，但 Direct Message 入口必须改为 Match 状态入口。
 
 #### 页面要求
 
@@ -219,7 +249,7 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - Radius 选项：5 / 10 / 20 / 25 / 30 / 40 / 50 / 60 / 70 / 80 / 90 / 100 km 和 Unlimited（不限距离）；2026-09-13 按真机验收反馈扩展；
 - 支持分页和下拉刷新；
 - 点击列表项进入完整 Profile；
-- Profile 上提供 Message、Block 和 Report。
+- Profile 上提供 Like/Pass 状态、Block 和 Report；未互相 Like 前不提供 Direct Message；已 Match 后才提供 Message。
 
 #### 确定性过滤规则
 
@@ -235,12 +265,84 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 
 严禁根据用户行为学习排序，严禁生成兼容度分数，严禁出现 “Recommended for you”“AI match” 或百分比匹配文案。
 
-#### 验收
+#### 原有列表验收
 
 - 同一数据和筛选参数始终返回相同顺序；
 - Block 后双方立即从彼此 Discover 中消失；
 - 没有 sport/pace 的资料不会错误进入对应筛选结果；
-- UI 和数据库都不存在 Like、Swipe、Match 概念。
+- 列表筛选和分页仍然稳定、可解释，并且不自动创建 Match。
+
+### F5A. Match：Like、Pass、Swipe 与互相 Match
+
+**状态：🟡 未完成（新增范围，原 Expo/Supabase Match 文档不能直接视为原生验收通过）。**
+
+#### 产品规则
+
+- 用户必须主动打开 Match 可见性才进入候选池；
+- 首次进入 Match 显示 onboarding，至少说明：开启后自己的公开 Profile 会进入候选池、可以随时关闭、Like 只有互相发生后才会建立聊天；
+- Onboarding 至少允许设置自己的 gender 和 `Show me`：All / Male / Female / Other；Profile 设置还允许 `Prefer not to say`，该值只表示本人不公开性别，不应被错误当作可筛选的性别类别；保存前不进入候选池，保存后才将 `visible_in_match` 设为 true；
+- Like 和 Pass 都必须由服务端记录，且对同一目标幂等；
+- 双方都 Like 后才创建唯一 Match；
+- 未互相 Like 前不得创建 Direct Chat、Stream direct channel 或消息入口；
+- Pass 后目标从当前用户候选池消失；
+- 候选人从当前卡片移除后，下一张卡片立即出现；网络失败时恢复该候选人，并提供明确的 Retry，不得把请求失败误显示为空候选池；
+- Block、暂停、删除、取消 Match 可立即阻止新的 Like、Match 和 Chat；
+- Swipe 手势和 Like/Pass 按钮必须调用同一业务接口；
+- 不根据行为学习排序，不生成兼容度分数，不出现 AI match 文案；
+- 每日最多 15 次 Like，按 UTC 自然日由服务端计算和重置；Pass 不消耗 Like 配额；达到上限后 Like 按钮禁用，并显示下一次可用的明确提示。
+
+#### 数据模型
+
+新增或扩展：
+
+- `swipes`：`swiper_id`、`swiped_id`、`direction`、`created_at`，同一方向写入必须幂等；
+- `matches`：规范化的 user pair、`matched_at`、`unmatched_by`、`unmatched_at`；
+- Match 可见性和偏好字段；
+- 每日 Like 限额必须由服务端检查，不能只由客户端显示；
+- Block、暂停和删除状态必须参与候选、Like 和 Match 权限检查。
+
+当前架构使用 Stream Chat，不新增旧 Match 文档中的 Supabase `messages` 表。
+
+#### 候选与排序
+
+服务端只允许执行：
+
+1. 排除自己、未完成、未 opt-in、已删除、暂停和任一方向 Block 的用户；
+2. 排除已 Pass 或已处理的候选人；
+3. 按展示性别、运动、城市级近似距离和用户明确的筛选条件过滤；
+4. 按近似距离、共同运动数、Profile 更新时间和 user ID 稳定排序；
+5. 使用 cursor pagination，不能因客户端重复请求产生重复候选或重复 Match。
+
+不得保存或返回精确位置；Match 距离继续使用 F4 的城市中心点隐私规则。
+
+#### Native UI
+
+- Match onboarding：解释加入候选池和可见性；
+- Candidate Profile card：最多 9 张公开照片的可浏览预览、姓名、城市、近似距离、运动、pace、bio 和可选的 skill/level；
+- Candidate card 必须提供进入完整 Other Profile 的 `View Profile` 入口；完整 Profile 使用同一份公开字段和照片 projection；
+- Swipe Right = Like，Swipe Left = Pass；
+- 同时提供 Like、Pass、View Profile 按钮；
+- Match Toast：`It's a match`、`Say Hi`、`Keep browsing`；
+- Matches 列表按最近消息时间降序、无消息时按 matched_at 降序，展示对方头像、姓名、最后一条消息预览、未读数和进入 Chat 的入口；
+- Filter Sheet 支持展示性别、最大距离和多选运动；Match 默认最大距离为 25 km，提供 10 / 25 / 50 km / Any（不限距离），并支持清除筛选；当前筛选条件在本地安全持久化，重启 App 后恢复；
+- 过滤中、加载中、空状态、无位置、每日限额、网络错误和 Retry 状态必须分别展示，不能混用同一空状态；
+- 无候选人时说明原因并提供扩大距离、清除运动筛选或稍后重试的操作；
+- VoiceOver 和 Dynamic Type 下必须可以完成同样流程；
+- 不使用 Tinder 品牌、复制式文案或不可访问的卡片堆叠实现。
+
+#### 验收
+
+- A Like B 但 B 未 Like 时不会创建 Match 或 Chat；
+- A Like B、B Like A 后只创建一个 Match；
+- Pass、重启 App、重复点击和网络重试都不会产生错误重复记录；
+- Match 成功后双方才能创建/进入 Stream direct channel；
+- Unmatch、Block、暂停和删除后双方不能继续聊天或重新绕过权限；
+- 每日 15 次 Like 限额、UTC 重置、并发 Like、Pass 不扣额度、IDOR、伪造 user ID 均有 backend/integration tests；
+- 筛选条件重启后保持；候选请求失败可 Retry，且不会丢失或重复候选；
+- Matches 列表的最后消息、未读数和排序正确，打开 Chat 后未读数清零；
+- Candidate card 可浏览多张照片、进入 View Profile，VoiceOver 不使用 Swipe 手势也能完成 View Profile、Like、Pass 和 Chat；
+- 两个真实 staging 账户完成 Like → Match → Chat → Unmatch 全流程。
+- Profile Preview、9 张照片的公开显示、排序、删除和失败重试均有 iOS/staging 验收。
 
 ### F6. 一对一私聊、Block 与 Report
 
@@ -249,18 +351,21 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 - 使用 Stream Chat Swift SDK；
 - Node 后端用 Stream server SDK 创建短期 user token；
 - iOS 只能向已认证后端请求属于自己的 Stream token；
+- Direct Chat 只能在服务端确认双方存在未解除的 Match 后创建；
 - Direct Chat 使用 deterministic channel ID 或后端唯一约束，两个用户之间只有一个 channel；
 - Channel type 使用 private `messaging`，成员只包含双方；
-- 支持文本消息、会话列表、未读数、发送状态和基础错误重试；
-- MVP 不要求图片、语音、视频、已读回执或 Push Notification。
+- 支持文本消息、会话列表、未读数、发送状态、消息时间戳、基础错误重试和 1,000 字符长度限制；
+- 打开 Chat 后将对方未读消息标记为已读；发送方显示发送中/已发送/已读状态，至少提供单勾和双勾等可访问文本语义，不得只依赖颜色或图标；
+- MVP 不要求图片、语音、视频或 Push Notification。
 
 #### Block
 
 - Chat header 和 Profile 都可 Block；
-- Block 后不能创建新私聊、不能继续发送消息、双方从 Discover 隐藏；
+- 未 Match 前不能创建新私聊；
+- Block 后不能 Like、Pass、创建新私聊或继续发送消息，双方从 Discover 和 Match 候选池隐藏；
 - iOS 同时调用 Stream block 能力，后端 `blocks` 表作为最终事实来源；
 - Unblock 位于 Settings > Blocked Users；
-- 解除拉黑不会自动恢复旧对话入口。
+- 解除拉黑不会自动恢复旧 Match 或旧对话入口，是否重新建立关系必须从新的 Like 开始。
 
 #### Report
 
@@ -272,10 +377,12 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 #### 验收
 
 - Stream secret 只在后端；
+- 未互相 Like 的用户请求 direct channel 或消息 token 必须被拒绝；
 - 伪造其他 user ID 请求 token 必须返回 403；
 - 非 channel member 不能读写 channel；
-- Block 前已打开的聊天也不能继续发送；
-- Profile 和 Chat 均能完成举报。
+- Unmatch 或 Block 后已打开的聊天也不能继续发送；
+- Profile 和 Chat 均能完成举报；
+- Chat 能正确展示空会话、时间戳、长文本、发送失败重试、未读清零和已读状态。
 
 ### F7. Public Workout Meet-up Events
 
@@ -355,17 +462,19 @@ Discover 只能使用确定性的普通筛选和排序：运动类型、城市�
 
 ### 登录后 Tab
 
-1. **Discover**：筛选列表 → User Profile → Direct Chat；
-2. **Events**：Upcoming list → Event Detail → Event Group Chat；
-3. **Messages**：Direct/Event conversations；
-4. **Profile**：自己的资料、最近活动、编辑资料；
-5. Profile 右上角进入 **Settings**。
+1. **Discover**：普通筛选列表 → User Profile → Like/Pass；
+2. **Match**：候选卡片/Swipe → Match Toast → Matches → Chat；
+3. **Events**：Upcoming list → Event Detail → Event Group Chat；
+4. **Messages**：已 Match 的 Direct/Event conversations；
+5. **Profile**：自己的资料、最近活动、编辑资料；
+6. Profile 右上角进入 **Settings**。
 
 ### Settings
 
 - Account；
 - Connected Apps：Strava、Apple Health；
 - Blocked Users；
+- Match visibility、Match preferences；
 - Privacy Policy / Terms；
 - Sign Out；
 - Delete Account。
@@ -492,7 +601,9 @@ iOS 可包含的只有公开配置，例如 API base URL、Apple bundle/client I
 
 | Entity | 关键字段与约束 |
 |---|---|
-| `users` | id, email, display_name, bio, photo_key, city_name, region_code, country_code, city_lat, city_lng, status, deleted_at |
+| `users` | id, email, display_name, bio, city_name, region_code, country_code, city_lat, city_lng, status, deleted_at |
+| `profile_photos` | id, user_id, object_key, upload_status(pending/published/failed/deleted), mime_type, byte_size, width, height, checksum, sort_order, is_primary, created_at, published_at, deleted_at；user + sort_order 唯一，published 照片最多 9 张 |
+| `photo_uploads` | id, user_id, photo_id, object_key, upload_token_hash, expires_at, confirmed_at, failed_at；只能由本人确认，过期任务可清理 |
 | `auth_identities` | user_id, provider(email/apple), provider_subject；provider + subject 唯一 |
 | `password_credentials` | user_id, argon2_hash, updated_at |
 | `sessions` | user_id, refresh_token_hash, expires_at, revoked_at, device metadata |
@@ -540,11 +651,22 @@ DELETE /v1/account
 GET    /v1/me
 PATCH  /v1/me
 GET    /v1/users/:userId
+GET    /v1/me/preview
 GET    /v1/users/:userId/activities?limit=10
-POST   /v1/me/photo/upload-url
-DELETE /v1/me/photo
+POST   /v1/me/photos/upload-url
+POST   /v1/me/photos/:photoId/confirm
+PATCH  /v1/me/photos/order
+DELETE /v1/me/photos/:photoId
 GET    /v1/discover?sport=&radius=&paceMin=&paceMax=&cursor=
+
+GET    /v1/match/candidates?sport=&radiusKm=&cursor=
+POST   /v1/match/swipes
+GET    /v1/matches
+POST   /v1/matches/:matchId/unmatch
+PATCH  /v1/me/match-preferences
 ```
+
+照片上传契约：`POST /v1/me/photos/upload-url` 只创建带过期时间的 pending photo 和一次性上传凭证，并返回 `photoId`、预签名 URL、允许的 MIME、最大字节数和 `expiresAt`；客户端直接上传 object storage 后调用 confirm。confirm 必须幂等，且只有 confirm 成功后照片才进入公开 Profile projection。`PATCH /v1/me/photos/order` 接收完整的已发布 `photoId` 顺序，服务端校验不重复、属于当前用户、数量不超过 9，并在事务中重排和保证唯一主照片。
 
 ### Strava / HealthKit
 
@@ -644,6 +766,8 @@ POST   /admin/messages/:messageId/remove
 3. **人工验收记录**：写入 `artifacts/acceptance/step-XX.md`，包含环境、测试账号、操作步骤和结果；
 4. **配置文档**：新增环境变量、第三方后台配置和 migration 必须同步更新 `.env.example` 与 README。
 
+**真机优先规则：** 如果通过 `xcrun xctrace list devices` 或 `xcrun devicectl list devices` 检测到已连接且可用的 iPhone 17e，所有 iOS 测试（包括 XCTest/XCUITest 和人工验收）一律使用该真机，不得使用 iOS Simulator 代替；只有检测不到可用 iPhone 17e 时才允许使用 Simulator。
+
 通用测试命令在项目建立后统一为：
 
 ```bash
@@ -674,22 +798,24 @@ xcodebuild test \
 | 02 | 可运行的原生 iOS Shell | Native iOS、Navigation |
 | 03 | Email/Password 完整登录闭环 | F1 |
 | 04 | Sign in with Apple 登录闭环 | F1 |
-| 05 | Workout Profile、头像、城市 | F4 |
-| 06 | 普通列表式 Discover | F5 |
-| 07 | Block / Report 安全基础 | F6、F8 |
+| 05 | Workout Profile、最多 9 张照片、Preview、城市、Match 可见性 | F4（Match 扩展待完成） |
+| 06 | 普通列表式 Discover | F5（Match 联动待完成） |
+| 06A | Match 数据模型、Like/Pass、候选 API | F5A |
+| 06B | Native Match UI、Swipe、Match Toast | F5A |
+| 07 | Block / Report 安全基础与 Match 隔离 | F6、F8（Match 扩展待完成） |
 | 08 | Strava 只读集成 | F2 |
 | 09 | 可选 HealthKit 导入 | F3 |
-| 10 | Stream 一对一私聊 | F6 |
+| 10 | 互相 Like 后的 Stream 一对一私聊 | F6（Match gate 待完成） |
 | 11 | Public Events 与 Apple Maps | F7 |
 | 12 | Event Attendee Group Chat | F7 |
-| 13 | Admin Report Dashboard | F8 |
-| 14 | 账户删除全链路 | F1、Apple compliance |
-| 14A | 按 Expo 参考版本对齐原生 UI 与真机体验 | F1–F8 用户页面、UI quality |
-| 15 | Release hardening 与交付 | Definition of Done |
+| 13 | Admin Report Dashboard 与 Match 举报 | F8（Match 来源待完成） |
+| 14 | 账户删除全链路（含 Swipe/Match） | F1、Apple compliance（Match 清理待完成） |
+| 14A | 按 Expo 参考版本对齐原生 UI 与真机体验 | F1–F8、Match 页面、UI quality |
+| 15 | Release hardening 与交付 | Definition of Done（Match 待完成） |
 
 ### Step 00：范围护栏与仓库骨架
 
-**状态：✅ 已完成（2026-09-01）。** 本地验收与 GitHub Actions 均已通过，证据见 `artifacts/acceptance/step-00.md`。
+**状态：✅ 已完成（2026-09-19）。** 已按 Match/Swipe 纳入 MVP 后重新验收 scope guard、OpenAPI、CI、secret guardrail、仓库结构、双环境 scheme 和原生登录入口；证据见 `artifacts/acceptance/step-00.md`。
 
 **依赖：** 无。
 
@@ -700,24 +826,24 @@ xcodebuild test \
 3. 建立 `Lauver-Staging` / `Lauver-Production` scheme 和后端 test/staging/production 环境；
 4. 创建 `.env.example`、`.xcconfig.example`，真实值保持未跟踪；
 5. 建立 CI，执行 Swift build/test、Backend lint/typecheck/test、secret scan；
-6. 添加 `scripts/check-mvp-scope.sh`，只扫描产品源码和 UI 资源，禁止 AI、Garmin、Premium、IAP、Swipe/Match 功能依赖与面向用户文案；文档中的范围说明不参与扫描；
+6. 更新 `scripts/check-mvp-scope.sh`，继续禁止 AI、Garmin、Premium、IAP、Tinder 品牌和不可访问的品牌化交互，但允许经过审核的 Swipe/Like/Pass/Match 实现；文档中的范围说明不参与扫描；
 7. 建立最小 OpenAPI 文件，统一错误结构 `{ code, message, requestId, details? }`。
 
 **可测试 Deliverable：**
 
 - 一个能编译并显示 “Lauver” 空壳页面的原生 Swift App；
 - 一个能启动并响应 `GET /healthz` 的 Express App；
-- 首次 CI 绿色；
+- GitHub Actions CI 执行 guardrails、Backend lint/typecheck/test/build 和原生 iOS Simulator build/test；
 - scope guard script 和 secret scan 可执行。
 
 **测试方法：**
 
-1. 在禁用词测试 fixture 中加入 Garmin/AI SDK import，确认 scope guard 失败；删除 fixture 后确认通过；
+1. 在禁用词测试 fixture 中加入 Garmin/AI SDK import 和 Tinder 品牌文案，确认 scope guard 失败；加入合法的 Swipe/Like/Pass/Match 文案，确认 scope guard 通过；
 2. 提交假 secret fixture，确认 secret scan 失败；
 3. 在全新 clone 中执行 iOS build 和 `npm test`；
 4. `curl http://localhost:3000/healthz` 应返回 `200 { "status": "ok" }`。
 
-**通过标准：** 空项目可从零构建；CI 能阻止超范围代码和 secret；不依赖开发者机器上的未记录文件。
+**通过标准：** 空项目可从零构建；CI 能阻止超范围代码和 secret，并执行原生 iOS build/test；不依赖开发者机器上的未记录文件。
 
 ### Step 01：Express、PostgreSQL 与 Render 基础
 
@@ -753,14 +879,14 @@ xcodebuild test \
 
 ### Step 02：原生 iOS App Shell 与 API Client
 
-**状态：✅ 已完成（2026-09-02）。** 原生 App Shell、API Client、Keychain、非敏感 UI 状态存储、Design System、Render staging 在线状态及完整 CI 回归均已验收；证据见 `artifacts/acceptance/step-02.md`。
+**状态：✅ 已完成（2026-09-19）。** 原生 App Shell、API Client、Keychain、UI 状态持久化、Design System、staging/production 配置、Match 入口与显式 opt-in gate 已完成并通过 Simulator 回归；Staging App 已签名安装到连接的 iPhone 17e，证据见 `artifacts/acceptance/step-02.md`。
 
 **依赖：** Step 01。
 
 **实现任务：**
 
 1. 创建 SwiftUI App lifecycle、依赖注入容器和 staging/production config；
-2. 建立 Auth flow 与登录后的 Discover、Events、Messages、Profile 四个 Tab 占位导航；
+2. 建立 Auth flow 与登录后的 Discover、Match、Events、Messages、Profile 导航；Match 在业务 API 完成前展示明确的 opt-in 权限 gate；
 3. 实现基于 `URLSession` + `async/await` 的 API client；
 4. 实现 Codable models、统一 API error、request ID 显示和网络重试边界；
 5. 实现 Keychain adapter 和仅用于非敏感 UI 状态的本地存储；
@@ -777,7 +903,7 @@ xcodebuild test \
 1. 用 `URLProtocol` stub 验证 2xx、401、422、500、超时和无网络；
 2. 将 API URL 指向不可达地址，UI 显示错误并可 Retry；
 3. 把测试 token 写入 Keychain，重启 App 后能读取，退出测试后能删除；
-4. XCUITest 验证四个 Tab 导航，不允许存在 Swipe/Match Tab。
+4. XCUITest 验证新的导航和 Match 入口，确认未 Match 用户不会进入 Direct Chat。
 
 **通过标准：** App 能稳定访问 staging API，错误不会导致崩溃，敏感 token 不写入 UserDefaults 或日志。
 
@@ -846,7 +972,16 @@ xcodebuild test \
 
 ### Step 05：Workout Profile、Photo 与 City Location
 
-**状态：✅ 已完成（2026-09-13）。** 实现、真机 Profile/头像生命周期及重开持久化验收、最终提交 `10c8168` 的全部 CI jobs 均已通过。Render staging 已部署该提交，`python3 scripts/verify-step-05-staging.py` 的 33 项验收全部通过，覆盖两账户坐标隐私、头像重复确认、替换/删除清理、新会话持久化和非法文件拒绝；测试资料、头像和会话已清理。准确证据见 `artifacts/acceptance/step-05.md`。
+**状态：✅ 已完成。** Profile 范围扩展、最多 9 张照片、排序/主照片、Profile Preview、城市隐私和 Match 可见性相关实现已完成；本地验证通过，CI 已通过，Render staging 已成功运行。
+
+**当前进度（2026-09-19）：**
+
+- ✅ Backend Profile API、Profile projection、城市坐标隐私、pace 校验和 profile completeness 已完成；
+- ✅ 原生 SwiftUI Own/Edit/Other Profile、PhotosPicker、多照片展示、Preview My Profile 和 MapKit 城市搜索已完成；
+- ✅ 上传、confirm 幂等、替换、删除、排序、过期上传和孤儿对象清理已完成；并发 confirm 遗留临时对象的问题已在 commit `7a0ee34` 修复并 push；
+- ✅ Backend lint、typecheck 和本地 175 个测试通过；Staging 真机包已编译并安装到连接的 iPhone 17e；
+- ✅ `7a0ee34` 推送后的 PostgreSQL integration CI 已通过，Render staging 已成功运行；
+- ⏳ iPhone 上仍需人工确认登录测试账号后的 Profile Preview 实际显示，作为设备端最终体验记录，不阻塞后端部署。
 
 **依赖：** Step 03；Step 04 可并行完成，但合并前两种登录都要支持 Profile。
 
@@ -856,14 +991,16 @@ xcodebuild test \
 2. 实现 `GET/PATCH /v1/me`、`GET /v1/users/:id`；
 3. 实现 sports tags、各运动 pace value/unit/bracket 和训练时间；
 4. 使用 MapKit 搜索城市，只向后端保存城市元数据和中心点；
-5. 接入 S3-compatible object storage，完成头像签名上传、格式校验、替换和删除；
+5. 接入 S3-compatible object storage，完成最多 9 张照片的签名上传、confirm、格式校验、排序、替换、删除和孤儿对象清理；
 6. 实现 Edit Profile、Own Profile、Other Profile；
-7. 定义 profile completeness，未完成资料不参与 Discover。
+7. 实现 `Preview My Profile`，使用与公开 Profile 相同的字段过滤；
+8. 增加 Match visibility、Match preferences 和 profile completeness，未完成资料不参与 Discover/Match。
 
 **可测试 Deliverable：**
 
 - 用户可编辑并重新读取完整 Workout Profile；
-- 用户可上传、更换和删除头像；
+- 用户可上传最多 9 张照片、更换、排序和删除；
+- 用户可从 Profile 打开 Preview My Profile，且预览不泄露私密字段；
 - 用户可用 Apple Maps 搜索城市，但其他用户 API 看不到经纬度；
 - Profile API 和 iOS Profile tests。
 
@@ -871,16 +1008,17 @@ xcodebuild test \
 
 1. 对每种运动测试正确 pace unit 和非法负数/极端值；
 2. 上传伪装扩展名、超大文件和非图片，服务端必须拒绝；
-3. 更换头像后旧 object key 被删除；
-4. `GET /v1/users/:id` 的响应 contract 明确不含 `city_lat/city_lng`；
-5. XCUITest：编辑 → 保存 → kill App → 重开 → 字段仍一致。
-6. 分别模拟申请上传地址、PUT 上传和确认保存时返回 `-1005`，验证有限重试；确认成功但响应丢失后，重复确认返回同一头像，不生成额外最终对象；取消和 HTTP 错误不触发连接重试。
+3. 第 10 张照片、超过 9 个有效上传任务、重复排序 ID、无主照片和非法 photo owner 均被拒绝；
+4. confirm 成功前照片不出现在任何公开接口；confirm 重复调用幂等，更换/删除照片后旧 object key 被删除，失败/过期上传不会留下可见孤儿对象；
+5. `GET /v1/users/:id` 和 `/v1/me/preview` 的响应 contract 明确不含 `city_lat/city_lng`、Match 偏好和内部字段，并返回同一份已发布照片 projection；
+6. XCUITest：编辑 → 保存 → kill App → 重开 → 字段、照片顺序和主照片仍一致；
+7. 分别模拟申请上传地址、PUT 上传和确认保存时返回 `-1005`，验证有限重试；确认成功但响应丢失后，重复确认不生成重复照片对象；取消和 HTTP 错误不触发连接重试。
 
 **通过标准：** Profile 数据可持久化、照片无孤儿对象、位置只公开城市和近似信息。
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：✅ 验收通过（2026-09-13）。** 新版 Render staging API **62/62** 通过；用户明确确认真机实际 API 的 Discover 列表 → Profile、100 km / Unlimited、Running 数值配速范围、下拉刷新、分页加载及最终 Load more 消失、断网提示与恢复网络后的 Retry 均正常。新版实现已提交、推送并部署，实际配速 migration 已应用，34 个新版 API 自动测试账户和后补 44 个临时分页账户全部清理；独立核对本批残留为 0，清理 journal 已删除，完整 ACTIVE Profile 恢复为原有 3 个。Backend unit 123/123、PostgreSQL integration 28/28、iPhone 14 Plus XCTest 75/75 与数值范围/半径 XCUITest 1/1、Simulator UI、Profile editor UI、双环境构建及范围/secret 检查通过。实现提交 `10bd58d` 的完整云端 CI 也通过（XCTest 75/75、XCUITest 12/12）；已修复空输入框断言在 iOS 18/26 的差异及既有密码重置测试的点击焦点问题。实际 Render 部署 `594030b` 仅额外新增部署文档。最后一轮实际 API 默认 20 条分页遍历 3 页无重复遗漏，Discover XCTest 8/8 复验通过。准确证据见 `artifacts/acceptance/step-06.md`。
+**状态：🟡 进行中（2026-09-19）。** 原有列表筛选、分页和真机 Discover 证据仍有效；已补齐公开 Profile 多照片浏览，并移除未 Match 前的 Direct Message 绕过入口。Preview 已具备，Match 状态入口、Like/Pass、互相 Match 后的 Message 入口和 Match 候选隔离仍待 Step 06A/06B 完成后重新验收。
 
 **依赖：** Step 05。
 
@@ -890,8 +1028,9 @@ xcodebuild test \
 2. 使用城市中心点 Haversine 距离和确定性 SQL 过滤；
 3. 排除自己、未完成、暂停、删除以及任一方向已 Block 的用户；
 4. 实现固定排序和 cursor pagination；
-5. SwiftUI 构建普通 List、Filter Sheet、Profile navigation、空状态和刷新；
-6. 在 UI、数据模型和数据库确认没有 Like、Swipe、Match。
+5. SwiftUI 构建普通 List、Filter Sheet、Profile navigation、空状态和刷新；✅
+6. 保持普通 Discover 列表的确定性过滤，同时明确它与 Match 候选池的数据边界；Match 状态不得绕过 Discover 的 Block、暂停、删除和 Profile completeness 规则。🟡
+7. 公开 Profile 支持浏览全部已发布照片；未 Match 前不提供 Direct Message 绕过入口。✅（2026-09-19）
 
 **可测试 Deliverable：**
 
@@ -905,13 +1044,92 @@ xcodebuild test \
 2. 分页前后不重复、不漏用户；
 3. 测试半径边界内、恰好边界、边界外；
 4. 缺 pace 的用户不会进入指定数值范围，准确包含 mm:ss / km/h 范围的两端；
-5. XCUITest 验证列表 → Profile，且不存在卡片滑动手势与 Like 按钮。
+5. XCUITest 验证列表 → Profile、最多 9 张公开照片/Preview，并确认未 Match 用户没有 Message 入口；公开照片分页浏览和 Match 前私聊入口隔离已在原生代码中完成，待 iPhone 17e 真机 UI 复验。
 
 **通过标准：** Discover 是完全可解释、稳定、零 AI 的过滤列表，返回数据不泄露精确位置。
 
+### Step 06A：Match 数据模型、Like/Pass 与候选 API
+
+**状态：🟡 进行中（2026-09-19）。** 已按 SwiftUI/Express/PostgreSQL/Stream 架构完成 Match migration、偏好/候选/Like/Pass/Match/Unmatch API、签名 cursor、Block/visibility/completeness 检查、每日 15 次 UTC Like 限额、并发幂等和 Direct Chat mutual-Match gate，并补充 PostgreSQL integration test。当前 Supabase `public` schema 已成功部署全部 16 个 Prisma migrations，旧 Expo 表已保留在 `legacy_expo` schema，未写入测试 fixture；本地 `lauver_test` migration-from-zero、69 项 integration tests 和 96 项 Step 06/06A API 验收已通过，验收临时账户已全部清理。Render staging 双账户验收已尝试，但当前外部 PostgreSQL IP allowlist 拒绝连接，未创建 staging fixture；解除 allowlist 后需重跑。原生 Match UI、真机验收属于 Step 06B。证据见 `artifacts/acceptance/step-06a-20260919.md`。
+
+**依赖：** Step 05、Step 06。
+
+**实现任务：**
+
+1. 创建 `swipes`、`matches` 和 Match preferences migration；✅（Supabase `public` schema 已完成 migration-from-zero）
+2. 实现候选查询、Like、Pass、Match 列表、Unmatch 和偏好更新 API，包含展示性别、最大城市级距离和多选运动筛选；✅（后端 API 第一版已完成）
+3. 对同一用户对建立 canonical unique constraint，Like 和 Match 写入幂等；✅（后端已完成）
+4. 服务端执行每日 15 次 Like 限额、UTC 重置、Block、暂停、删除、Profile completeness 和 visibility policy；✅（本地 PostgreSQL integration 已验证，staging 管理状态联动待验收）
+5. 使用城市中心点近似距离，不增加精确位置返回字段；✅（候选 API 已完成）
+6. 保持候选排序确定、可解释、稳定并支持 cursor pagination；✅（本地固定 seed integration 已验证）
+7. 复用现有 Stream Chat，不创建第二套 Supabase `messages` 表；✅（Direct Chat 已强制 active Match）
+8. 为 IDOR、并发 Like、重复请求、过期 Match、Unmatch、筛选持久化数据和限额边界建立 backend/integration tests；✅（API contract/unit 与 PostgreSQL integration 已完成；staging 双账户流程待验收）。
+
+**可测试 Deliverable：**
+
+- 未互相 Like 的用户无法创建 Direct Chat；
+- 双方 Like 只创建一个 Match；
+- Pass、Block、暂停、删除和关闭 visibility 后候选池立即生效；
+- 每日 15 次 Like 限额、UTC 重置、Pass 不扣额度和并发写入在服务端强制执行；
+- API contract、migration-from-zero 和 authorization tests。
+
+**测试方法：**
+
+1. A Like B、B 不操作时不能出现 Match；
+2. A/B 同时 Like 时只产生一个 Match；
+3. 重试同一请求不会增加 Swipe、Like 或 Match 记录；
+4. 非本人、被 Block、未 opt-in、暂停和已删除目标均不能被 Like；
+5. Unmatch 后双方不能通过旧 channel ID 恢复聊天；
+6. 固定 seed 下候选顺序和分页结果可重复；
+7. 性别、距离、运动筛选组合正确，`Any/Unlimited` 不错误排除候选；
+8. 15 次 Like 后第 16 次被拒绝，UTC 日期切换后恢复额度；
+9. 筛选条件重启 App 后保持，候选加载失败时 Retry 不会重复记录 Like/Pass。
+
+**通过标准：** 双方明确 Like 是创建私聊的唯一用户关系入口；所有关系权限由后端强制执行。
+
+### Step 06B：Native Match UI、Swipe 与 Profile Preview
+
+**状态：🟡 未完成（新增 MVP 范围）。**
+
+**依赖：** Step 02、Step 05、Step 06A、Step 14A。
+
+**实现任务：**
+
+1. 增加 Match 入口、onboarding、候选卡片、Matches 列表和 Filter Sheet；
+2. 实现 Swipe Right/Left，并提供等价的 Like/Pass 按钮；手势与按钮调用同一 API；
+3. 实现 Match Toast、Say Hi、Keep browsing 和 Unmatch confirmation；
+4. Profile 卡片和 Profile Preview 支持最多 9 张公开照片浏览，并提供 View Profile；
+5. Matches 列表展示头像、姓名、最后消息、未读数和稳定排序；
+6. Filter Sheet 支持展示性别、最大距离和多选运动，筛选条件本地持久化；
+7. 未 Match 的 Profile 不显示 Message，已 Match 后才显示 Message；
+8. 覆盖加载、空状态、无位置、每日限额、错误、断网、Retry 和快速重复点击；
+9. 保证 VoiceOver、Dynamic Type、浅色/深色和小屏/大屏可完成同样操作；
+10. 不使用 Tinder 品牌、复制式文案或只支持手势的不可访问交互。
+
+**可测试 Deliverable：**
+
+- Match onboarding → Like/Pass → Match Toast → Chat；
+- Candidate Profile、Own Profile Preview 和 Other Profile 的照片、公开字段一致；
+- Like/Pass 按钮与 Swipe 调用相同 API，不能产生不同状态；
+- Match UI 的 XCTest/XCUITest、截图和真机操作证据。
+
+**测试方法：**
+
+1. 用两个 staging 用户完成 Like → mutual Like → Chat → Unmatch；
+2. 验证未 Match 时没有 Message 入口且 direct channel 请求失败；
+3. 验证 9 张照片全部可预览，第 10 张被拒绝，排序/删除/主照片状态持久化；
+4. 验证 Profile Preview 不显示经纬度、Match 偏好、内部 ID 和私密集成数据；
+5. VoiceOver 不使用 Swipe 手势也能完成 Like、Pass、Preview 和 Chat；
+6. 断网重试不会产生重复 Like 或 Match；
+7. Matches 列表的最后消息、未读数、打开 Chat 后清零和排序正确；
+8. 候选卡片可浏览多照片并进入完整 Profile；网络错误显示 Retry 而不是伪装成空状态；
+9. 筛选条件退出并重新进入 Match 后仍保持。
+
+**通过标准：** Match 关系、Profile Preview、照片上限和互相 Like 后聊天在真实 iPhone 与 staging 均通过。
+
 ### Step 07：Block 与 Report 安全基础
 
-**状态：✅ 验收通过，完整 CI 已闭环（2026-09-13）。** 后端双向 Block / Profile 隔离、blocked users 分页、普通举报与原子 Report and Block、不可变快照/reference/audit 全部交付。Backend unit 129/129、隔离 PostgreSQL integration 37/37、staging 实际 API 34/34 与手机操作通过；额外实际 API 双向隔离 4/4 通过。用户逐项确认普通举报不自动拉黑、取消/确认拉黑、B 也看不到 A、Settings 解除恢复 Discover、Report and Block、断网失败后的联网恢复及过期后刷新。真机发现的 session 刷新竞态已修复并重新安装；云端确认手机 session rotation 成功且未撤销。独立手机 run 的 3 个账号、3 条举报、6 条安全审计与依赖数据全部清理，独立残留核对为 0，旧 access/refresh 返回 401，私人凭据与 journal 已删除。提交 `20fd09f` 的手动/自动部署均通过；原生 session 修复 `05ee272` 及 UI 交互修复 `d38c9a5`、`33aaf3f` 已推送。最终源码 `33aaf3f` 的完整云端 CI 全部通过：Backend、guardrails、XCTest 88/88、完整 UI 14/14 与 staging/production 构建配置检查；此前超时中断及部分通过仅保留为历史记录。完整证据见 `artifacts/acceptance/step-07.md`；全部页面视觉签收仍按 Step 14A 执行。
+**状态：🟡 未完成（Match/Swipe 安全联动待重新验收）。** 原有双向 Block、Profile 举报、Report and Block 和后台审计证据仍有效；Like、Pass、Match、Unmatch、已打开聊天和 Match 候选池的隔离尚未完成。
 
 **依赖：** Step 05、Step 06。
 
@@ -922,7 +1140,9 @@ xcodebuild test \
 3. 实现通用 `POST /v1/reports`，先支持 User Profile 举报；
 4. 在 Other Profile 添加 Block、Report、Report and Block；
 5. 在所有用户查询建立共享 block policy；
-6. 对 Block/Report 接口加权限校验、rate limit 和 request audit metadata。
+6. 对 Block/Report/Like/Pass/Match/Unmatch 接口加权限校验、rate limit 和 request audit metadata；
+7. Block 后立即撤销候选、Like、Match 和 Direct Chat 权限；
+8. Report and Block、暂停用户和删除账户必须覆盖已存在 Match 与已打开 Stream channel。
 
 **可测试 Deliverable：**
 
@@ -930,6 +1150,7 @@ xcodebuild test \
 - Settings > Blocked Users 可查看和解除；
 - Report 会生成 reference ID 和不可变目标快照；
 - 双向 Discover 隔离测试。
+- Match 候选池、Like、Match 和 Direct Chat 的双向隔离测试。
 
 **测试方法：**
 
@@ -938,6 +1159,7 @@ xcodebuild test \
 3. 重复 block 幂等，自己 block 自己返回 422；
 4. Report target 不存在或 target type 不合法时拒绝；
 5. 修改被举报 Profile 后，report snapshot 仍保留提交时内容。
+6. Match、Unmatch、Block、Report and Block 的组合状态不能绕过聊天权限。
 
 **通过标准：** Block 是后端强制策略而不只是客户端隐藏；Profile 举报已进入可审核的数据队列。
 
@@ -1011,16 +1233,16 @@ xcodebuild test \
 
 ### Step 10：Stream 一对一私聊
 
-**状态：✅ 已完成（2026-09-16）。** Stream server SDK、短期 token provider、canonical direct channel、Block/Report 策略、官方 iOS `StreamChatSwiftUI` SDK、Conversations、Direct Chat、文本发送、未读数、失败重试和消息举报均已完成。两台真机已完成实时互发、第三方隔离、Block 后禁止发送、消息举报证据保存，以及断网发送失败、恢复后重试且不重复发送验收。证据见 `artifacts/acceptance/step-10.md`。
+**状态：🟡 未完成（Chat gate 改动后需重新验收）。** 原有 Stream、文本、未读数、Block/Report 和断网证据仍有效；需要加入“互相 Like 后才能聊天”的后端 gate，并重新完成两账户真机验收。
 
-**依赖：** Step 07；Stream staging application（API key、API secret 和 iOS SDK 配置）。
+**依赖：** Step 06A、Step 06B、Step 07；Stream staging application（API key、API secret 和 iOS SDK 配置）。
 
 **实现任务：**
 
 1. 后端接入 Stream server SDK，创建/同步 Stream user；
 2. 实现认证后的短期 Stream token provider；
-3. 创建 canonical user pair 和唯一 direct channel；
-4. 创建 channel 前及发送期间执行 block policy；
+3. 仅在服务端确认未解除 Match 后创建 canonical user pair 和唯一 direct channel；
+4. 创建 channel 前、获取 token 时及发送期间执行 Match + block policy；
 5. iOS 接入 Stream Chat Swift SDK，实现 Conversations、Direct Chat、文本发送、未读数和错误重试；
 6. Chat header 接入 Block、Report User、Report Message；
 7. Report evidence 保存 Stream channel/message ID 和安全快照。
@@ -1028,6 +1250,8 @@ xcodebuild test \
 **可测试 Deliverable：**
 
 - 两个 staging 用户可从 Profile 发起唯一私聊并实时收发文本；
+- 未互相 Like 的两个 staging 用户从 Profile 或 Match 页面都不能发起私聊；
+- 双方 Like 后可以进入唯一 Direct Chat；
 - 第三个用户不可读写该 channel；
 - Chat 内 Block / Report 可用；
 - Stream token/channel authorization integration tests。
@@ -1035,11 +1259,12 @@ xcodebuild test \
 **测试方法：**
 
 1. A 与 B 双向多次发起聊天只产生一个 channel；
-2. 用 A 的 Lauver token 请求 B 的 Stream token 返回 403；
-3. C 猜测 channel ID 也不能 watch/query/send；
-4. A block B 后，已打开的 B Chat 发送失败，双方会话入口按策略隐藏；
-5. Report Message 后即使 Stream 消息被删除，后台仍有最小 evidence snapshot；
-6. iOS 断网发送显示失败状态，恢复后用户可重试且不重复发送。
+2. A 与 B 未互相 Like 时，Profile、Match 和 API 均不显示或允许 Message；
+3. 用 A 的 Lauver token 请求 B 的 Stream token 返回 403；
+4. C 猜测 channel ID 也不能 watch/query/send；
+5. A Unmatch 或 block B 后，已打开的 B Chat 发送失败，双方会话入口按策略隐藏；
+6. Report Message 后即使 Stream 消息被删除，后台仍有最小 evidence snapshot；
+7. iOS 断网发送显示失败状态，恢复后用户可重试且不重复发送。
 
 **通过标准：** ✅ Realtime 文本、成员隔离、唯一会话、Block、Report 和断网恢复均通过两用户加攻击用户验收。
 
@@ -1112,23 +1337,23 @@ xcodebuild test \
 
 ### Step 13：Admin Report Dashboard
 
-**状态：✅ staging/admin UI 验收完成（2026-09-18）。** 已建立隔离的 Admin session、CSRF、RBAC、report workflow、用户暂停/恢复、活动下架、Stream message 删除和不可变 admin audit log；管理员账号仅通过 `npm run admin:create` 受控创建，不提供公开注册。真实 staging 已完成四类举报来源、状态流、暂停/恢复、活动下架、群聊权限、消息删除和 audit log E2E；整体产品视觉签收仍归 Step 14A。
+**状态：🟡 未完成（Match 举报来源和处罚联动待重新验收）。** 原有 Admin session、CSRF、RBAC、report workflow、暂停/恢复、活动下架、Stream message 删除和 audit log 已验收；新增 Match/Profile/Unmatch/Like 相关证据与暂停后的 Match 清理尚未验收。
 
-**依赖：** Step 07、Step 10、Step 11、Step 12。
+**依赖：** Step 06A、Step 07、Step 10、Step 11、Step 12。
 
 **实现任务：**
 
 1. 创建 `admin_users`、`admin_audit_logs` 和 report workflow migration；
 2. 建立不可公开注册的 admin auth、安全 cookie、CSRF 和 role middleware；
-3. 实现 Report Queue、筛选、Report Detail 和 evidence snapshot 展示；
+3. 实现 Report Queue、筛选、Report Detail 和 evidence snapshot 展示，覆盖 Match/Profile/Direct Chat/Event 来源；
 4. 实现 Open → In Review → Resolved/Dismissed 状态流；
 5. 实现暂停/恢复用户、下架活动、删除 Stream message；
 6. 每个管理员动作记录 actor、reason、before/after 和 timestamp；
-7. 暂停用户时撤销 Lauver sessions，并停止签发 Stream token。
+7. 暂停用户时撤销 Lauver sessions，停止签发 Stream token，并隐藏/终止其新的 Like、Match 和 Chat 权限。
 
 **可测试 Deliverable：**
 
-- `/admin` 可登录并处理来自 Profile、Direct Chat、Event、Event Chat 的举报；
+- `/admin` 可登录并处理来自 Profile、Match、Direct Chat、Event、Event Chat 的举报；
 - 管理动作会实际影响 API/Event/Stream；
 - 完整 admin authorization、CSRF 和 audit integration tests。
 
@@ -1140,14 +1365,15 @@ xcodebuild test \
 4. Suspend 后用户现有 session 调 API 返回 401/403，不能获取 Stream token；
 5. Remove Event 后活动不可加入；Delete Message 后 Stream 消息消失；
 6. 每个动作对应且只对应一条完整 audit log，普通 admin 不能修改日志。
+7. 被暂停或删除用户的候选、Like、Match 和 Direct Chat 权限均被撤销，且有可审计证据。
 
 **通过标准：** 三个要求位置产生的举报都能被实际审核和处置，后台本身不存在明显越权入口。
 
 ### Step 14：账户删除全链路
 
-**状态：✅ 已完成并签收（2026-09-18）。** Email + Strava 以及 Apple + 头像账户均已在 Render staging 和实体 iPhone 17e 完成删除全链路：重新认证、立即撤销 access/refresh token、Apple/Strava provider cleanup、PostgreSQL/Stream/object storage 清理、后台 job 完成、强退重启后仍停留 Login。证据见 `artifacts/acceptance/step-14.md`。
+**状态：🟡 未完成（新增 Swipe/Match/9 张照片/Preview 清理待重新验收）。** 原有 Email/Apple、Strava、单头像、PostgreSQL、Stream、object storage 和 Keychain 删除证据仍有效；新增关系数据和多照片清理尚未完成。
 
-**依赖：** Step 04、Step 05、Step 08、Step 09、Step 10、Step 12、Step 13。
+**依赖：** Step 04、Step 05、Step 06A、Step 06B、Step 08、Step 09、Step 10、Step 12、Step 13。
 
 **实现任务：**
 
@@ -1155,7 +1381,7 @@ xcodebuild test \
 2. 后端建立 deletion orchestration 和幂等状态；
 3. 立即禁用账户、撤销全部 Lauver sessions 和 Stream token 能力；
 4. 调用 Apple revoke、Strava revoke、Stream delete/anonymize、object storage delete；
-5. 删除 Profile、Sports、Activities、Blocks、Attendees 等个人数据；
+5. 删除 Profile、最多 9 张照片及其 object key、Sports、Activities、Swipes、Matches、Match preferences、Blocks、Attendees 等个人数据；
 6. 对用户创建的 Event 和 Report evidence 按 Privacy Policy 执行删除或不可逆匿名化；
 7. 外部服务失败时记录最小 retry job，不恢复用户访问；
 8. iOS 清空 Keychain、Stream local state 和缓存并返回 Login。
@@ -1164,6 +1390,7 @@ xcodebuild test \
 
 - Email 用户和 Apple 用户都可在 App 内永久删除账户；
 - 有/无 Strava、HealthKit、Chat、Event 数据的账户均有集成测试；
+- 有/无照片、Swipe、Match、Unmatch 和 Direct Chat 数据的账户均有集成测试；
 - 外部 provider fake 可验证 revoke/delete 调用次数和重试；
 - staging 真实 Apple + Strava deletion 验收记录。
 
@@ -1175,21 +1402,22 @@ xcodebuild test \
 4. Apple token 和 Strava token 确认已 revoke；
 5. 模拟每个外部 provider 超时，用户仍被禁用，retry 最终成功；
 6. 删除后 App 重启仍停留 Login，旧 Keychain token 不存在。
+7. 删除后候选 API、Like/Pass/Match API、Profile Preview 和旧 Stream channel 均不能恢复或暴露已删除用户数据。
 
 **通过标准：** 删除不是 Deactivate；不要求联系客服；内部数据、第三方授权和本地凭据全部进入可证明的清理闭环。
 
 ### Step 14A：UI 视觉对齐与体验优化（参照 Expo 版本）
 
-**状态：🟡 进行中（2026-09-18）。** 已完成第一轮 Expo 基线盘点、Logo 原生资源接入、Design System token 扩展，以及登录/注册入口的首轮视觉对齐，并在实体 iPhone 17e 构建安装；Profile、Discover、Events、Messages、Settings 的逐页对比、截图和全功能回归仍待完成。证据见 `artifacts/acceptance/step-14a.md`。
+**状态：🟡 进行中（2026-09-18）。** 已完成第一轮 Expo 基线盘点、Logo 原生资源接入、Design System token 扩展、登录/注册入口首轮视觉对齐，以及 Profile、Discover、Events、Messages、Settings 主要容器的第二轮统一样式；首轮改动已在实体 iPhone 17e 构建安装。已通过 Firebase 登录采集 authenticated Expo 的 Dashboard、Activities、Community、Match、Profile light-theme 参考，但仍是桌面浏览器视口，尚未完成同设备逐页对比。剩余同尺寸截图、Dynamic Type/VoiceOver、全功能回归和 Product Owner 真机验收仍待完成。证据见 `artifacts/acceptance/step-14a.md`。
 
 **依赖：** Step 02；设计基础与已完成页面可立即开展，其余页面随 Step 07–14 实现同步推进，最终验收依赖 Step 00–14 全部通过。
 
 **实现任务：**
 
 1. 运行当前仓库的 `npx expo start` 版本，记录参考 commit、运行方式、设备尺寸和主题，逐页保存参考截图；结合 `App.js`、`src/screens/`、`src/context/ThemeContext.js` 与实际使用的资源梳理页面和样式，不以记忆或临时猜测作为设计依据；
-2. 建立 Expo → SwiftUI 页面对应表，运用lauver的官方logo，覆盖 Welcome、登录/注册/重置密码、Discover/筛选/其他用户资料、自己的 Profile/编辑资料、Events/活动详情/创建编辑、Messages/私聊/活动群聊、Settings/Connected Apps/Blocked Users/举报/删除账户；Expo 没有的 MVP 页面沿用统一设计语言；
+2. 建立 Expo → SwiftUI 页面对应表，运用 Lauver 官方 logo，覆盖 Welcome、登录/注册/重置密码、Discover/筛选/Match/候选卡片/Match Toast/其他用户资料、自己的 Profile/编辑资料/9 张照片/Preview、Events/活动详情/创建编辑、Messages/互相 Like 后的私聊/活动群聊、Settings/Connected Apps/Blocked Users/Match preferences/举报/删除账户；Expo 没有的 MVP 页面沿用统一设计语言；
 3. 扩展原生 Design System，统一品牌色、浅深色背景与文字、字体层级、间距、圆角、边框、图标、头像、按钮、输入框、列表行、Tab Bar、导航栏和 Sheet。优先复用已有品牌资源，避免各页面分别硬编码样式；
-4. 用 SwiftUI 逐页对齐参考版本的视觉层级与交互细节，包括按钮位置、表单反馈、筛选摘要、键盘避让、返回导航和滚动体验。保留原生认证、地图、照片与权限流程；Discover 继续使用普通列表和手动筛选；
+4. 用 SwiftUI 逐页对齐参考版本的视觉层级与交互细节，包括按钮位置、表单反馈、筛选摘要、键盘避让、返回导航和滚动体验。保留原生认证、地图、照片与权限流程；Discover 继续使用普通列表和手动筛选，Match 使用可访问的卡片/Swipe/Like/Pass 交互；
 5. 为真实数据、长姓名/城市/文案、无头像、加载、空状态、错误、断网重试、按钮禁用和提交中状态提供完整样式；页面中不暴露无助于用户决策的实现细节或调试信息；
 6. 对比相同设备尺寸、主题和等价内容的 Expo / 原生截图，逐项修复明显差异；有意调整的页面记录原因。原生平台适配或 MVP 范围要求优先，不能为了视觉一致引入禁用入口或改变已验收业务规则；
 7. 完成小屏和大屏 iPhone、浅色/深色、Dynamic Type 和 VoiceOver 检查；真机验证点击区域、键盘、滚动、导航与错误恢复，并复验受到 UI 改动影响的关键业务路径。
@@ -1206,19 +1434,21 @@ xcodebuild test \
 1. 按页面对应表逐项对比品牌、配色、字体、间距、图标、布局和交互；每个页面都有结果，遗漏页面不能视为通过；
 2. 检查小屏/大屏、浅色/深色和大字体下没有截断关键信息、布局重叠、键盘遮挡主要操作或不可点击的按钮；VoiceOver 能识别主要操作；
 3. 验证加载/空/错误/成功和提交状态均有清晰反馈，断网恢复可重试，连续点击不会造成重复提交；
-4. 对 UI 改动影响的登录、Profile 保存、Discover 筛选/分页、聊天、活动、举报/拉黑和账户删除执行回归；涉及真实 API 的路径使用 staging 验证；
+4. 对 UI 改动影响的登录、Profile 保存/9 张照片/Preview、Discover 筛选/分页、Match Like/Pass/Swipe/Match Toast、互相 Like 后聊天、活动、举报/拉黑和账户删除执行回归；涉及真实 API 的路径使用 staging 验证；
 5. Product Owner 在真机逐页验收，确认整体视觉符合 Expo 参考版本，已记录的原生适配与 MVP 差异可接受。
 
 **通过标准：** 全部 MVP 用户页面视觉与体验验收完成，没有未修复的明显视觉差异或阻断操作的问题；差异有明确理由和验收结论，业务回归通过，并取得 Product Owner 的真机 UI 确认。仅功能通过或仅有静态截图不能签收本 Step。
 
 ### Step 15：Release Hardening、TestFlight 与最终交付
 
+**状态：🟡 未完成（Match、9 张照片和 Profile Preview 纳入后必须重新执行发布验收）。**
+
 **依赖：** Step 00–14 和 Step 14A 全部通过。
 
 **实现任务：**
 
 1. 运行完整 Backend unit/integration/authorization/migration-from-zero suite；
-2. 运行 iOS XCTest/XCUITest，真实设备验证 Apple、Strava、HealthKit 和 Stream；
+2. 运行 iOS XCTest/XCUITest，真实设备验证 Apple、Strava、HealthKit、最多 9 张照片、Profile Preview、Match 和 Stream；
 3. 复验 Step 14A 已完成的 UI 对齐，以及 Dynamic Type、VoiceOver、Dark Mode、无网络、慢网络和错误恢复；
 4. 完成 Privacy Policy、Terms、App Privacy、purpose strings 和 Review Notes；
 5. 从全新 Render project 按 README 部署 staging，验证所有 secret 和 migration；
@@ -1237,12 +1467,12 @@ xcodebuild test \
 **测试方法：**
 
 1. 在没有原开发环境的机器上仅按 README 完成 build/deploy；
-2. TestFlight 执行 Register/Apple Login → Profile → Discover → Direct Chat → Report/Block；
+2. TestFlight 执行 Register/Apple Login → Profile/9 张照片/Preview → Discover → Like/Pass → mutual Like → Direct Chat → Report/Block；
 3. 执行 Strava Connect/Refresh/Disconnect 和 HealthKit Opt-in/Import/Delete；
 4. 执行 Event Create/Join/Group Chat/Leave/Report/Admin Resolve；
 5. 最后执行 Account Delete 并核对 Apple、Strava、Stream、Storage、DB、Keychain；
 6. `scripts/check-mvp-scope.sh` 和 secret scan 对 archive/源码均通过；
-7. 确认 App 不含 AI、Garmin、Premium、IAP、Swipe、Like、Match 功能或面向用户入口。
+7. 确认 App 不含 AI、Garmin、Premium、IAP、行为学习匹配、兼容度分数或自动推荐；Swipe/Like/Pass/Match 必须符合本文件的权限、隐私和无障碍规则。
 
 **通过标准：** Definition of Done 全部打勾，自动化测试、真实服务验收、从零部署和 TestFlight E2E 均有可审计证据。
 
@@ -1253,13 +1483,15 @@ xcodebuild test \
 | Auth | 注册、重复邮箱、错误密码、Apple token 校验、refresh rotation、logout、reset、delete |
 | Authorization | IDOR、伪造 user ID、非成员读写 Stream channel、普通用户访问 admin |
 | Profile | 字段校验、pace unit、照片格式/大小、城市位置不泄露 |
-| Discover | 三种筛选组合、稳定排序、分页、双向 block 排除 |
+| Profile photos | 最多 9 张、主照片、排序、替换、删除、失败重试、Preview 隐私 |
+| Discover | 三种筛选组合、稳定排序、分页、双向 block 排除、未 Match 无 Message |
+| Match | onboarding、visibility opt-in、gender preference、sport/distance filters、筛选持久化、候选排序、Like/Pass/Swipe、15 次 UTC Like 限额、mutual Like、唯一 Match、Match Toast、Matches last message/unread、View Profile、Retry、Unmatch |
 | Strava | state/回调、scope 拒绝、token refresh、活动幂等、revoke |
 | HealthKit | 未授权、拒绝、限制授权、重复 import、disconnect/delete |
-| Direct Chat | channel 唯一、实时文本、block 前后、report message |
+| Direct Chat | 互相 Like gate、channel 唯一、实时文本、1,000 字符限制、时间戳、发送状态、已读回执、未读清零、Unmatch/Block 前后、断网重试、report message |
 | Events | CRUD、过去时间、capacity 并发、join/leave、取消、群成员同步 |
 | Reports | Profile/Chat/Event 来源、快照、状态流转、admin audit |
-| Account deletion | Apple/Strava/Stream/照片/DB/session 全链路清理 |
+| Account deletion | Apple/Strava/Stream/最多 9 张照片/Swipe/Match/DB/session 全链路清理 |
 | UI 视觉对齐 | Expo / SwiftUI 逐页截图对比、统一设计 token、页面与状态覆盖、小屏/大屏、真机 Product Owner 验收 |
 | iOS UI | Dynamic Type、VoiceOver、Dark Mode、网络断开、空状态、错误重试 |
 | Deployment | 空数据库 migration、seed admin、Render health check、env validation |
@@ -1329,7 +1561,6 @@ xcodebuild test \
 - Garmin official API sync；
 - Premium subscription；
 - In-App Purchase；
-- Tinder-style swipe / like / mutual match；
 - 图片/视频/语音消息；
 - 路线发现、挑战、排行榜；
 - 复杂推荐、增长和付费实验。
@@ -1348,10 +1579,11 @@ MVP 只有同时满足以下条件才可签收：
 - Strava secret、Apple private key、Stream secret、数据库凭据未进入 iOS 或 git；
 - HealthKit 未主动点击时从不申请权限；
 - Block 和 Report 在 Profile、Chat、Event 可用；
+- Profile 支持最多 9 张已发布照片的上传、确认、排序、替换、删除和失败重试；`Preview My Profile` 与 Other Profile 共享公开字段投影且不泄露私密数据；
 - App 内永久删除账户可用，并完成 Apple token revoke；
 - Xcode archive、backend build、自动测试和 Render deploy 全部成功；
 - README 经未参与开发的人从零验证通过；
-- Product Owner 确认 App 内没有 AI、Garmin、Premium、IAP、Swipe 或 Match。
+- Product Owner 确认 App 内没有 AI、Garmin、Premium、IAP、行为学习匹配或自动推荐；同时确认 Swipe/Like/Pass/Match 符合本文件并完成互相 Like 后聊天验收。
 
 ## 16. 官方实现参考
 

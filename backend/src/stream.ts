@@ -182,6 +182,10 @@ export class StreamService {
       throw new ProfileError(404, 'user_not_found', 'User not found.');
     const blocked = await tx.block.findFirst({ where: { OR: [{ blockerId: userId, blockedId: targetUserId }, { blockerId: targetUserId, blockedId: userId }] }, select: { blockerId: true } });
     if (blocked) throw new ProfileError(403, 'chat_blocked', 'This conversation is unavailable.');
+    const lowerUserId = userId < targetUserId ? userId : targetUserId;
+    const higherUserId = userId < targetUserId ? targetUserId : userId;
+    const match = await tx.match.findFirst({ where: { lowerUserId, higherUserId, unmatchedAt: null }, select: { id: true } });
+    if (!match) throw new ProfileError(403, 'chat_requires_match', 'You can message this person after a mutual Match.');
   }
 
   async send(userId: string, channelId: string, input: z.infer<typeof sendSchema>) {
