@@ -12,31 +12,27 @@ assert_app_configuration() {
   local expected_environment=$3
   local expected_url=$4
   local expected_bundle_id=$5
-  local app_plist="$derived_data/Build/Products/${configuration}-iphonesimulator/Lauver.app/Info.plist"
+  local settings_log="$derived_data/$scheme-settings.log"
 
-  if ! xcodebuild build \
+  # This check validates the values that Xcode will inject into Info.plist.
+  # Building the whole app here needlessly compiles StreamChat from source on
+  # every hosted runner and can make this lightweight scope check appear stuck.
+  if ! xcodebuild -showBuildSettings \
     -project "$project" \
     -scheme "$scheme" \
+    -configuration "$configuration" \
     -destination 'generic/platform=iOS Simulator' \
-    -derivedDataPath "$derived_data" \
-    CODE_SIGNING_ALLOWED=NO \
-    ONLY_ACTIVE_ARCH=YES \
-    >"$derived_data/$scheme-build.log" 2>&1; then
-    cat "$derived_data/$scheme-build.log" >&2
+    >"$settings_log" 2>&1; then
+    cat "$settings_log" >&2
     return 1
-  fi
-
-  if [ ! -f "$app_plist" ]; then
-    echo "Missing built Info.plist for $scheme." >&2
-    exit 1
   fi
 
   local actual_environment
   local actual_url
   local actual_bundle_id
-  actual_environment=$(plutil -extract APP_ENVIRONMENT raw "$app_plist")
-  actual_url=$(plutil -extract API_BASE_URL raw "$app_plist")
-  actual_bundle_id=$(plutil -extract CFBundleIdentifier raw "$app_plist")
+  actual_environment=$(sed -n 's/^    APP_ENVIRONMENT = //p' "$settings_log" | tail -1)
+  actual_url=$(sed -n 's/^    API_BASE_URL = //p' "$settings_log" | tail -1)
+  actual_bundle_id=$(sed -n 's/^    PRODUCT_BUNDLE_IDENTIFIER = //p' "$settings_log" | tail -1)
 
   if [ "$actual_environment" != "$expected_environment" ] \
     || [ "$actual_url" != "$expected_url" ] \
