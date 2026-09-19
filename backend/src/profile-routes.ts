@@ -7,7 +7,7 @@ import {
   supportedSports,
   timeBuckets,
 } from './profile.js';
-import type { InMemoryRateLimiter } from './rate-limiter.js';
+import { RateLimitExceededError, type InMemoryRateLimiter } from './rate-limiter.js';
 
 const sportSchema = z.enum(supportedSports);
 const timeBucketSchema = z.enum(timeBuckets);
@@ -41,6 +41,9 @@ const photoUploadSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
   contentType: z.string().trim().min(1).max(32),
   byteSize: z.number().int().positive().max(5 * 1_024 * 1_024),
+}).strict();
+const photoBatchUploadSchema = z.object({
+  photos: z.array(photoUploadSchema.extend({ clientID: z.string().trim().min(1).max(80) }).strict()).min(1).max(9),
 }).strict();
 const photoCompleteSchema = z.object({ objectKey: z.string().min(1).max(512) }).strict();
 const photoReorderSchema = z.object({ photoIds: z.array(z.uuid()).min(1).max(9) }).strict();
@@ -83,8 +86,17 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
   app.post('/v1/me/photo/upload-url', authenticated(dependencies.authService, async (user, request, response) => {
     const body = parseBody(photoUploadSchema, request, response);
     if (body === null) return;
-    if (!consumeUploadRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
+    // The legacy single-photo endpoint consumes the same bucket as the batch
+    // endpoint: one request is one photo batch, regardless of its size.
+    if (!consumePhotoBatchRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
     response.status(201).json(await dependencies.profileService.createPhotoUpload({ userId: user.id, ...body }));
+  }));
+
+  app.post('/v1/me/photos/upload-urls', authenticated(dependencies.authService, async (user, request, response) => {
+    const body = parseBody(photoBatchUploadSchema, request, response);
+    if (body === null || dependencies.profileService.createPhotoUploads === undefined) return;
+    if (!consumePhotoBatchRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
+    response.status(201).json({ uploads: await dependencies.profileService.createPhotoUploads(body.photos.map((photo) => ({ ...photo, userId: user.id }))) });
   }));
 
   app.post('/v1/me/photo/complete', authenticated(dependencies.authService, async (user, request, response) => {
@@ -155,20 +167,23 @@ function validationResponse(response: Response): void {
   });
 }
 
-function consumeUploadRateLimit(
+function consumePhotoBatchRateLimit(
   userID: string,
   request: Request,
   response: Response,
   rateLimiter: InMemoryRateLimiter,
 ): boolean {
   try {
-    rateLimiter.consume(`profile-photo:ip:${request.ip}`);
-    rateLimiter.consume(`profile-photo:user:${userID}`);
+    rateLimiter.consume(`profile-photo-batch:ip:${request.ip}`);
+    rateLimiter.consume(`profile-photo-batch:user:${userID}`);
     return true;
-  } catch {
+  } catch (error) {
+    const retryAfter = error instanceof RateLimitExceededError ? error.retryAfterSeconds : 60;
+    response.setHeader('Retry-After', String(retryAfter));
     response.status(429).json({
       code: 'rate_limited',
-      message: 'Too many requests. Try again later',
+      message: 'Too many photo batches. Try again later',
+      retryAfter,
       requestId: String(response.getHeader('x-request-id')),
     });
     return false;

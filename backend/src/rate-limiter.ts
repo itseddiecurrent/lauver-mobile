@@ -1,7 +1,10 @@
 export class RateLimitExceededError extends Error {
-  constructor() {
+  readonly retryAfterSeconds: number;
+
+  constructor(retryAfterSeconds = 1) {
     super('Rate limit exceeded');
     this.name = 'RateLimitExceededError';
+    this.retryAfterSeconds = Math.max(1, retryAfterSeconds);
   }
 }
 
@@ -27,7 +30,7 @@ export class InMemoryRateLimiter {
       return;
     }
     if (existing.count >= this.#maxAttempts) {
-      throw new RateLimitExceededError();
+      throw new RateLimitExceededError(Math.ceil((existing.resetAt - now) / 1_000));
     }
     existing.count += 1;
   }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createAuthServiceStub, createProfileServiceStub, createTestApp } from './helpers/test-app.js';
 import { AuthError } from '../src/auth.js';
+import { InMemoryRateLimiter } from '../src/rate-limiter.js';
 
 const authenticated = createAuthServiceStub({
   restore: vi.fn().mockResolvedValue({ id: 'trusted-user-id', email: 'runner@example.com' }),
@@ -92,5 +93,54 @@ describe('profile routes', () => {
       contentType: 'image/png',
       byteSize: 1000,
     });
+  });
+
+  it('requests up to nine upload URLs in one photo-batch rate-limit unit', async () => {
+    const createPhotoUploads = vi.fn().mockResolvedValue([
+      {
+        clientID: 'photo-1',
+        objectKey: 'profile-photo-uploads/trusted-user-id/one.jpg',
+        uploadURL: 'https://upload.example/one',
+        expiresIn: 600,
+        requiredHeaders: { 'Content-Type': 'image/jpeg' },
+      },
+    ]);
+    const response = await request(createTestApp({
+      authService: authenticated,
+      profileService: createProfileServiceStub({ createPhotoUploads }),
+    }))
+      .post('/v1/me/photos/upload-urls')
+      .set('Authorization', 'Bearer verified-access-token')
+      .send({ photos: [{ clientID: 'photo-1', fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000 }] });
+
+    expect(response.status).toBe(201);
+    expect(createPhotoUploads).toHaveBeenCalledWith([{
+      clientID: 'photo-1', userId: 'trusted-user-id', fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000,
+    }]);
+  });
+
+  it('shares the batch rate limit between legacy single and batch requests and returns Retry-After', async () => {
+    const rateLimiter = new InMemoryRateLimiter(60_000, 1);
+    const app = createTestApp({
+      authService: authenticated,
+      profileRateLimiter: rateLimiter,
+      profileService: createProfileServiceStub({
+        createPhotoUpload: vi.fn().mockResolvedValue({ objectKey: 'x', uploadURL: 'https://upload.example/x', expiresIn: 600, requiredHeaders: {} }),
+        createPhotoUploads: vi.fn(),
+      }),
+    });
+    await request(app)
+      .post('/v1/me/photo/upload-url')
+      .set('Authorization', 'Bearer verified-access-token')
+      .send({ fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000 })
+      .expect(201);
+    const response = await request(app)
+      .post('/v1/me/photos/upload-urls')
+      .set('Authorization', 'Bearer verified-access-token')
+      .send({ photos: [{ clientID: 'photo-2', fileName: 'two.jpg', contentType: 'image/jpeg', byteSize: 1000 }] });
+
+    expect(response.status).toBe(429);
+    expect(response.headers['retry-after']).toMatch(/^\d+$/);
+    expect(response.body.retryAfter).toBe(Number(response.headers['retry-after']));
   });
 });

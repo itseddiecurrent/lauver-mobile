@@ -89,6 +89,19 @@ export interface ProfileServicing {
     expiresIn: number;
     requiredHeaders: { 'Content-Type': string };
   }>;
+  createPhotoUploads?(inputs: Array<{
+    clientID: string;
+    userId: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+  }>): Promise<Array<{
+    clientID: string;
+    objectKey: string;
+    uploadURL: string;
+    expiresIn: number;
+    requiredHeaders: { 'Content-Type': string };
+  }>>;
   completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse>;
   deletePhoto(userId: string): Promise<void>;
   deletePhotoById?(userId: string, photoId: string): Promise<void>;
@@ -207,6 +220,25 @@ export class ProfileService implements ProfileServicing {
       expiresIn: photoUploadTTLSeconds,
       requiredHeaders: { 'Content-Type': contentType },
     };
+  }
+
+  async createPhotoUploads(inputs: Array<{
+    clientID: string;
+    userId: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+  }>): Promise<Array<{
+    clientID: string;
+    objectKey: string;
+    uploadURL: string;
+    expiresIn: number;
+    requiredHeaders: { 'Content-Type': string };
+  }>> {
+    return Promise.all(inputs.map(async (input) => ({
+      clientID: input.clientID,
+      ...(await this.createPhotoUpload(input)),
+    })));
   }
 
   async completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse> {
