@@ -13,5 +13,5 @@ CREATE TABLE "profile_photos" (
 );
 CREATE INDEX "profile_photos_user_id_sort_order_idx" ON "profile_photos"("user_id", "sort_order");
 INSERT INTO "profile_photos" ("id", "user_id", "object_key", "sort_order", "is_primary", "updated_at")
-SELECT gen_random_uuid(), "user_id", "photo_key", 0, true, CURRENT_TIMESTAMP
+SELECT md5(random()::text || clock_timestamp()::text)::uuid, "user_id", "photo_key", 0, true, CURRENT_TIMESTAMP
 FROM "profiles" WHERE "photo_key" IS NOT NULL;
