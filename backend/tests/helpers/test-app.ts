@@ -60,6 +60,7 @@ export function createProfileServiceStub(overrides: Partial<ProfileServicing> = 
   const unavailable = vi.fn().mockRejectedValue(new Error('Profile service stub was not configured'));
   return {
     getOwnProfile: unavailable,
+    getOwnProfilePreview: unavailable,
     getPublicProfile: unavailable,
     updateProfile: unavailable,
     createPhotoUpload: unavailable,
