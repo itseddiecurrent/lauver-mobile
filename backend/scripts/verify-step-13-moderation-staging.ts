@@ -132,7 +132,8 @@ async function main() {
   let deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, reason: 'Step 13 message deletion fixture' });
   for (let attempt = 0; attempt < 4 && deleteMessage.status !== 200; attempt++) { await new Promise(resolve => setTimeout(resolve, 3_000)); deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, reason: 'Step 13 message deletion fixture' }); }
   check(deleteMessage.status === 200, `direct chat message deleted (${deleteMessage.status})`);
-  check((await api('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'deleted message probe' })).status === 404, 'deleted Stream message no longer readable');
+  const deletedMessageProbe = await api('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'deleted message probe' });
+  check(deletedMessageProbe.status === 404, `deleted Stream message no longer readable (${deletedMessageProbe.status})`);
 
   const sql = new Client({ connectionString: databaseURL, ssl: { rejectUnauthorized: false } }); await sql.connect();
   try {
