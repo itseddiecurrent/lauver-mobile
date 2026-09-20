@@ -67,12 +67,13 @@ describe('DELETE /v1/account', () => {
 
 describe('account deletion worker', () => {
   function cleanup(deleteStreamUser: (userId: string) => Promise<void> = vi.fn<(userId: string) => Promise<void>>().mockResolvedValue(undefined)): AccountDeletionCleanup {
+    const deleteObject = vi.fn<(objectKey: string) => Promise<void>>().mockResolvedValue(undefined);
     return {
       revokeApple: vi.fn().mockResolvedValue(undefined),
       revokeStrava: vi.fn().mockResolvedValue(undefined),
       deleteFirebaseUser: vi.fn().mockResolvedValue(undefined),
       deleteStreamUser,
-      deleteObject: vi.fn().mockResolvedValue(undefined),
+      deleteObject,
     };
   }
 
@@ -107,7 +108,9 @@ describe('account deletion worker', () => {
     await expect(service.processNext(external)).resolves.toBe(true);
     expect(transaction.user.delete).toHaveBeenCalledWith({ where: { id: 'user-id' } });
     expect(transaction.report.deleteMany).toHaveBeenCalledWith({ where: { OR: [{ reporterId: 'user-id' }, { targetUserId: 'user-id' }] } });
-    expect(external.deleteObject.mock.calls).toEqual([['primary-key'], ['second-key'], ['pending-upload-key']]);
+    const deleteObjectFunction = Reflect.get(external, 'deleteObject') as object;
+    const deleteObjectMock = Reflect.get(deleteObjectFunction, 'mock') as { calls: unknown[][] };
+    expect(deleteObjectMock.calls).toEqual([['primary-key'], ['second-key'], ['pending-upload-key']]);
     expect(transaction.accountDeletionJob.update.mock.calls[0]?.[0]).toMatchObject({
       where: { id: 'job-id' },
       data: { status: 'COMPLETED' },
