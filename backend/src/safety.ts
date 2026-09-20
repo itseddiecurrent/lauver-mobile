@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import type { Express } from 'express';
 import { z } from 'zod';
 import type { AuthServicing } from './auth.js';
@@ -24,6 +25,13 @@ export interface SafetyServicing {
     requestId: string): Promise<{ referenceId: string; blockedUser: boolean }>;
 }
 
+// HTTP requests carry UUID request IDs, but service-level callers and tests may
+// provide a descriptive correlation label. PostgreSQL stores this field as a
+// UUID, so preserve real IDs and safely replace labels at the persistence edge.
+export function normalizeRequestId(value: string): string {
+  return z.uuid().safeParse(value).success ? value : randomUUID();
+}
+
 export class SafetyService implements SafetyServicing {
   onBlocking?: (actorId: string, targetId: string) => Promise<void>;
   constructor(private readonly client: PrismaClient) {}
@@ -41,6 +49,7 @@ export class SafetyService implements SafetyServicing {
 
   async block(actorId: string, targetId: string, requestId: string): Promise<void> {
     this.validatePair(actorId, targetId);
+    requestId = normalizeRequestId(requestId);
     await this.client.$transaction(async (tx) => {
       await this.lockChat(tx, actorId, targetId);
       if (!await tx.user.findFirst({ where: { id: targetId, status: 'ACTIVE' }, select: { id: true } })) {
@@ -59,6 +68,7 @@ export class SafetyService implements SafetyServicing {
 
   async unblock(actorId: string, targetId: string, requestId: string): Promise<void> {
     this.validatePair(actorId, targetId);
+    requestId = normalizeRequestId(requestId);
     await this.client.$transaction(async (tx) => {
       await tx.block.deleteMany({ where: { blockerId: actorId, blockedId: targetId } });
       const target = await tx.user.findUnique({ where: { id: targetId }, select: { id: true } });
@@ -78,6 +88,7 @@ export class SafetyService implements SafetyServicing {
 
   async report(actorId: string, input: ReportInput, requestId: string): Promise<{ referenceId: string; blockedUser: boolean }> {
     this.validatePair(actorId, input.targetId);
+    requestId = normalizeRequestId(requestId);
     return this.client.$transaction(async tx => {
       if (input.blockUser) await this.lockChat(tx, actorId, input.targetId);
       const profile = await tx.profile.findFirst({ where: { userId: input.targetId, isComplete: true, user: { status: 'ACTIVE' } },
@@ -114,6 +125,7 @@ export class SafetyService implements SafetyServicing {
     messageText: string, messageSenderId: string, reason: ReportInput['reason'], details: string | undefined,
     requestId: string): Promise<{ referenceId: string; blockedUser: boolean }> {
     this.validatePair(actorId, targetUserId);
+    requestId = normalizeRequestId(requestId);
     if (messageSenderId !== targetUserId) throw new ProfileError(422, 'invalid_report_target', 'The message sender is not the reported user.');
     return this.client.$transaction(async tx => {
       const profile = await tx.profile.findFirst({ where: { userId: targetUserId, isComplete: true, user: { status: 'ACTIVE' } }, select: { userId: true } });

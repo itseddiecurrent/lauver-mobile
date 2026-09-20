@@ -8,7 +8,7 @@ import type { ProfilePhotoStorage } from './object-storage.js';
 import { authenticated } from './profile-routes.js';
 import { ProfileError, supportedSports } from './profile.js';
 import { noBlockSQL } from './block-policy.js';
-import { reportReasons } from './safety.js';
+import { normalizeRequestId, reportReasons } from './safety.js';
 
 const gender = z.enum(['male', 'female', 'other', 'prefer_not_to_say']);
 const preferenceGender = z.enum(['all', 'male', 'female', 'other']);
@@ -286,6 +286,7 @@ export class MatchService {
   }
 
   async reportMatch(userId: string, matchId: string, input: { reason: typeof reportReasons[number]; details?: string; context: 'match' | 'unmatch' }, requestId: string) {
+    requestId = normalizeRequestId(requestId);
     const match = await this.client.match.findUnique({ where: { id: matchId }, include: {
       lowerUser: { include: { profile: true } }, higherUser: { include: { profile: true } },
     } });
@@ -308,6 +309,7 @@ export class MatchService {
   }
 
   async reportLike(userId: string, targetUserId: string, input: { reason: typeof reportReasons[number]; details?: string }, requestId: string) {
+    requestId = normalizeRequestId(requestId);
     if (userId === targetUserId) throw new ProfileError(422, 'invalid_safety_target', 'You cannot report yourself.');
     const swipe = await this.client.swipe.findUnique({ where: { actorId_targetId: { actorId: userId, targetId: targetUserId } }, include: {
       target: { include: { profile: true } },
