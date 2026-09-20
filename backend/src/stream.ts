@@ -123,6 +123,16 @@ export class StreamService {
     catch { throw new ProfileError(503, 'chat_unavailable', 'Event chat membership could not be synchronized.'); }
   }
 
+  async revokeUser(userId: string): Promise<void> {
+    await this.ensurePermissions();
+    try {
+      const channels = await this.client.queryChannels({ type: 'messaging', members: { $in: [userId] } }, [], { limit: 100 });
+      for (const channel of channels) await channel.removeMembers([userId]);
+    } catch {
+      throw new ProfileError(503, 'chat_unavailable', 'The user could not be removed from chat.');
+    }
+  }
+
   async deleteMessage(_channelId: string, messageId: string): Promise<void> {
     try { await this.client.deleteMessage(messageId, true); }
     catch { throw new ProfileError(503, 'chat_unavailable', 'The message could not be deleted.'); }

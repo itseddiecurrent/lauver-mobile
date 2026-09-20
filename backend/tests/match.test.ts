@@ -15,6 +15,8 @@ function app() {
     swipe: vi.fn().mockResolvedValue({ direction: 'like', matched: false, matchId: null }),
     list: vi.fn().mockResolvedValue({ matches: [] }),
     unmatch: vi.fn().mockResolvedValue(undefined),
+    reportMatch: vi.fn().mockResolvedValue({ referenceId: 'c1500000-0000-4000-8000-000000000001' }),
+    reportLike: vi.fn().mockResolvedValue({ referenceId: 'c1500000-0000-4000-8000-000000000002' }),
   } as unknown as MatchService;
   return { service, app: createTestApp({ matchService: service, authService: createAuthServiceStub({ restore: vi.fn().mockResolvedValue({ id: viewer, email: null }) }) }) };
 }
@@ -51,5 +53,14 @@ describe('Match API contract', () => {
     await request(testApp).post('/v1/match/swipes').send({ targetUserId: target, direction: 'like', userId: 'forged' }).expect(422);
     expect(vi.mocked(service.candidates)).toHaveBeenCalledWith(viewer, expect.objectContaining({ limit: 10, sport: ['running'] }));
     expect(vi.mocked(service.swipe)).not.toHaveBeenCalled();
+  });
+
+  it('reports Match and Like evidence using the authenticated actor', async () => {
+    const { app: testApp, service } = app();
+    const matchId = 'b1500000-0000-4000-8000-000000000001';
+    await request(testApp).post(`/v1/matches/${matchId}/report`).send({ reason: 'harassment', context: 'unmatch', details: 'after unmatching' }).expect(201);
+    expect(vi.mocked(service.reportMatch)).toHaveBeenCalledWith(viewer, matchId, { reason: 'harassment', context: 'unmatch', details: 'after unmatching' }, expect.any(String));
+    await request(testApp).post(`/v1/match/likes/${target}/report`).send({ reason: 'spam' }).expect(201);
+    expect(vi.mocked(service.reportLike)).toHaveBeenCalledWith(viewer, target, { reason: 'spam' }, expect.any(String));
   });
 });

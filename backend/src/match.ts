@@ -8,6 +8,7 @@ import type { ProfilePhotoStorage } from './object-storage.js';
 import { authenticated } from './profile-routes.js';
 import { ProfileError, supportedSports } from './profile.js';
 import { noBlockSQL } from './block-policy.js';
+import { reportReasons } from './safety.js';
 
 const gender = z.enum(['male', 'female', 'other', 'prefer_not_to_say']);
 const preferenceGender = z.enum(['all', 'male', 'female', 'other']);
@@ -28,6 +29,15 @@ const preferenceSchema = z.object({
 const swipeSchema = z.object({
   targetUserId: z.uuid(),
   direction: z.enum(['like', 'pass']),
+}).strict();
+const matchReportSchema = z.object({
+  reason: z.enum(reportReasons),
+  details: z.string().trim().max(2000).optional(),
+  context: z.enum(['match', 'unmatch']).default('match'),
+}).strict();
+const likeReportSchema = z.object({
+  reason: z.enum(reportReasons),
+  details: z.string().trim().max(2000).optional(),
 }).strict();
 const candidateQuerySchema = z.object({
   cursor: z.string().min(1).max(2048).optional(),
@@ -275,6 +285,54 @@ export class MatchService {
     await this.client.match.update({ where: { id: matchId }, data: { unmatchedBy: userId, unmatchedAt: new Date() } });
   }
 
+  async reportMatch(userId: string, matchId: string, input: { reason: typeof reportReasons[number]; details?: string; context: 'match' | 'unmatch' }, requestId: string) {
+    const match = await this.client.match.findUnique({ where: { id: matchId }, include: {
+      lowerUser: { include: { profile: true } }, higherUser: { include: { profile: true } },
+    } });
+    if (!match || (match.lowerUserId !== userId && match.higherUserId !== userId)) throw new ProfileError(404, 'match_not_found', 'Match not found.');
+    const target = match.lowerUserId === userId ? match.higherUser : match.lowerUser;
+    const snapshot: Prisma.InputJsonObject = {
+      matchId: match.id, context: input.context, reporterId: userId, targetUserId: target.id,
+      matchedAt: match.matchedAt.toISOString(), unmatchedAt: match.unmatchedAt?.toISOString() ?? null,
+      unmatchedBy: match.unmatchedBy,
+      target: { id: target.id, displayName: target.profile?.displayName ?? null, city: target.profile?.cityName ?? null },
+    };
+    return this.client.$transaction(async tx => {
+      const report = await tx.report.create({ data: {
+        reporterId: userId, targetUserId: target.id, targetType: 'match', source: 'match',
+        reason: input.reason, details: input.details ?? null, snapshot, requestId,
+      } });
+      await tx.safetyAuditEvent.create({ data: { actorId: userId, targetId: target.id, action: 'report', requestId, reportId: report.id } });
+      return { referenceId: report.id };
+    });
+  }
+
+  async reportLike(userId: string, targetUserId: string, input: { reason: typeof reportReasons[number]; details?: string }, requestId: string) {
+    if (userId === targetUserId) throw new ProfileError(422, 'invalid_safety_target', 'You cannot report yourself.');
+    const swipe = await this.client.swipe.findUnique({ where: { actorId_targetId: { actorId: userId, targetId: targetUserId } }, include: {
+      target: { include: { profile: true } },
+    } });
+    if (!swipe || swipe.direction !== 'LIKE') throw new ProfileError(404, 'like_not_found', 'Like not found.');
+    const match = await this.client.match.findUnique({ where: { lowerUserId_higherUserId: {
+      lowerUserId: userId < targetUserId ? userId : targetUserId,
+      higherUserId: userId < targetUserId ? targetUserId : userId,
+    } }, select: { id: true, matchedAt: true, unmatchedAt: true } });
+    const snapshot: Prisma.InputJsonObject = {
+      targetUserId, direction: swipe.direction, likedAt: swipe.createdAt.toISOString(),
+      matchId: match?.id ?? null, matchedAt: match?.matchedAt?.toISOString() ?? null,
+      unmatchedAt: match?.unmatchedAt?.toISOString() ?? null,
+      target: { id: targetUserId, displayName: swipe.target.profile?.displayName ?? null, city: swipe.target.profile?.cityName ?? null },
+    };
+    return this.client.$transaction(async tx => {
+      const report = await tx.report.create({ data: {
+        reporterId: userId, targetUserId, targetType: 'like', source: 'like',
+        reason: input.reason, details: input.details ?? null, snapshot, requestId,
+      } });
+      await tx.safetyAuditEvent.create({ data: { actorId: userId, targetId: targetUserId, action: 'report', requestId, reportId: report.id } });
+      return { referenceId: report.id };
+    });
+  }
+
   private toPreferences(profile: { visibleInMatch: boolean; gender: string | null; matchPrefGender: string; matchPrefDistanceKm: number | null; matchPrefSports: string[] }): MatchPreferences {
     return { visibleInMatch: profile.visibleInMatch, gender: profile.gender as MatchPreferences['gender'], preferredGender: profile.matchPrefGender as MatchPreferences['preferredGender'], maxDistanceKm: profile.matchPrefDistanceKm, sports: profile.matchPrefSports };
   }
@@ -348,6 +406,18 @@ export function installMatchRoutes(app: Express, dependencies: { authService: Au
     if (!matchId.success) { validationResponse(response); return; }
     await dependencies.matchService.unmatch(user.id, matchId.data);
     response.status(204).send();
+  }));
+  app.post('/v1/matches/:matchId/report', authenticated(dependencies.authService, async (user, request, response) => {
+    const matchId = z.uuid().safeParse(request.params.matchId);
+    const body = matchReportSchema.safeParse(request.body);
+    if (!matchId.success || !body.success) { validationResponse(response); return; }
+    response.status(201).json(await dependencies.matchService.reportMatch(user.id, matchId.data, body.data, String(response.getHeader('x-request-id'))));
+  }));
+  app.post('/v1/match/likes/:targetUserId/report', authenticated(dependencies.authService, async (user, request, response) => {
+    const targetUserId = z.uuid().safeParse(request.params.targetUserId);
+    const body = likeReportSchema.safeParse(request.body);
+    if (!targetUserId.success || !body.success) { validationResponse(response); return; }
+    response.status(201).json(await dependencies.matchService.reportLike(user.id, targetUserId.data, body.data, String(response.getHeader('x-request-id'))));
   }));
 }
 

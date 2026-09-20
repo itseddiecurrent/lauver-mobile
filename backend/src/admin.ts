@@ -17,6 +17,7 @@ export type AdminIdentity = { id: string; email: string; role: AdminRole };
 export type AdminStreamActions = {
   deleteMessage?: (channelId: string, messageId: string) => Promise<void>;
   revokeEvent?: (eventId: string, members: string[]) => Promise<void>;
+  revokeUser?: (userId: string) => Promise<void>;
 };
 
 function hash(value: string): string { return createHash('sha256').update(value).digest('hex'); }
@@ -96,8 +97,22 @@ export class AdminService {
     const target = suspended ? 'SUSPENDED' : 'ACTIVE'; if (current.status === target) throw new ProfileError(409, 'user_already_in_state', 'User is already in this state.');
     return this.database.$transaction(async tx => {
       const updated = await tx.user.update({ where: { id: userId }, data: { status: target } });
-      if (suspended) await tx.session.deleteMany({ where: { userId } });
-      await tx.adminAuditLog.create({ data: { adminId: admin.id, action: suspended ? 'suspend_user' : 'restore_user', targetType: 'user', targetId: userId, reason, before: { status: current.status }, after: { status: updated.status }, requestId } });
+      let revokedLikes = 0; let revokedMatches = 0;
+      if (suspended) {
+        await tx.session.deleteMany({ where: { userId } });
+        const swipes = await tx.swipe.deleteMany({ where: { OR: [{ actorId: userId }, { targetId: userId }] } });
+        const matches = await tx.match.updateMany({
+          where: { OR: [{ lowerUserId: userId }, { higherUserId: userId }], unmatchedAt: null },
+          data: { unmatchedBy: userId, unmatchedAt: new Date() },
+        });
+        revokedLikes = swipes.count; revokedMatches = matches.count;
+      }
+      await tx.adminAuditLog.create({ data: { adminId: admin.id, action: suspended ? 'suspend_user' : 'restore_user', targetType: 'user', targetId: userId, reason,
+        before: { status: current.status }, after: { status: updated.status, revokedLikes, revokedMatches, directChatRevoked: suspended }, requestId } });
+      if (suspended) {
+        try { await this.stream?.revokeUser?.(userId); }
+        catch { throw new ProfileError(503, 'admin_action_unavailable', 'The user could not be removed from chat completely.'); }
+      }
       return updated;
     });
   }
