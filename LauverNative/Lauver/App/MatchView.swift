@@ -378,32 +378,49 @@ private struct MatchRow: View {
     let match: MatchSummary; let preview: MatchConversationPreview?; let chatService: (any ChatServicing)?; let safetyService: any SafetyServicing; let onUnmatch: () -> Void
     @State private var confirming = false
     var body: some View {
-        HStack {
-            ProfileAvatar(photoURL: match.user.photoURL, size: 52)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(match.user.displayName).font(.headline)
-                if let lastMessage = preview?.lastMessage, !lastMessage.isEmpty {
-                    Text(lastMessage).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        .accessibilityIdentifier("match-last-message-\(match.id)")
-                } else {
-                    Text("No messages yet").font(.caption).foregroundStyle(.secondary)
-                        .accessibilityIdentifier("match-last-message-\(match.id)")
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                ProfileAvatar(photoURL: match.user.photoURL, size: 52)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(match.user.displayName).font(.headline)
+                    if let lastMessage = preview?.lastMessage, !lastMessage.isEmpty {
+                        Text(lastMessage).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            .accessibilityIdentifier("match-last-message-\(match.id)")
+                    } else {
+                        Text("No messages yet").font(.caption).foregroundStyle(.secondary)
+                            .accessibilityIdentifier("match-last-message-\(match.id)")
+                    }
                 }
+                Spacer()
+                if let unreadCount = preview?.unreadCount, unreadCount > 0 {
+                    Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(LauverDesign.ColorToken.accent, in: Capsule())
+                        .accessibilityLabel("\(unreadCount) unread messages")
+                        .accessibilityIdentifier("match-unread-\(match.id)")
+                }
+                if let chatService { NavigationLink { DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: match.user.id) } label: { Image(systemName: "message.fill") }.accessibilityLabel("Message \(match.user.displayName)") }
+                Button { confirming = true } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options").accessibilityIdentifier("match-more-\(match.id)")
             }
-            Spacer()
-            if let unreadCount = preview?.unreadCount, unreadCount > 0 {
-                Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
-                    .font(.caption2.bold())
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(LauverDesign.ColorToken.accent, in: Capsule())
-                    .accessibilityLabel("\(unreadCount) unread messages")
-                    .accessibilityIdentifier("match-unread-\(match.id)")
+            if confirming {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Unmatch \(match.user.displayName)?").font(.subheadline.bold())
+                    Text("You will no longer be able to message each other.").font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button("Unmatch", role: .destructive, action: onUnmatch)
+                        Button("Cancel") { confirming = false }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(LauverDesign.ColorToken.surface, in: RoundedRectangle(cornerRadius: 10))
+                .accessibilityIdentifier("match-unmatch-confirmation")
             }
-            if let chatService { NavigationLink { DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: match.user.id) } label: { Image(systemName: "message.fill") }.accessibilityLabel("Message \(match.user.displayName)") }
-            Button { confirming = true } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options").accessibilityIdentifier("match-more-\(match.id)")
-        }.padding(.vertical, 6).confirmationDialog("Unmatch \(match.user.displayName)?", isPresented: $confirming) { Button("Unmatch", role: .destructive, action: onUnmatch); Button("Cancel", role: .cancel) {} } message: { Text("You will no longer be able to message each other.") }
+        }
+        .padding(.vertical, 6)
     }
 }
 

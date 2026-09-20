@@ -19,6 +19,7 @@ The resource set includes the language picker and Settings sections, account del
 - `AppConfigurationTests.testAppLanguageUsesSupportedLocaleAndPersistsSelection`: supported locale identifiers and persisted selection.
 - `xcodebuild test -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -destination 'id=00008150-00010C6E22C0C01C'`: connected physical iPhone 17e; no Simulator destination was used.
 - `xcodebuild build ... -destination 'id=00008150-00010C6E22C0C01C'`: staging device build/install verification.
+- Crash regression: the physical-device Match flow reproduced a hang/kill after tapping a matched row's More action; replacing the iOS 26 `confirmationDialog` with an inline confirmation control fixed it. The focused regression test passed on the same iPhone 17e: 1 passed, 0 failed.
 
 ## Manual device checklist
 
@@ -33,6 +34,6 @@ The resource set includes the language picker and Settings sections, account del
 
 The root `render.yaml` remains the source of truth. Render deploys the backend from `main` with `./scripts/build-deploy.sh`, runs `npm run db:migrate:deploy && npm start`, and exposes `/healthz` and `/readyz`. Acceptance records the post-deploy HTTP checks and deployment revision below.
 
-- Deploy revision: recorded after the push that contains this acceptance update.
-- `/healthz`: recorded after deployment.
-- `/readyz`: recorded after deployment.
+- Deploy revision: `550bd5a` (pushed to `origin/main`; Render auto-deploy source).
+- `/healthz`: HTTP 200, `{"status":"ok","service":"lauver-api"}`.
+- `/readyz`: HTTP 200, `{"status":"ready","service":"lauver-api","database":"ok"}`.
