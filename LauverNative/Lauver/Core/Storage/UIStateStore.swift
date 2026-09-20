@@ -69,5 +69,6 @@ final class UIStateStore: UIStateStoring, MatchFilterStoring {
     func reset() {
         defaults.removeObject(forKey: Keys.selectedTab)
         defaults.removeObject(forKey: Keys.matchFilters)
+        defaults.removeObject(forKey: Keys.appLanguage)
     }
 }
