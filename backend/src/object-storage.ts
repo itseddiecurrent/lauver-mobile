@@ -140,7 +140,14 @@ export class S3ProfilePhotoStorage implements ProfilePhotoStorage {
 
   publicURL(objectKey: string): string {
     const encodedKey = objectKey.split('/').map(encodeURIComponent).join('/');
-    return `${this.#publicBaseURL}/${encodedKey}`;
+    // Supabase's public object endpoint is rooted at
+    // `/storage/v1/object/public`, with the bucket as the next path segment.
+    // A custom CDN base, on the other hand, normally already maps directly to
+    // the bucket and must keep the old `${base}/${key}` shape.
+    const baseURL = this.#publicBaseURL.endsWith('/storage/v1/object/public')
+      ? `${this.#publicBaseURL}/${encodeURIComponent(this.#bucket)}`
+      : this.#publicBaseURL;
+    return `${baseURL}/${encodedKey}`;
   }
 }
 
