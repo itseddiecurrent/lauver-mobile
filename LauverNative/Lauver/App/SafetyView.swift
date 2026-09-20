@@ -308,6 +308,7 @@ struct BlockedUsersView: View {
 }
 
 struct SafetySettingsView: View {
+    @EnvironmentObject private var languageStore: AppLanguageStore
     let service: any SafetyServicing
     let profileService: any ProfileServicing
     let stravaService: any StravaServicing
@@ -329,6 +330,16 @@ struct SafetySettingsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
+                Text("PREFERENCES").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
+                safetyCard {
+                    Picker("App Language", selection: $languageStore.selection) {
+                        Text("System Default").tag(AppLanguage.system)
+                        Text("English").tag(AppLanguage.english)
+                        Text("简体中文").tag(AppLanguage.simplifiedChinese)
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("settings-app-language")
+                }
                 Text("CONNECTIONS").font(.caption.weight(.bold)).foregroundStyle(LauverDesign.ColorToken.accent)
                 safetyCard {
                     NavigationLink { ConnectedAppsView(service: stravaService, healthUploader: healthUploader) } label: {

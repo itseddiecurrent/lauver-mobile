@@ -253,6 +253,12 @@ The root `render.yaml` defines a Singapore staging web service and PostgreSQL da
 3. On the free web-service plan, Render runs `npm run db:migrate:deploy && npm start` as the start command because pre-deploy commands are unavailable. Prisma safely skips migrations that are already applied; a migration failure prevents the API process from starting.
 4. After the first deploy, record the assigned `onrender.com` URL in `artifacts/acceptance/step-01.md` and verify both health endpoints.
 
+### Native app language support (Step 14B)
+
+The SwiftUI app supports English and Simplified Chinese. `System Default` follows the iOS preferred language when it is English or Chinese and falls back to English for every other system language. A manual choice is stored in `UserDefaults` under `lauver.app-language` and overrides future system-language changes. User-generated names, event titles and chat messages are never passed through localization.
+
+Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key to both `Lauver/Resources/en.lproj/Localizable.strings` and `Lauver/Resources/zh-Hans.lproj/Localizable.strings`. Keep server error codes and API payloads language-neutral; map only presentation text at the UI boundary.
+
 ## Current external setup still needed
 
 Step 01 Render staging acceptance is complete. Before later steps, the project owner will still need to provide or create:

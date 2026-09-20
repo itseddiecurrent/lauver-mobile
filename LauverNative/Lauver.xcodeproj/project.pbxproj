@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-        AE0000000000000000000001 = {isa = PBXBuildFile; fileRef = AE0000000000000000000002; };
-		A1000000000000000000001F /* StreamChatSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = A80000000000000000000001 /* StreamChatSwiftUI */; };
+		A10000000000000000000020 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000028 /* AppLanguage.swift */; };
+		2230944130604BD400A85809 /* MatchView.swift in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* MatchView.swift */; };
+		2230944230604BD400A85809 /* StreamChatSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = A80000000000000000000001 /* StreamChatSwiftUI */; };
 		A10000000000000000000001 /* LauverApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* LauverApp.swift */; };
 		A10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* ContentView.swift */; };
 		A10000000000000000000003 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* AppConfiguration.swift */; };
@@ -40,6 +41,8 @@
 		A1000000000000000000001D /* StravaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000025 /* StravaView.swift */; };
 		A1000000000000000000001E /* StravaTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000026 /* StravaTests.swift */; };
 		A1000000000000000000001F /* MatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000027 /* MatchView.swift */; };
+		A10000000000000000000021 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000029 /* Localizable.strings */; };
+		AE0000000000000000000001 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE0000000000000000000002 /* ChatView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,7 +63,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-        AE0000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		A20000000000000000000001 /* LauverApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauverApp.swift; sourceTree = "<group>"; };
 		A20000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
@@ -100,6 +102,10 @@
 		A20000000000000000000025 /* StravaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StravaView.swift; sourceTree = "<group>"; };
 		A20000000000000000000026 /* StravaTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StravaTests.swift; sourceTree = "<group>"; };
 		A20000000000000000000027 /* MatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatchView.swift; sourceTree = "<group>"; };
+		A20000000000000000000028 /* AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLanguage.swift; sourceTree = "<group>"; };
+		A2000000000000000000002A /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A2000000000000000000002B /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
+		AE0000000000000000000002 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,7 +113,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A1000000000000000000001F /* StreamChatSwiftUI in Frameworks */,
+				2230944230604BD400A85809 /* StreamChatSwiftUI in Frameworks */,
+				2230944130604BD400A85809 /* MatchView.swift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -155,8 +162,9 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000001 /* LauverApp.swift */,
+				A20000000000000000000028 /* AppLanguage.swift */,
 				A20000000000000000000002 /* ContentView.swift */,
-                AE0000000000000000000002,
+				AE0000000000000000000002 /* ChatView.swift */,
 				A20000000000000000000012 /* AppContainer.swift */,
 				A20000000000000000000020 /* ProfileView.swift */,
 				A20000000000000000000022 /* DiscoverView.swift */,
@@ -192,6 +200,7 @@
 			isa = PBXGroup;
 			children = (
 				A20000000000000000000004 /* Assets.xcassets */,
+				A20000000000000000000029 /* Localizable.strings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -309,10 +318,10 @@
 			);
 			dependencies = (
 			);
+			name = Lauver;
 			packageProductDependencies = (
 				A80000000000000000000001 /* StreamChatSwiftUI */,
 			);
-			name = Lauver;
 			productName = Lauver;
 			productReference = A20000000000000000000007 /* Lauver.app */;
 			productType = "com.apple.product-type.application";
@@ -388,6 +397,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = A70000000000000000000001;
 			packageReferences = (
@@ -404,31 +414,13 @@
 		};
 /* End PBXProject section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		A80000000000000000000002 /* XCRemoteSwiftPackageReference "stream-chat-swiftui" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/GetStream/stream-chat-swiftui.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.10.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A80000000000000000000001 /* StreamChatSwiftUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A80000000000000000000002 /* XCRemoteSwiftPackageReference "stream-chat-swiftui" */;
-			productName = StreamChatSwiftUI;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin PBXResourcesBuildPhase section */
 		AB0000000000000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000004 /* Assets.xcassets in Resources */,
+				A10000000000000000000021 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -454,8 +446,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000001 /* LauverApp.swift in Sources */,
+				A10000000000000000000020 /* AppLanguage.swift in Sources */,
 				A10000000000000000000002 /* ContentView.swift in Sources */,
-                AE0000000000000000000001,
+				AE0000000000000000000001 /* ChatView.swift in Sources */,
 				A10000000000000000000003 /* AppConfiguration.swift in Sources */,
 				A10000000000000000000007 /* APIClient.swift in Sources */,
 				A10000000000000000000008 /* KeychainStore.swift in Sources */,
@@ -516,6 +509,18 @@
 		};
 /* End PBXTargetDependency section */
 
+/* Begin PBXVariantGroup section */
+		A20000000000000000000029 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A2000000000000000000002A /* en */,
+				A2000000000000000000002B /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		AD0000000000000000000001 /* Staging */ = {
 			isa = XCBuildConfiguration;
@@ -545,8 +550,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A2000000000000000000000B /* Staging.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Lauver/Lauver.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Lauver/Resources/Info.plist;
@@ -560,8 +565,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A2000000000000000000000C /* Production.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Lauver/Lauver.entitlements;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Lauver/Resources/Info.plist;
@@ -665,6 +670,25 @@
 			defaultConfigurationName = Staging;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A80000000000000000000002 /* XCRemoteSwiftPackageReference "stream-chat-swiftui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/GetStream/stream-chat-swiftui.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A80000000000000000000001 /* StreamChatSwiftUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A80000000000000000000002 /* XCRemoteSwiftPackageReference "stream-chat-swiftui" */;
+			productName = StreamChatSwiftUI;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A40000000000000000000001 /* Project object */;
 }

@@ -3,6 +3,22 @@ import XCTest
 @testable import Lauver
 
 final class AppConfigurationTests: XCTestCase {
+    @MainActor
+    func testAppLanguageUsesSupportedLocaleAndPersistsSelection() {
+        let suiteName = "lauver-language-test-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = AppLanguageStore(defaults: defaults)
+        XCTAssertEqual(store.selection, .system)
+        XCTAssertEqual(AppLanguage.english.locale.identifier, "en")
+        XCTAssertEqual(AppLanguage.simplifiedChinese.locale.identifier, "zh-Hans")
+
+        store.selection = .simplifiedChinese
+        XCTAssertEqual(defaults.string(forKey: "lauver.app-language"), "zh-Hans")
+        XCTAssertEqual(AppLanguageStore(defaults: defaults).selection, .simplifiedChinese)
+    }
+
     func testMetadataUsesExpectedDisplayName() {
         XCTAssertEqual(AppMetadata.displayName, "Lauver")
     }

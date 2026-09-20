@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct LauverApp: App {
     private let bootstrap: AppBootstrap
+    @StateObject private var languageStore = AppLanguageStore()
 
     init() {
         do {
@@ -14,24 +15,28 @@ struct LauverApp: App {
 
     var body: some Scene {
         WindowGroup {
-            switch bootstrap {
-            case let .ready(container):
-                #if DEBUG
-                if ProcessInfo.processInfo.arguments.contains("-ui-testing-public-profile") {
-                    NavigationStack { OtherProfileView(profile: Self.publicProfileFixture) }
-                } else {
+            Group {
+                switch bootstrap {
+                case let .ready(container):
+                    #if DEBUG
+                    if ProcessInfo.processInfo.arguments.contains("-ui-testing-public-profile") {
+                        NavigationStack { OtherProfileView(profile: Self.publicProfileFixture) }
+                    } else {
+                        ContentView(container: container)
+                    }
+                    #else
                     ContentView(container: container)
+                    #endif
+                case .failed:
+                    ErrorStateView(
+                        message: "The app configuration is unavailable.",
+                        requestID: nil
+                    )
+                    .padding()
                 }
-                #else
-                ContentView(container: container)
-                #endif
-            case .failed:
-                ErrorStateView(
-                    message: "The app configuration is unavailable.",
-                    requestID: nil
-                )
-                .padding()
             }
+            .environmentObject(languageStore)
+            .environment(\.locale, languageStore.locale)
         }
     }
 

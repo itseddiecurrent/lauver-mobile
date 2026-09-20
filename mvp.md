@@ -1457,7 +1457,7 @@ xcodebuild test \
 
 ### Step 14B：多语言支持（英文 + 简体中文）
 
-**状态：⚪ 未开始。** 第一阶段只支持英文和简体中文；不翻译用户生成内容、活动标题、聊天消息或 Admin Dashboard。
+**状态：✅ 已完成（2026-09-21；Render staging 已部署，iPhone 17e 真机回归通过）。** 第一阶段支持英文和简体中文；不翻译用户生成内容、活动标题、聊天消息或 Admin Dashboard。Settings 已加入 `System Default` / `English` / `简体中文`，手动选择持久化并立即刷新 SwiftUI 页面；不支持的系统语言回退英文。证据见 `artifacts/acceptance/step-14b.md`。
 
 **依赖：** Step 02、Step 05、Step 07、Step 14A。
 
