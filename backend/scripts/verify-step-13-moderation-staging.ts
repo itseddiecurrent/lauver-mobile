@@ -126,7 +126,7 @@ async function main() {
 
   const remove = await admin('POST', `/admin/api/events/${eventID}/remove`, { reason: 'Step 13 event removal fixture' });
   check(remove.status === 200, 'event removed');
-  check((await api('POST', `/v1/events/${eventID}/join`, target)).status === 409, 'removed event cannot be joined');
+  check((await api('POST', `/v1/events/${eventID}/join`, partner)).status === 409, 'removed event cannot be joined');
   check((await api('GET', `/v1/events/${eventID}/chat`, owner)).status === 403, 'removed event chat is inaccessible');
 
   let deleteMessage = await admin('POST', `/admin/api/messages/${directMessage.data.id}/delete`, { channelId: direct.data.channelId, reason: 'Step 13 message deletion fixture' });
