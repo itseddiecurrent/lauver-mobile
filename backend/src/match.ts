@@ -174,7 +174,16 @@ export class MatchService {
           AND p.display_name IS NOT NULL AND btrim(p.display_name) <> ''
           AND (${selectedGender} = 'all' OR p.gender = ${selectedGender})
           AND ${noBlockSQL(userId, Prisma.sql`p.user_id`)}
-          AND NOT EXISTS (SELECT 1 FROM swipes s WHERE s.actor_id = ${userId}::uuid AND s.target_id = p.user_id)
+          AND NOT EXISTS (
+            SELECT 1 FROM swipes s
+            WHERE s.actor_id = ${userId}::uuid AND s.target_id = p.user_id
+              AND NOT EXISTS (
+                SELECT 1 FROM matches old_match
+                WHERE old_match.lower_user_id = LEAST(${userId}::uuid, p.user_id)
+                  AND old_match.higher_user_id = GREATEST(${userId}::uuid, p.user_id)
+                  AND old_match.unmatched_at IS NOT NULL
+              )
+          )
           AND (${selectedDistance === null || viewer.cityLatitude === null || viewer.cityLongitude === null ? Prisma.sql`TRUE` : Prisma.sql`(${distanceExpression}) <= ${selectedDistance}::double precision`})
           ${sportFilter}
       )

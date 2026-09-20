@@ -120,5 +120,7 @@ describe('Match PostgreSQL invariants', () => {
     expect(rematched).toMatchObject({ matched: true, matchId: match.id });
     expect(await service.list(concurrentA)).toHaveLength(1);
     await service.unmatch(concurrentA, match.id);
+    const rematchCandidatePage = await service.candidates(concurrentA, { limit: 50, gender: undefined, maxDistanceKm: null, sport: undefined });
+    expect(rematchCandidatePage.users.some(candidate => candidate.id === concurrentB)).toBe(true);
   });
 });
