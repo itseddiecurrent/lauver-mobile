@@ -812,6 +812,7 @@ xcodebuild test \
 | 13 | Admin Report Dashboard 与 Match 举报 | F8（Match 来源待完成） |
 | 14 | 账户删除全链路（含 Swipe/Match） | F1、Apple compliance（Match 清理待完成） |
 | 14A | 按 Expo 参考版本对齐原生 UI 与真机体验 | F1–F8、Match 页面、UI quality |
+| 14B | 英文 + 简体中文本地化、Settings 语言选择与 fallback | UI quality、Accessibility、Release readiness |
 | 15 | Release hardening 与交付 | Definition of Done（Match 待完成） |
 
 ### Step 00：范围护栏与仓库骨架
@@ -1140,7 +1141,7 @@ xcodebuild test \
 
 ### Step 07：Block 与 Report 安全基础
 
-**状态：🟡 进行中（安全联动已补齐，部署后验收待完成）。** 原有双向 Block、Profile 举报、Report and Block 和后台审计证据已通过 Render staging；本轮已补充 Block/Report and Block 在同一事务内撤销双方 Like/Pass、关闭 active Match，Direct Chat 继续由后端 Block gate 强制拒绝。新增代码的 Render 部署后双账号验收仍待完成。
+**状态：✅ 已完成（2026-09-20）。** 原有双向 Block、Profile 举报、Report and Block 和后台审计证据已通过 Render staging；本轮已补充 Block/Report and Block 在同一事务内撤销双方 Like/Pass、关闭 active Match，Direct Chat 继续由后端 Block gate 强制拒绝。2026-09-20 已用 Render staging 完成新增代码的 34 项三账号验收并自动清理测试数据；Staging 包已签名安装并成功启动于连接的 iPhone 17e，完整证据见 `artifacts/acceptance/step-07.md`。
 
 **依赖：** Step 05、Step 06。
 
@@ -1244,7 +1245,7 @@ xcodebuild test \
 
 ### Step 10：Stream 一对一私聊
 
-**状态：🟡 未完成（Chat gate 改动后需重新验收）。** 原有 Stream、文本、未读数、Block/Report 和断网证据仍有效；需要加入“互相 Like 后才能聊天”的后端 gate，并重新完成两账户真机验收。
+**状态：✅ 已完成（2026-09-20）。** Stream、文本、未读数、Block/Report、互相 Like 后 Chat gate、第三方成员隔离、Unmatch/Block 后发送撤销和断网幂等均已实现并完成 staging/真机验收；本轮修正了真机验收消息中的 Swift 字符串插值，避免把 `String(UUID().uuidString.prefix(8))` 作为字面量显示。最新 Staging 包已安装并启动于 iPhone 17e，完整证据见 `artifacts/acceptance/step-10.md`。
 
 **依赖：** Step 06A、Step 06B、Step 07；Stream staging application（API key、API secret 和 iOS SDK 配置）。
 
@@ -1348,7 +1349,7 @@ xcodebuild test \
 
 ### Step 13：Admin Report Dashboard
 
-**状态：🟡 未完成（Match 举报来源和处罚联动待重新验收）。** 原有 Admin session、CSRF、RBAC、report workflow、暂停/恢复、活动下架、Stream message 删除和 audit log 已验收；新增 Match/Profile/Unmatch/Like 相关证据与暂停后的 Match 清理尚未验收。
+**状态：✅ 已完成（2026-09-21 staging/API 验收通过）。** Admin session、CSRF、RBAC、report workflow、暂停/恢复、活动下架、Stream message 删除和 audit log 已验收；Match/Profile/Unmatch/Like、Direct Chat/Event Chat 举报来源，以及暂停后的候选、Like、Match、Session 和 Direct Chat 清理均已重新验收。
 
 **依赖：** Step 06A、Step 07、Step 10、Step 11、Step 12。
 
@@ -1356,7 +1357,7 @@ xcodebuild test \
 
 1. 创建 `admin_users`、`admin_audit_logs` 和 report workflow migration；
 2. 建立不可公开注册的 admin auth、安全 cookie、CSRF 和 role middleware；
-3. 实现 Report Queue、筛选、Report Detail 和 evidence snapshot 展示，覆盖 Match/Profile/Direct Chat/Event 来源；
+3. 实现 Report Queue、筛选、Report Detail 和 evidence snapshot 展示，覆盖 Match/Profile/Like/Unmatch/Direct Chat/Event/Event Chat 来源；
 4. 实现 Open → In Review → Resolved/Dismissed 状态流；
 5. 实现暂停/恢复用户、下架活动、删除 Stream message；
 6. 每个管理员动作记录 actor、reason、before/after 和 timestamp；
@@ -1378,7 +1379,9 @@ xcodebuild test \
 6. 每个动作对应且只对应一条完整 audit log，普通 admin 不能修改日志。
 7. 被暂停或删除用户的候选、Like、Match 和 Direct Chat 权限均被撤销，且有可审计证据。
 
-**通过标准：** 三个要求位置产生的举报都能被实际审核和处置，后台本身不存在明显越权入口。
+**通过标准：** Profile、Match/Unmatch/Like、Direct Chat、Event/Event Chat 六类举报都能被实际审核和处置，后台本身不存在明显越权入口。
+
+**2026-09-21 验收证据：** `backend/scripts/verify-step-13-moderation-staging.ts` 在 Render staging 创建一次性用户、互相 Like 形成 Match、Direct Chat/Event Chat 消息和六类举报；验证来源、状态流、暂停后的旧 session/API/Stream token 拒绝、候选移除、Match 撤销、Direct Chat 拒绝、活动下架、消息删除及 audit log。iPhone 17e 真机包使用 Xcode destination `16753B2D-88AB-5D77-82BF-B1EA68946526` 构建并安装验证；详见 `artifacts/acceptance/step-13.md`。
 
 ### Step 14：账户删除全链路
 
@@ -1450,11 +1453,44 @@ xcodebuild test \
 
 **通过标准：** 全部 MVP 用户页面视觉与体验验收完成，没有未修复的明显视觉差异或阻断操作的问题；差异有明确理由和验收结论，业务回归通过，并取得 Product Owner 的真机 UI 确认。仅功能通过或仅有静态截图不能签收本 Step。
 
+### Step 14B：多语言支持（英文 + 简体中文）
+
+**状态：⚪ 未开始。** 第一阶段只支持英文和简体中文；不翻译用户生成内容、活动标题、聊天消息或 Admin Dashboard。
+
+**依赖：** Step 02、Step 05、Step 07、Step 14A。
+
+**实现任务：**
+
+1. 建立统一的 App 本地化资源和文案 key，覆盖登录、Profile、Discover、Match、Chat、Events、Connected Apps、Blocked Users、举报、删除账户和错误状态；
+2. Settings 增加 App Language 选择，支持 `System Default`、`English`、`简体中文`，并持久化用户选择；
+3. 默认跟随系统语言；系统语言不在支持范围内时回退英文；用户手动选择后不受系统语言变化影响；
+4. 本地化系统日期、时间、数字、单位和可翻译的权限/错误提示，同时保持 pace、距离和运动数据含义不变；
+5. Stream Chat 使用对应语言的系统/客户端文案能力；聊天消息、用户昵称、活动标题和其他用户生成内容保持原文；
+6. 为长中文文案、Dynamic Type、VoiceOver、浅色/深色、窄屏/大屏和语言切换后的页面刷新建立回归测试；
+7. 更新 README，说明新增语言、fallback 规则和新增文案的维护方式。
+
+**可测试 Deliverable：**
+
+- Settings 中可切换 System Default / English / 简体中文；
+- App 重启后保持用户选择，切换语言后主要页面和错误状态立即显示对应语言；
+- 不支持的系统语言自动使用英文；
+- `artifacts/acceptance/step-14b.md`：覆盖文案清单、语言切换、fallback、真机截图、Accessibility 和回归测试证据。
+
+**测试方法：**
+
+1. 分别在系统语言为英文、简体中文和不支持语言时启动 App，验证默认语言和 fallback；
+2. 在 Settings 手动切换两种语言，关闭并重启 App，确认选择持久化；
+3. 覆盖登录、Profile、Discover、Match、Chat、Events、举报、Blocked Users、Connected Apps、删除账户和所有主要 loading/empty/error 状态；
+4. 验证中文长文案不会截断、重叠或遮挡按钮，Dynamic Type 和 VoiceOver 仍可完成主要操作；
+5. 确认聊天消息、用户昵称、活动标题等用户生成内容不被错误翻译或破坏。
+
+**通过标准：** 英文和简体中文覆盖全部 MVP 用户界面与主要状态；语言选择、fallback、持久化、Accessibility 和真机回归均通过；不支持语言不会出现空白 key 或混乱布局。
+
 ### Step 15：Release Hardening、TestFlight 与最终交付
 
 **状态：🟡 未完成（Match、9 张照片和 Profile Preview 纳入后必须重新执行发布验收）。**
 
-**依赖：** Step 00–14 和 Step 14A 全部通过。
+**依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过。
 
 **实现任务：**
 
@@ -1472,7 +1508,7 @@ xcodebuild test \
 - 可安装的 TestFlight build；
 - 可从零部署的 Render backend、Postgres migrations 和 Admin dashboard；
 - 完整 Xcode project、backend source、README、OpenAPI、`.env.example`；
-- `artifacts/acceptance/final-test-report.md`，逐项链接 Step 00–14 和 Step 14A 的测试证据及真机 UI 验收结论；
+- `artifacts/acceptance/final-test-report.md`，逐项链接 Step 00–14、Step 14A 和 Step 14B 的测试证据及真机 UI 验收结论；
 - App Store Review demo account 与审核说明。
 
 **测试方法：**
@@ -1592,6 +1628,7 @@ MVP 只有同时满足以下条件才可签收：
 - Block 和 Report 在 Profile、Chat、Event 可用；
 - Profile 支持最多 9 张已发布照片的上传、确认、排序、替换、删除和失败重试；`Preview My Profile` 与 Other Profile 共享公开字段投影且不泄露私密数据；
 - App 内永久删除账户可用，并完成 Apple token revoke；
+- App 支持英文和简体中文，Settings 可切换语言，系统语言 fallback 和语言选择持久化通过真机验收；
 - Xcode archive、backend build、自动测试和 Render deploy 全部成功；
 - README 经未参与开发的人从零验证通过；
 - Product Owner 确认 App 内没有 AI、Garmin、Premium、IAP、行为学习匹配或自动推荐；同时确认 Swipe/Like/Pass/Match 符合本文件并完成互相 Like 后聊天验收。

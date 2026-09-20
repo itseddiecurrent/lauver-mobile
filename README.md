@@ -236,7 +236,7 @@ STEP13_ADMIN_BASE_URL='https://lauver-api-staging.onrender.com' \
 npm run verify:step-13:staging
 ```
 
-The verifier never prints the password, session cookies or database URL. The full Step 13 sign-off still requires disposable reports from Profile, Direct Chat, Event and Event Chat plus real suspend/event/message moderation checks.
+The verifier never prints the password, session cookies or database URL. The full Step 13 sign-off is covered by `npm run verify:step-13:moderation`: it creates disposable Profile, Match, Like, Direct Chat, Event and Event Chat reports and checks real suspend/candidate/Match/chat, event, message and audit-log effects.
 
 Build the production API image from the repository root:
 
