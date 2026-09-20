@@ -74,7 +74,7 @@ async function main() {
   const directReport = await api<{ referenceId: string }>('POST', `/v1/chat/channels/${direct.data.channelId}/messages/${directMessage.data.id}/report`, owner, { reason: 'other', details: 'Step 13 direct chat moderation fixture' });
   check(directReport.status === 201, 'direct chat report created');
   const matchReport = await api<{ referenceId: string }>('POST', `/v1/matches/${matchID}/report`, owner, { reason: 'harassment', details: 'Step 13 match moderation fixture', context: 'match' });
-  check(matchReport.status === 201, `match report created (${matchReport.status})`);
+  check(matchReport.status === 201, `match report created (${matchReport.status}): ${JSON.stringify(matchReport.data)}`);
   const likeReport = await api<{ referenceId: string }>('POST', `/v1/match/likes/${target.user.id}/report`, owner, { reason: 'spam', details: 'Step 13 like moderation fixture' });
   check(likeReport.status === 201, `like report created (${likeReport.status})`);
   const eventReport = await api<{ referenceId: string }>('POST', `/v1/events/${eventID}/report`, partner, { reason: 'other', details: 'Step 13 event moderation fixture', targetType: 'event' });
