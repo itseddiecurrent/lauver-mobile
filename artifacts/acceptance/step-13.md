@@ -39,6 +39,8 @@ Date: 2026-09-21
 - `GET https://lauver-api-staging.onrender.com/healthz` — `200`, service `lauver-api`.
 - `GET https://lauver-api-staging.onrender.com/readyz` — `200`, database `ok`.
 - `npm run verify:step-13:moderation` — the verifier was extended to create a mutual Match before Direct Chat, then passed the Match, Like, Profile, Direct Chat, Event and Event Chat source checks plus suspension cleanup checks after the Render deploy.
+- Prisma migration `20260921000000_step_13_match_report_sources` was applied to the attached Render staging PostgreSQL database, extending the report target constraint to `match` and `like`; `/readyz` returned `200` with `database: ok` afterward.
+- `npm run verify:step-13:staging` — passed: unauthenticated denial, admin UI shell, admin login, CSRF enforcement, report queue and logout.
 - Native build target: connected `Edward的iPhone`, model `iPhone 17e (iPhone18,5)`, device ID `16753B2D-88AB-5D77-82BF-B1EA68946526`; no simulator was used.
 
 ## Acceptance result

@@ -146,6 +146,6 @@ async function main() {
     catch { await new Promise(resolve => setTimeout(resolve, 3_000)); }
   }
   check(logout.status === 204, 'admin logout');
-  console.log(JSON.stringify({ result: 'passed', sources: ['profile', 'chat-direct', 'event', 'chat-event'], moderation: ['suspend-restore', 'remove-event', 'delete-message'] }));
+  console.log(JSON.stringify({ result: 'passed', sources: ['profile', 'match', 'like', 'chat-direct', 'event', 'chat-event'], moderation: ['suspend-restore', 'remove-event', 'delete-message'] }));
 }
 main().catch(error => { console.error(error instanceof Error ? `FAIL: ${error.message}` : 'FAIL: moderation acceptance failed'); process.exitCode = 1; });
