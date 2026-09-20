@@ -67,7 +67,8 @@ export class AccountDeletionService implements AccountDeletionServicing {
       const user = await this.database.user.findUnique({
         where: { id: job.userId },
         include: {
-          profile: { select: { photoKey: true } },
+          profile: { select: { photoKey: true, photos: { select: { objectKey: true } } } },
+          photoUploads: { select: { objectKey: true } },
           identities: { include: { appleCredential: { select: { refreshTokenEncrypted: true } } } },
           stravaConnection: { select: { refreshTokenEncrypted: true } },
         },
@@ -81,10 +82,21 @@ export class AccountDeletionService implements AccountDeletionServicing {
         const stravaToken = user.stravaConnection?.refreshTokenEncrypted;
         if (stravaToken !== undefined) await cleanup.revokeStrava(user.id, stravaToken);
         await cleanup.deleteStreamUser(user.id);
-        if (user.profile?.photoKey !== null && user.profile?.photoKey !== undefined) {
-          await cleanup.deleteObject(user.profile.photoKey);
+        const objectKeys = new Set<string>();
+        if (user.profile?.photoKey !== null && user.profile?.photoKey !== undefined) objectKeys.add(user.profile.photoKey);
+        for (const photo of user.profile?.photos ?? []) objectKeys.add(photo.objectKey);
+        for (const upload of user.photoUploads) objectKeys.add(upload.objectKey);
+        for (const objectKey of objectKeys) {
+          await cleanup.deleteObject(objectKey);
         }
         await this.database.$transaction(async (transaction) => {
+          // Reports contain profile snapshots. Deleting them when either side
+          // of the report is the deleted account removes personal evidence
+          // without rewriting the immutable moderation record.
+          await transaction.report.deleteMany({
+            where: { OR: [{ reporterId: user.id }, { targetUserId: user.id }] },
+          });
+          await transaction.photoCleanupJob.deleteMany({ where: { objectKey: { in: [...objectKeys] } } });
           await transaction.user.delete({ where: { id: user.id } });
           await transaction.accountDeletionJob.update({
             where: { id: job.id },

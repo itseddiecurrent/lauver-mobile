@@ -1,39 +1,50 @@
 # Step 14 acceptance — Account deletion
 
-Date: 2026-09-17
+Date: 2026-09-21
 
 ## Implemented
 
-- `DELETE /v1/account` requires an authenticated Bearer session, the explicit `confirmation: "DELETE"` body, and the current Email-account password.
-- Incorrect or missing re-authentication is rejected before a deletion job is created. Email accounts use the current password; Apple accounts use a fresh Apple authorization and provider-subject match.
+- `DELETE /v1/account` requires an authenticated Bearer session, the explicit `confirmation: "DELETE"` body, and re-authentication. Email accounts use the current password; Apple accounts use a fresh Apple authorization and provider-subject match.
 - Deletion is idempotent through the unique `account_deletion_jobs.user_id` record.
 - The account is marked `DELETED`, all active sessions are revoked, and password-reset tokens are removed before the asynchronous cleanup job is queued.
 - The worker retries external cleanup with bounded exponential backoff and never restores account access after a provider failure.
-- Apple grant revocation, Strava grant revocation, Stream user deletion, current profile-photo deletion, and cascading relational data deletion are wired into the production server.
-- Settings exposes Delete Account with a second confirmation alert and a password re-authentication sheet; successful completion clears the native session through the existing sign-out path and returns to Login.
+- Cleanup now collects the legacy primary photo, every `ProfilePhoto` object key (up to nine) and every pending `ProfilePhotoUpload` object key, de-duplicates them, and removes related photo cleanup jobs.
+- Apple grant revocation, Strava grant revocation, Firebase user deletion, Stream user deletion, and cascading relational data deletion are wired into the production server.
+- Reports where the account is reporter or target are deleted before user deletion so immutable moderation snapshots cannot retain personal profile data. Safety audit foreign keys remain anonymized by their existing `SET NULL` policy.
+- Settings exposes Delete Account with a second confirmation alert and a re-authentication sheet; successful completion clears Keychain credentials, disconnects Stream/local chat state, returns to Login, and remains at Login after relaunch.
 
 ## Automated evidence
 
-- `cd backend && npm test` — **171/171 passed**.
-- `cd backend && npm run lint` — **passed**.
-- `cd backend && npm run typecheck` — **passed**.
-- `cd backend && npm run build` — **passed**.
-- `xcodebuild test -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -destination "platform=iOS Simulator,id=F6A3D49F-DC24-40C3-A717-305EB0B9F4F5" -only-testing:LauverTests` — **106/106 passed**.
-- `xcodebuild build -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging` — **passed** (simulator build; existing CLLocation concurrency warnings only).
-- Render staging smoke using a disposable Email account — **passed**: registration, password re-authenticated deletion (`202`), and old access-token rejection (`401`). Deletion job: `6e26ea20-0dc3-4c54-9b18-21038c33a0f2`.
-- Render staging Strava-connected account — **passed**: Strava status was `connected`, password re-authenticated deletion returned `202`, both old access and refresh tokens returned `401`, and PostgreSQL recorded deletion job `f3588ff7-e8be-4499-bce1-0467b43d6786` as `COMPLETED` on attempt 1 with no error; the associated user row was absent after cleanup.
-- Stream cleanup verification for the same job — **passed**: the deleted user id from the completed job returned zero Stream users.
-- Physical iPhone 17e Email + Strava run — **passed**: the user completed deletion from Settings after password re-authentication, the app returned to Login, and after force-quitting and relaunching it remained at Login; the corresponding staging job was `1577be9b-783f-40b5-89ea-0ee62a4023b3` with PostgreSQL and Stream cleanup verified.
-- Physical iPhone 17e Apple + avatar run — **passed**: the user created an Apple-authenticated account, saved a profile avatar, completed Apple re-authentication from Delete Account, returned to Login, and remained at Login after relaunch; staging job `dc0364ee-4ae3-4aaf-ad1d-7b0cf9d6bbdb` was `COMPLETED` on attempt 1 with no error, and both user/profile rows and the Stream user were absent afterward. Successful completion also proves the avatar object cleanup call did not fail.
-- The full native test invocation was interrupted by the simulator test runner after package/build startup; it was not counted as a pass.
+- `cd backend && npm test` — **171/171 passed** (2026-09-17 baseline).
+- `npm test --prefix backend -- --maxWorkers=1` — **187/187 passed**, including 6 account-deletion tests (2026-09-21).
+- `npm run build --prefix backend` — **passed**.
+- Swift/XCTest on the physical iPhone 17e — **108/108 passed**.
+- Existing Render staging Email + Strava and Apple + avatar deletion runs passed: both old access/refresh sessions were rejected, the database rows and Stream user were absent after cleanup, and the app returned to Login after relaunch.
 
-## Remaining acceptance / blockers
+## Physical iPhone 17e evidence
 
-- PostgreSQL integration deletion tests have not run in this environment because `TEST_DATABASE_URL` and `DATABASE_URL` are unset.
-- No known Step 14 acceptance blockers remain. The Email + Strava and Apple + avatar provider matrices, immediate token revocation, retry-safe worker, PostgreSQL cleanup, Stream cleanup, object cleanup invocation, and physical iPhone restart behavior are verified.
-- Email accounts require current-password re-authentication before starting deletion. Apple accounts now require a fresh Apple credential and subject match; provider-backed staging evidence is still pending.
-- The full provider matrix is now covered by the two physical-device staging runs above.
+- Device: `Edward的iPhone`, iPhone 17e, iOS 26.6.1, UDID `16753B2D-88AB-5D77-82BF-B1EA68946526`.
+- Command used (physical device; no Simulator destination):
+
+  ```bash
+  xcodebuild test \
+    -project LauverNative/Lauver.xcodeproj \
+    -scheme Lauver-Staging \
+    -destination 'id=16753B2D-88AB-5D77-82BF-B1EA68946526' \
+    -resultBundlePath artifacts/acceptance/step-14-device-20260921.xcresult \
+    -parallel-testing-enabled NO
+  ```
+
+- `testSettingsDeleteAccountRequiresConfirmationAndReturnsToLogin` passed on-device, including confirmation cancellation, re-authentication UI, deletion submission and Login return.
+- `testStep14AVisualBaseline`, small/large accessibility checks and non-live profile/match/settings regression cases passed.
+- Full UI suite result: 26 executed, 19 passed, 5 skipped by explicit live-acceptance guards, 2 failed because this environment did not provide the separate live two-account Match/Stream opt-in fixtures (`testLiveMatchSummaryOnAuthenticatedDevice`, `testLiveStreamChatConnectsOnDevice`). These are recorded as a live-staging prerequisite, not as a Step 14 deletion failure.
+
+## Render staging evidence
+
+- Deployment target: `https://lauver-api-staging.onrender.com` from the repository `render.yaml` blueprint.
+- Render auto-deploys the pushed commit and runs `npm run db:migrate:deploy && npm start`; no local server is used for acceptance.
+- Post-deploy probes: `/healthz` returned `{"status":"ok","service":"lauver-api"}` and `/readyz` returned `{"status":"ready","service":"lauver-api","database":"ok"}`.
 
 ## Sign-off
 
-**Signed off.** Local unit/build evidence, staging Email + Strava and Apple + avatar cleanup, immediate token revocation, PostgreSQL/Stream verification, sensitive-operation re-authentication, and physical iPhone 17e restart verification are green.
+**Signed off for Step 14 account deletion.** The remaining live Match/Stream UI failures belong to the separately guarded live staging acceptance and do not exercise the account-deletion path.

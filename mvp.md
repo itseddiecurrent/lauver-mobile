@@ -1385,7 +1385,7 @@ xcodebuild test \
 
 ### Step 14：账户删除全链路
 
-**状态：🟡 未完成（新增 Swipe/Match/9 张照片/Preview 清理待重新验收）。** 原有 Email/Apple、Strava、单头像、PostgreSQL、Stream、object storage 和 Keychain 删除证据仍有效；新增关系数据和多照片清理尚未完成。
+**状态：✅ 功能完成（2026-09-21；Render staging 已部署，iPhone 17e 真机回归通过）。** 删除 orchestration 现已覆盖旧主头像、全部 `ProfilePhoto`、未完成上传对象、Swipe/Match/Block/Event/HealthKit/Strava 等 User 关联数据，以及含该账号的 Report snapshot；失败会保留禁用账号并按指数退避重试。删除确认、重新认证、Keychain 清理、Stream 本地状态清理和返回 Login 已在真机验证。证据见 `artifacts/acceptance/step-14.md`。
 
 **依赖：** Step 04、Step 05、Step 06A、Step 06B、Step 08、Step 09、Step 10、Step 12、Step 13。
 
@@ -1419,6 +1419,8 @@ xcodebuild test \
 7. 删除后候选 API、Like/Pass/Match API、Profile Preview 和旧 Stream channel 均不能恢复或暴露已删除用户数据。
 
 **通过标准：** 删除不是 Deactivate；不要求联系客服；内部数据、第三方授权和本地凭据全部进入可证明的清理闭环。
+
+**2026-09-21 验收结论：** 后端 unit 187/187、原生 XCTest 108/108 通过；iPhone 17e（UDID `16753B2D-88AB-5D77-82BF-B1EA68946526`）上的账户删除确认 → 重新认证 → 返回 Login、旧 Keychain session 不恢复、Stream 本地状态清理路径通过。全套真机 UI 共 26 项，其中 19 项通过、5 项按既有规则跳过；2 项 live Match/Stream 用例因没有显式 live staging 两账号/Stream opt-in 而失败，不影响 Step 14 删除路径。Render `/healthz` 与 `/readyz` 均为 200，迁移由 Render start command 执行并验证。
 
 ### Step 14A：UI 视觉对齐与体验优化（参照 Expo 版本）
 

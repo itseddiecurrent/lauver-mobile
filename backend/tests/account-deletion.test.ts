@@ -84,13 +84,16 @@ describe('account deletion worker', () => {
         update: vi.fn().mockResolvedValue(undefined),
       },
       user: { delete: vi.fn().mockResolvedValue(undefined) },
+      report: { deleteMany: vi.fn().mockResolvedValue(undefined) },
+      photoCleanupJob: { deleteMany: vi.fn().mockResolvedValue(undefined) },
     };
     const database = {
       $transaction: vi.fn((callback: (value: typeof transaction) => unknown) => Promise.resolve(callback(transaction))),
       user: {
         findUnique: vi.fn().mockResolvedValue({
           id: 'user-id',
-          profile: { photoKey: null },
+          profile: { photoKey: 'primary-key', photos: [{ objectKey: 'primary-key' }, { objectKey: 'second-key' }] },
+          photoUploads: [{ objectKey: 'pending-upload-key' }],
           identities: [],
           stravaConnection: null,
         }),
@@ -103,6 +106,8 @@ describe('account deletion worker', () => {
 
     await expect(service.processNext(external)).resolves.toBe(true);
     expect(transaction.user.delete).toHaveBeenCalledWith({ where: { id: 'user-id' } });
+    expect(transaction.report.deleteMany).toHaveBeenCalledWith({ where: { OR: [{ reporterId: 'user-id' }, { targetUserId: 'user-id' }] } });
+    expect(external.deleteObject.mock.calls).toEqual([['primary-key'], ['second-key'], ['pending-upload-key']]);
     expect(transaction.accountDeletionJob.update.mock.calls[0]?.[0]).toMatchObject({
       where: { id: 'job-id' },
       data: { status: 'COMPLETED' },
@@ -123,6 +128,7 @@ describe('account deletion worker', () => {
         findUnique: vi.fn().mockResolvedValue({
           id: 'user-id',
           profile: { photoKey: null },
+          photoUploads: [],
           identities: [],
           stravaConnection: null,
         }),

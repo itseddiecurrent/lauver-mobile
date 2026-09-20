@@ -287,6 +287,8 @@ Step 06 has a verifier that creates 34 generated Email test accounts, runs Disco
 
 The account-deletion API is now implemented, but complete removal verification still requires a PostgreSQL connection to the **same** `lauver_staging` database used by the API. Copy the example and enter the staging external connection URL from Render into the ignored file:
 
+Step 14 deletion cleanup includes the legacy primary photo, all published profile photos (up to nine), pending photo-upload objects, external Apple/Strava/Firebase grants, Stream user state, report snapshots involving the account, and all user-owned relational data. The account is marked `DELETED` and all sessions are revoked before any external cleanup starts. External failures leave the account inaccessible and schedule an exponential-backoff retry; successful cleanup then deletes the user transactionally. The worker is idempotent for repeated `DELETE /v1/account` requests.
+
 ```bash
 cp backend/.env.staging.example backend/.env.staging
 npm run verify:step-06:staging --prefix backend

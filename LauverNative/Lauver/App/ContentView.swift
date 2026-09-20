@@ -617,6 +617,7 @@ private struct AuthenticatedShellView: View {
 
             NavigationStack {
                 OwnProfileView(service: profileService, accountDeletionService: accountDeletionService, safetyService: safetyService, stravaService: stravaService, healthUploader: profileService as? any HealthWorkoutUploading) {
+                    chat.stop()
                     Task { await viewModel.signOut() }
                 }
             }
