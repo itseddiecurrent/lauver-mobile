@@ -3,13 +3,16 @@ import SwiftUI
 @main
 struct LauverApp: App {
     private let bootstrap: AppBootstrap
-    @StateObject private var languageStore = AppLanguageStore()
+    @StateObject private var languageStore: AppLanguageStore
 
     init() {
         do {
-            bootstrap = .ready(try AppContainer.live())
+            let container = try AppContainer.live()
+            bootstrap = .ready(container)
+            _languageStore = StateObject(wrappedValue: AppLanguageStore(stateStore: container.uiStateStore))
         } catch {
             bootstrap = .failed
+            _languageStore = StateObject(wrappedValue: AppLanguageStore())
         }
     }
 

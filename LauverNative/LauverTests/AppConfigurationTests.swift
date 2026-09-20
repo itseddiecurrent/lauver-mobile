@@ -9,14 +9,15 @@ final class AppConfigurationTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        let store = AppLanguageStore(defaults: defaults)
+        let stateStore = UIStateStore(defaults: defaults)
+        let store = AppLanguageStore(stateStore: stateStore)
         XCTAssertEqual(store.selection, .system)
         XCTAssertEqual(AppLanguage.english.locale.identifier, "en")
         XCTAssertEqual(AppLanguage.simplifiedChinese.locale.identifier, "zh-Hans")
 
         store.selection = .simplifiedChinese
-        XCTAssertEqual(defaults.string(forKey: "lauver.app-language"), "zh-Hans")
-        XCTAssertEqual(AppLanguageStore(defaults: defaults).selection, .simplifiedChinese)
+        XCTAssertEqual(stateStore.appLanguageRawValue, "zh-Hans")
+        XCTAssertEqual(AppLanguageStore(stateStore: UIStateStore(defaults: defaults)).selection, .simplifiedChinese)
     }
 
     func testMetadataUsesExpectedDisplayName() {

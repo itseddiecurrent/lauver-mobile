@@ -37,6 +37,7 @@ final class UIStateStore: UIStateStoring, MatchFilterStoring {
     private enum Keys {
         static let selectedTab = "ui.selectedTab"
         static let matchFilters = "ui.match.filters"
+        static let appLanguage = "lauver.app-language"
     }
 
     private let defaults: UserDefaults
@@ -58,6 +59,11 @@ final class UIStateStore: UIStateStoring, MatchFilterStoring {
     var matchFiltersData: Data? {
         get { defaults.data(forKey: Keys.matchFilters) }
         set { defaults.set(newValue, forKey: Keys.matchFilters) }
+    }
+
+    var appLanguageRawValue: String? {
+        get { defaults.string(forKey: Keys.appLanguage) }
+        set { defaults.set(newValue, forKey: Keys.appLanguage) }
     }
 
     func reset() {

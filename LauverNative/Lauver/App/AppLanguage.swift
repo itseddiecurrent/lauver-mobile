@@ -24,15 +24,14 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 @MainActor
 final class AppLanguageStore: ObservableObject {
     @Published var selection: AppLanguage {
-        didSet { defaults.set(selection.rawValue, forKey: Self.defaultsKey) }
+        didSet { stateStore.appLanguageRawValue = selection.rawValue }
     }
 
-    private static let defaultsKey = "lauver.app-language"
-    private let defaults: UserDefaults
+    private let stateStore: UIStateStore
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        let rawValue = defaults.string(forKey: Self.defaultsKey) ?? AppLanguage.system.rawValue
+    init(stateStore: UIStateStore = UIStateStore()) {
+        self.stateStore = stateStore
+        let rawValue = stateStore.appLanguageRawValue ?? AppLanguage.system.rawValue
         selection = AppLanguage(rawValue: rawValue) ?? .system
     }
 
