@@ -16,6 +16,12 @@ struct ProfilePhotoSaveOutcome {
     let edits: [ProfilePhotoEdit]
 }
 
+private struct PhotoUploadAttempt {
+    let id: String
+    let photoID: String?
+    let errorMessage: String?
+}
+
 @MainActor
 final class ProfileViewModel: ObservableObject {
     @Published private(set) var profile: WorkoutProfile?
@@ -79,31 +85,53 @@ final class ProfileViewModel: ObservableObject {
             let requests = pending.map { PhotoUploadRequest(clientID: $0.id, photo: $0.upload!) }
             let tickets = requests.isEmpty ? [] : try await service.createPhotoUploadTickets(requests)
             let ticketByID = Dictionary(uniqueKeysWithValues: tickets.map { ($0.clientID, $0) })
+
+            // Upload and confirm in small batches. The signed PUT and confirm
+            // request are independent per photo, so waiting for one photo to
+            // finish before starting the next makes a 9-photo save needlessly
+            // slow. Keep the limit at four to avoid saturating the device or
+            // storage service, while preserving each edit's original order.
             for index in edits.indices where ticketByID[edits[index].id] != nil {
                 edits[index].isUploading = true
                 edits[index].uploadError = nil
             }
-
-            // Confirm one photo at a time. Each successful confirmation returns
-            // a durable photo ID before the next upload starts, so the final
-            // order request only contains committed IDs and a retry never
-            // re-uploads a photo that already succeeded.
-            for edit in pending {
-                guard let index = edits.firstIndex(where: { $0.id == edit.id }) else { continue }
-                edits[index].isUploading = true
-                edits[index].uploadError = nil
-                guard let ticket = ticketByID[edit.id], let photo = edit.upload else {
-                    edits[index].isUploading = false
-                    edits[index].uploadError = "Photo upload failed."
-                    continue
+            let concurrencyLimit = 4
+            var attempts: [PhotoUploadAttempt] = []
+            for batchStart in stride(from: 0, to: pending.count, by: concurrencyLimit) {
+                let batchEnd = min(batchStart + concurrencyLimit, pending.count)
+                let batch = Array(pending[batchStart..<batchEnd])
+                let batchAttempts = await withTaskGroup(of: PhotoUploadAttempt.self, returning: [PhotoUploadAttempt].self) { group in
+                    for edit in batch {
+                        group.addTask { [service] in
+                            guard let ticket = ticketByID[edit.id], let photo = edit.upload else {
+                                return PhotoUploadAttempt(id: edit.id, photoID: nil, errorMessage: "Photo upload failed.")
+                            }
+                            do {
+                                let upload = try await service.uploadPhoto(photo, using: ticket)
+                                return PhotoUploadAttempt(
+                                    id: edit.id,
+                                    photoID: upload.photoID,
+                                    errorMessage: upload.photoID == nil ? "Photo confirmation failed." : nil
+                                )
+                            } catch {
+                                return PhotoUploadAttempt(
+                                    id: edit.id,
+                                    photoID: nil,
+                                    errorMessage: (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
+                                )
+                            }
+                        }
+                    }
+                    var results: [PhotoUploadAttempt] = []
+                    for await result in group { results.append(result) }
+                    return results
                 }
-                do {
-                    let upload = try await service.uploadPhoto(photo, using: ticket)
-                    edits[index].uploadedPhotoID = upload.photoID
-                    edits[index].uploadError = upload.photoID == nil ? "Photo confirmation failed." : nil
-                } catch {
-                    edits[index].uploadError = (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
-                }
+                attempts.append(contentsOf: batchAttempts)
+            }
+            for attempt in attempts {
+                guard let index = edits.firstIndex(where: { $0.id == attempt.id }) else { continue }
+                edits[index].uploadedPhotoID = attempt.photoID
+                edits[index].uploadError = attempt.errorMessage
                 edits[index].isUploading = false
             }
 
