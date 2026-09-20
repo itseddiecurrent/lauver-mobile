@@ -136,7 +136,9 @@ begin
     if mutual then
       insert into matches (user1_id, user2_id)
       values (least(uid, target_id), greatest(uid, target_id))
-      on conflict (user1_id, user2_id) do nothing
+      on conflict (user1_id, user2_id) do update
+        set unmatched_by = null, unmatched_at = null, matched_at = now()
+        where matches.unmatched_at is not null
       returning id into new_match_id;
 
       -- fetch id if the row already existed (conflict path)

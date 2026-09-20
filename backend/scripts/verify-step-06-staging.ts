@@ -264,7 +264,8 @@ export async function runAcceptance(options: AcceptanceOptions): Promise<{ check
       const afterUnmatch = await call('GET', '/v1/matches', undefined, session.accessToken);
       check(afterUnmatch.status === 200 && (afterUnmatch.body as { matches: unknown[] }).matches.length === 0, 'match-unmatch-removes-active-match');
       const restored = await call('POST', '/v1/match/swipes', { targetUserId: find('b').id, direction: 'like' }, session.accessToken);
-      check(restored.status === 409, 'match-unmatched-pair-cannot-be-restored');
+      check(restored.status === 200 && (restored.body as { matched: boolean }).matched && (restored.body as { matchId: string | null }).matchId === matchID, 'match-unmatched-pair-can-be-restored');
+      check((await call('POST', `/v1/matches/${matchID}/unmatch`, undefined, session.accessToken)).status === 204, 'match-restored-pair-can-unmatch-again');
       check((await call('POST', '/v1/match/swipes', { targetUserId: find('blocked-in').id, direction: 'like' }, session.accessToken)).status === 403, 'match-block-is-bidirectional');
 
       const optedOut = await call('PATCH', '/v1/match/preferences', { ...matchPreferences, visibleInMatch: false }, session.accessToken);

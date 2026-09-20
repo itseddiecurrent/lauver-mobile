@@ -1,8 +1,9 @@
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  SafeAreaView, ActivityIndicator, Image, Modal, Dimensions,
+  SafeAreaView, ActivityIndicator, Image, Modal, Dimensions, Animated, PanResponder,
 } from 'react-native';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { useMatch } from '../../hooks/useMatch';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -98,16 +99,40 @@ function OnboardingGate({ onSave, saving, styles, c }) {
 
 // ─── Candidate Card ───────────────────────────────────────────────────────────
 
-function CandidateCard({ athlete, onPass, onLike, swiping, likesRemaining, dailyLimitHit, styles, c }) {
+function CandidateCard({ athlete, onPass, onLike, onViewProfile, swiping, likesRemaining, dailyLimitHit, styles, c }) {
   const name    = athlete.display_name || athlete.first_name || 'Athlete';
-  const photo   = athlete.photos?.[0] ?? null;
+  const photos  = athlete.photos?.length ? athlete.photos : [];
+  const photo   = photos[0] ?? null;
   const sports  = (athlete.sports || []).map(Cap);
   const distKm  = athlete.distance_km != null ? `${Math.round(athlete.distance_km)} km away` : null;
 
+  const position = useRef(new Animated.ValueXY()).current;
+  const panResponder = useRef(PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy),
+    onPanResponderMove: Animated.event([null, { dx: position.x, dy: position.y }], { useNativeDriver: false }),
+    onPanResponderRelease: (_, g) => {
+      const action = g.dx > 100 ? onLike : g.dx < -100 ? onPass : null;
+      if (!action) {
+        Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
+        return;
+      }
+      Animated.timing(position, { toValue: { x: g.dx > 0 ? SW * 1.2 : -SW * 1.2, y: g.dy }, duration: 180, useNativeDriver: false })
+        .start(() => { position.setValue({ x: 0, y: 0 }); action(); });
+    },
+  })).current;
+
   return (
-    <View style={styles.athleteCard}>
+    <Animated.View style={[styles.athleteCard, {
+      transform: [
+        ...position.getTranslateTransform(),
+        { rotate: position.x.interpolate({ inputRange: [-SW, 0, SW], outputRange: ['-8deg', '0deg', '8deg'] }) },
+      ],
+    }]} {...panResponder.panHandlers}>
       {photo ? (
-        <Image source={{ uri: photo }} style={styles.cardPhoto} />
+        <TouchableOpacity onPress={onViewProfile} activeOpacity={0.95} accessibilityLabel="View profile photos">
+          <Image source={{ uri: photo }} style={styles.cardPhoto} />
+          {photos.length > 1 && <Text style={styles.photoCount}>{photos.length} photos</Text>}
+        </TouchableOpacity>
       ) : (
         <View style={[styles.cardPhoto, styles.cardPhotoPlaceholder, { backgroundColor: avatarColor(name) + '33' }]}>
           <View style={[styles.cardInitialCircle, { backgroundColor: avatarColor(name) }]}>
@@ -150,6 +175,9 @@ function CandidateCard({ athlete, onPass, onLike, swiping, likesRemaining, daily
         {!!athlete.bio && (
           <Text style={styles.cardBio} numberOfLines={3}>{athlete.bio}</Text>
         )}
+        <TouchableOpacity onPress={onViewProfile} style={styles.viewProfileBtn} activeOpacity={0.75}>
+          <Text style={styles.viewProfileText}>View Profile</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.swipeRow}>
@@ -183,7 +211,38 @@ function CandidateCard({ athlete, onPass, onLike, swiping, likesRemaining, daily
       {!dailyLimitHit && (
         <Text style={styles.likesLeft}>{likesRemaining} likes left today</Text>
       )}
-    </View>
+    </Animated.View>
+  );
+}
+
+function ProfilePreview({ athlete, visible, onClose, styles, c }) {
+  const [index, setIndex] = useState(0);
+  const photos = athlete?.photos?.length ? athlete.photos : [];
+  const name = athlete?.display_name || athlete?.first_name || 'Athlete';
+  if (!athlete) return null;
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={styles.previewRoot}>
+        <View style={styles.previewHeader}>
+          <Text style={styles.previewTitle}>Profile</Text>
+          <TouchableOpacity onPress={onClose} accessibilityLabel="Close profile"><Text style={styles.previewClose}>Done</Text></TouchableOpacity>
+        </View>
+        {photos[index] ? <Image source={{ uri: photos[index] }} style={styles.previewPhoto} /> : <View style={[styles.previewPhoto, styles.cardPhotoPlaceholder]}><Text style={styles.previewInitial}>{name.charAt(0).toUpperCase()}</Text></View>}
+        {photos.length > 1 && (
+          <View style={styles.previewPager}>
+            <TouchableOpacity onPress={() => setIndex(Math.max(0, index - 1))} disabled={index === 0}><Text style={styles.previewArrow}>‹</Text></TouchableOpacity>
+            <Text style={styles.previewCount}>{index + 1} / {photos.length}</Text>
+            <TouchableOpacity onPress={() => setIndex(Math.min(photos.length - 1, index + 1))} disabled={index === photos.length - 1}><Text style={styles.previewArrow}>›</Text></TouchableOpacity>
+          </View>
+        )}
+        <ScrollView contentContainerStyle={styles.previewBody}>
+          <Text style={styles.previewName}>{name}</Text>
+          {!!athlete.city && <Text style={styles.cardCity}>{athlete.city}</Text>}
+          {!!athlete.bio && <Text style={styles.previewBio}>{athlete.bio}</Text>}
+          {(athlete.sports || []).length > 0 && <Text style={styles.previewSports}>{athlete.sports.map(Cap).join(' · ')}</Text>}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -312,10 +371,15 @@ export default function MatchScreen({ navigation }) {
     needsOnboarding, lastMatchResult,
     swipeRight, swipeLeft, applyFilters, saveMatchPrefs,
     dismissMatchResult,
+    refreshMatches,
   } = useMatch();
 
   const [filtersOpen,  setFiltersOpen]  = useState(false);
   const [onboardSaving, setOnboardSaving] = useState(false);
+  const [previewAthlete, setPreviewAthlete] = useState(null);
+
+  // Refresh after returning from Chat so read receipts clear the list badge.
+  useFocusEffect(useCallback(() => { refreshMatches(); }, [refreshMatches]));
 
   // ── handlers ────────────────────────────────────────────────────────────────
   const current = candidates[0] ?? null;
@@ -392,6 +456,7 @@ export default function MatchScreen({ navigation }) {
             athlete={current}
             onPass={() => swipeLeft(current)}
             onLike={() => swipeRight(current)}
+            onViewProfile={() => setPreviewAthlete(current)}
             swiping={swiping}
             likesRemaining={likesRemaining}
             dailyLimitHit={dailyLimitHit}
@@ -410,8 +475,8 @@ export default function MatchScreen({ navigation }) {
           <View style={styles.matchesSection}>
             <Text style={styles.matchesSectionTitle}>Your Matches</Text>
             {matches.map(m => {
-              const name  = m.other_display_name ?? 'Athlete';
-              const photo = m.other_photo ?? null;
+              const name  = m.other_display_name ?? m.display_name ?? 'Athlete';
+              const photo = m.other_photo ?? m.photos?.[0] ?? null;
               const unread = m.unread_count ?? 0;
               return (
                 <TouchableOpacity
@@ -469,6 +534,8 @@ export default function MatchScreen({ navigation }) {
         c={c}
       />
 
+      <ProfilePreview athlete={previewAthlete} visible={!!previewAthlete} onClose={() => setPreviewAthlete(null)} styles={styles} c={c} />
+
       {/* match toast */}
       {lastMatchResult && (
         <MatchToast
@@ -519,6 +586,7 @@ function makeStyles(c) {
     // ── Candidate card ──
     athleteCard: { backgroundColor: c.CARD_BG, borderRadius: 20, marginHorizontal: 16, marginBottom: 12, overflow: 'hidden' },
     cardPhoto:            { width: '100%', height: SW * 0.72 },
+    photoCount:           { position: 'absolute', right: 12, bottom: 12, color: '#fff', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 9, paddingVertical: 5, borderRadius: 12, fontSize: 12, fontWeight: '700' },
     cardPhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
     cardInitialCircle:    { width: 90, height: 90, borderRadius: 45, justifyContent: 'center', alignItems: 'center' },
     cardInitialText:      { color: '#fff', fontSize: 36, fontWeight: '900' },
@@ -531,6 +599,8 @@ function makeStyles(c) {
     cardDist:    { fontSize: 13, color: c.TEXT_MUTED, fontWeight: '500' },
     cardCity:    { fontSize: 13, color: c.TEXT_MUTED, marginBottom: 2 },
     cardBio:     { fontSize: 13, color: c.TEXT_SUB, lineHeight: 19, marginTop: 4 },
+    viewProfileBtn: { alignSelf: 'flex-start', marginTop: 12, paddingVertical: 4 },
+    viewProfileText: { color: c.DARK_ORANGE, fontSize: 13, fontWeight: '800' },
     sportChip:     { backgroundColor: c.ELEVATED, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5 },
     sportChipText: { fontSize: 12, fontWeight: '600', color: c.TEXT_SUB },
 
@@ -593,5 +663,18 @@ function makeStyles(c) {
     toastHiBtnText: { color: '#fff', fontSize: 16, fontWeight: '900' },
     toastSkipBtn:   { paddingVertical: 10, alignSelf: 'stretch', alignItems: 'center' },
     toastSkipText:  { fontSize: 14, color: c.TEXT_MUTED, fontWeight: '600' },
+    previewRoot: { flex: 1, backgroundColor: c.BG },
+    previewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
+    previewTitle: { color: c.TEXT, fontSize: 20, fontWeight: '900' },
+    previewClose: { color: c.ORANGE, fontSize: 15, fontWeight: '800' },
+    previewPhoto: { width: '100%', height: SW * 1.05, backgroundColor: c.CARD_BG },
+    previewPager: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 8 },
+    previewArrow: { color: c.ORANGE, fontSize: 36, lineHeight: 38 },
+    previewCount: { color: c.TEXT_MUTED, fontSize: 13, fontWeight: '700' },
+    previewBody: { padding: 20 },
+    previewName: { color: c.TEXT, fontSize: 28, fontWeight: '900' },
+    previewBio: { color: c.TEXT_SUB, fontSize: 15, lineHeight: 22, marginTop: 12 },
+    previewSports: { color: c.TEXT_MUTED, fontSize: 14, marginTop: 16 },
+    previewInitial: { color: c.TEXT, fontSize: 64, fontWeight: '900' },
   });
 }

@@ -10,6 +10,8 @@ import {
   updateMatchPrefs,
   updateLocation,
 } from '../lib/match';
+import { subscribeToMatchMessages } from '../lib/chat';
+import { supabase } from '../lib/supabase';
 
 const FILTERS_KEY    = '@lauver_match_filters';
 const DAILY_LIMIT    = 15;
@@ -44,6 +46,7 @@ export function useMatch() {
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
   const loadingRef = useRef(false);
+  const matchChannelsRef = useRef([]);
 
   // ── load persisted filters from AsyncStorage ──────────────────────────────
   useEffect(() => {
@@ -104,6 +107,35 @@ export function useMatch() {
       await load(filters);
     })();
   }, [uid, filtersReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep previews and unread counts current while the Matches screen is open.
+  useEffect(() => {
+    matchChannelsRef.current.forEach(channel => supabase.removeChannel(channel));
+    matchChannelsRef.current = [];
+    if (!uid || matches.length === 0) return undefined;
+
+    matchChannelsRef.current = matches.map(match => subscribeToMatchMessages(match.match_id, message => {
+      setMatches(prev => prev.map(item => {
+        if (item.match_id !== match.match_id) return item;
+        const fromOther = message.sender_id !== uid;
+        return {
+          ...item,
+          last_message: message.body,
+          last_msg_at: message.sent_at,
+          unread_count: fromOther ? Number(item.unread_count ?? 0) + 1 : item.unread_count,
+        };
+      }).sort((a, b) => {
+        const aDate = a.last_msg_at ?? a.matched_at ?? '';
+        const bDate = b.last_msg_at ?? b.matched_at ?? '';
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      }));
+    }));
+
+    return () => {
+      matchChannelsRef.current.forEach(channel => supabase.removeChannel(channel));
+      matchChannelsRef.current = [];
+    };
+  }, [uid, matches]);
 
   // ── check if user needs onboarding (pref_gender not set) ─────────────────
   useEffect(() => {
@@ -206,6 +238,12 @@ export function useMatch() {
   // ── dismiss match toast ───────────────────────────────────────────────────
   const dismissMatchResult = useCallback(() => setLastMatchResult(null), []);
 
+  const refreshMatches = useCallback(async () => {
+    if (!uid) return;
+    const next = await getMyMatches(uid).catch(() => null);
+    if (next) setMatches(next);
+  }, [uid]);
+
   return {
     // data
     candidates,
@@ -228,5 +266,6 @@ export function useMatch() {
     requestLocation,
     dismissMatchResult,
     refresh: () => load(filters),
+    refreshMatches,
   };
 }

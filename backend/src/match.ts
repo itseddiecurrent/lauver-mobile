@@ -213,8 +213,11 @@ export class MatchService {
         if (direction === 'like' && activeMatch === null) {
           const lowerUserId = userId < targetId ? userId : targetId;
           const higherUserId = userId < targetId ? targetId : userId;
-          const previous = await tx.match.findUnique({ where: { lowerUserId_higherUserId: { lowerUserId, higherUserId } }, select: { unmatchedAt: true } });
-          if (previous?.unmatchedAt) throw new ProfileError(409, 'match_unmatched', 'This previous Match cannot be restored.');
+          const previous = await tx.match.findUnique({ where: { lowerUserId_higherUserId: { lowerUserId, higherUserId } }, select: { id: true, unmatchedAt: true } });
+          if (previous?.unmatchedAt) {
+            await tx.match.update({ where: { id: previous.id }, data: { unmatchedBy: null, unmatchedAt: null, matchedAt: new Date() } });
+            return this.swipeResult(direction, previous.id);
+          }
         }
         return this.swipeResult(direction, activeMatch);
       }
@@ -229,7 +232,10 @@ export class MatchService {
       const lowerUserId = userId < targetId ? userId : targetId;
       const higherUserId = userId < targetId ? targetId : userId;
       const previous = await tx.match.findUnique({ where: { lowerUserId_higherUserId: { lowerUserId, higherUserId } } });
-      if (previous?.unmatchedAt) throw new ProfileError(409, 'match_unmatched', 'This previous Match cannot be restored.');
+      if (previous?.unmatchedAt) {
+        const restored = await tx.match.update({ where: { id: previous.id }, data: { unmatchedBy: null, unmatchedAt: null, matchedAt: new Date() } });
+        return this.swipeResult(direction, restored.id);
+      }
       const match = previous ?? await tx.match.create({ data: { lowerUserId, higherUserId } });
       return this.swipeResult(direction, match.id);
     }, { timeout: 15_000 });

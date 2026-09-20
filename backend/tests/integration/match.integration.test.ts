@@ -115,5 +115,10 @@ describe('Match PostgreSQL invariants', () => {
     await service.unmatch(concurrentA, match.id);
     expect(await service.list(concurrentA)).toEqual([]);
     expect(await database.client.match.findUniqueOrThrow({ where: { id: match.id } })).toMatchObject({ unmatchedBy: concurrentA });
+
+    const rematched = await service.swipe(concurrentB, concurrentA, 'like');
+    expect(rematched).toMatchObject({ matched: true, matchId: match.id });
+    expect(await service.list(concurrentA)).toHaveLength(1);
+    await service.unmatch(concurrentA, match.id);
   });
 });

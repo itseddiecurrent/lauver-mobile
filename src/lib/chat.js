@@ -76,6 +76,11 @@ export function subscribeToMessages(matchId, onInsert) {
   return channel;
 }
 
+/** Subscribe to inserts for a match-list preview without opening a chat. */
+export function subscribeToMatchMessages(matchId, onInsert) {
+  return subscribeToMessages(matchId, onInsert);
+}
+
 /**
  * Subscribes to UPDATE events on the messages table for a match.
  * Used to detect when the other person marks messages as read (read_at set).

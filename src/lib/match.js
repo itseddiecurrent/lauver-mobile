@@ -80,7 +80,13 @@ export async function getTodayLikesCount(userId) {
 export async function getMyMatches(userId) {
   const { data, error } = await supabase.rpc('get_my_matches', { uid: userId });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(match => ({
+    ...match,
+    // Keep the RPC's canonical field names and expose the UI-friendly aliases
+    // used by older screens. This makes the list resilient to either payload.
+    other_display_name: match.other_display_name ?? match.display_name ?? 'Athlete',
+    other_photo: match.other_photo ?? match.photos?.[0] ?? null,
+  }));
 }
 
 // ─── Unmatch ──────────────────────────────────────────────────────────────────
