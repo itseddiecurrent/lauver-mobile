@@ -35,6 +35,6 @@ The resource set includes the language picker and Settings sections, account del
 
 The root `render.yaml` remains the source of truth. Render deploys the backend from `main` with `./scripts/build-deploy.sh`, runs `npm run db:migrate:deploy && npm start`, and exposes `/healthz` and `/readyz`. Acceptance records the post-deploy HTTP checks and deployment revision below.
 
-- Deploy revision: `f02c4b2` (pushed to `origin/main`; Render auto-deploy source).
+- Deploy revision: `a7c71ea` (pushed to `origin/main`; Render auto-deploy source).
 - `/healthz`: HTTP 200, `{"status":"ok","service":"lauver-api"}`.
 - `/readyz`: HTTP 200, `{"status":"ready","service":"lauver-api","database":"ok"}`.
