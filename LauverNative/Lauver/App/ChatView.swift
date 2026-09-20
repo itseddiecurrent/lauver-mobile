@@ -6,6 +6,8 @@ import StreamChatSwiftUI
 final class ChatConnection: ObservableObject {
     @Published private(set) var client: ChatClient?
     @Published private(set) var unreadMessages = 0
+    @Published private(set) var locallyReadChannelIDs: Set<String> = []
+    @Published private(set) var locallyReadTargetUserIDs: Set<String> = []
     @Published var reportMessage: ChatMessage?
     private var context: StreamChatSwiftUI.StreamChat?
     private var connecting: Task<ChatClient, Error>?
@@ -77,7 +79,17 @@ final class ChatConnection: ObservableObject {
         currentUserController?.delegate = nil
         currentUserController = nil
         unreadMessages = 0
+        locallyReadChannelIDs = []
+        locallyReadTargetUserIDs = []
         Task { await previous?.logout() }
+    }
+
+    func markChannelRead(_ channelID: String) {
+        locallyReadChannelIDs.insert(channelID)
+    }
+
+    func markTargetRead(_ targetUserID: String) {
+        locallyReadTargetUserIDs.insert(targetUserID)
     }
 }
 
@@ -203,13 +215,40 @@ struct DirectConversationView: View {
                 let client = try await chat.connect(service: service)
                 let channel = try await service.directChat(targetUserID: targetUserID)
                 try Task.checkCancellation()
-                controller = client.channelController(for: try ChannelId(cid: channel.id))
+                let channelController = client.channelController(for: try ChannelId(cid: channel.id))
+                try await synchronize(channelController)
+                try await markRead(channelController)
+                chat.markChannelRead(channel.id)
+                chat.markTargetRead(targetUserID)
+                // Refresh after the read request. Stream updates the channel's
+                // unread state asynchronously, so synchronizing before
+                // markRead can leave a stale badge when navigating back.
+                try await synchronize(channelController)
+                controller = channelController
             } catch { if !Task.isCancelled { errorMessage = (error as? APIError)?.userMessage ?? "This conversation could not be opened." } }
         }
         .toolbar(.hidden, for: .tabBar)
         .sheet(isPresented: Binding(get: { chat.reportMessage != nil }, set: { if !$0 { chat.reportMessage = nil } })) {
             if let message = chat.reportMessage {
                 ReportMessageView(service: service, message: message) { chat.reportMessage = nil }
+            }
+        }
+    }
+
+    private func synchronize(_ controller: ChatChannelController) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            controller.synchronize { error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume() }
+            }
+        }
+    }
+
+    private func markRead(_ controller: ChatChannelController) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            controller.markRead { error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume() }
             }
         }
     }

@@ -601,7 +601,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A2000000000000000000000B /* Staging.xcconfig */;
 			buildSettings = {
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LauverUITests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -614,7 +615,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = A2000000000000000000000C /* Production.xcconfig */;
 			buildSettings = {
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = LauverUITests/Info.plist;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;

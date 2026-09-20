@@ -30,6 +30,171 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
+    // Real Render staging Match/Stream acceptance. This is intentionally opt-in because it
+    // writes one message and rotates the real test account session on the connected device.
+    func testLiveMatchAndConversationOnDevice() throws {
+        let value: (String) -> String? = { key in
+            ProcessInfo.processInfo.environment[key]
+                ?? Bundle(for: LauverUITests.self).object(forInfoDictionaryKey: key) as? String
+        }
+        guard value("LAUVER_LIVE_MATCH") == "1",
+              let email1 = value("LAUVER_LIVE_EMAIL_1"),
+              let password1 = value("LAUVER_LIVE_PASSWORD_1"),
+              let email2 = value("LAUVER_LIVE_EMAIL_2"),
+              let password2 = value("LAUVER_LIVE_PASSWORD_2") else {
+            throw XCTSkip("Requires explicit two-account live Match acceptance opt-in")
+        }
+
+        let message = "Step 06B live (String(UUID().uuidString.prefix(8)))"
+        let app = XCUIApplication()
+
+        login(email: email1, password: password1, in: app)
+        openMatch(in: app)
+        XCTAssertTrue(app.staticTexts["Step 06B Tester Two"].waitForExistence(timeout: 15))
+        let accountOneMessage = app.buttons["Message Step 06B Tester Two"]
+        XCTAssertTrue(accountOneMessage.waitForExistence(timeout: 15))
+        scrollToHittable(accountOneMessage, in: app)
+        accountOneMessage.tap()
+        sendLiveMessage(message, in: app)
+        let sent = XCTAttachment(screenshot: app.screenshot())
+        sent.name = "step06b-account1-sent"
+        sent.lifetime = .keepAlways
+        add(sent)
+        app.navigationBars.buttons.firstMatch.tap()
+
+        signOut(in: app)
+        login(email: email2, password: password2, in: app)
+        openMatch(in: app)
+        XCTAssertTrue(app.staticTexts["Step 06B Tester One"].waitForExistence(timeout: 15))
+        let lastMessage = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@ AND label == %@", "match-last-message-", message)
+        ).firstMatch
+        XCTAssertTrue(lastMessage.waitForExistence(timeout: 15), "Matches row must show the latest Stream message")
+        let unread = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "match-unread-")
+        )
+        XCTAssertTrue(unread.count > 0, "Account two must see the unread badge before opening chat")
+        let accountTwoMessage = app.buttons["Message Step 06B Tester One"]
+        XCTAssertTrue(accountTwoMessage.waitForExistence(timeout: 15))
+        scrollToHittable(accountTwoMessage, in: app)
+        accountTwoMessage.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["chat-message-input"].waitForExistence(timeout: 15))
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertEqual(app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "match-unread-")
+        ).count, 0, "Opening the conversation must clear unread state")
+        let received = XCTAttachment(screenshot: app.screenshot())
+        received.name = "step06b-account2-read"
+        received.lifetime = .keepAlways
+        add(received)
+    }
+
+    // Uses the authenticated staging session left by the live login test above.
+    func testLiveMatchSummaryOnAuthenticatedDevice() {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
+        openMatch(in: app)
+        XCTAssertTrue(app.staticTexts["Step 06B Tester Two"].waitForExistence(timeout: 15))
+        let messageButton = app.buttons["Message Step 06B Tester Two"]
+        XCTAssertTrue(messageButton.waitForExistence(timeout: 15))
+        messageButton.tap()
+        let message = "iPhone 17e Match (String(UUID().uuidString.prefix(8)))"
+        sendLiveMessage(message, in: app)
+        app.navigationBars.buttons.firstMatch.tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@ AND label == %@", "match-last-message-", message)
+        ).firstMatch.waitForExistence(timeout: 15))
+    }
+
+    // The second connected account has nine deployed staging photos. The tenth-photo
+    // boundary must be enforced by the real editor before another upload starts.
+    func testLiveProfilePhotoLimitOnDevice() throws {
+        let value: (String) -> String? = { key in
+            ProcessInfo.processInfo.environment[key]
+                ?? Bundle(for: LauverUITests.self).object(forInfoDictionaryKey: key) as? String
+        }
+        guard value("LAUVER_LIVE_MATCH") == "1",
+              let email = value("LAUVER_LIVE_EMAIL_2"),
+              let password = value("LAUVER_LIVE_PASSWORD_2") else {
+            throw XCTSkip("Requires explicit live staging acceptance opt-in")
+        }
+
+        let app = XCUIApplication()
+        login(email: email, password: password, in: app)
+        let profileTab = app.tabBars.firstMatch.buttons["Profile"]
+        XCTAssertTrue(profileTab.waitForExistence(timeout: 5))
+        for _ in 0..<3 {
+            profileTab.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            if app.descendants(matching: .any)["screen-profile"].waitForExistence(timeout: 3) { break }
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["screen-profile"].exists)
+        let edit = app.buttons["profile-edit"]
+        if !edit.waitForExistence(timeout: 15) {
+            let labels = app.staticTexts.allElementsBoundByIndex.map(\.label).filter { !$0.isEmpty }
+            print("LIVE_PROFILE_SCREEN_LABELS: \(labels)")
+            XCTFail("Live profile editor did not load")
+            return
+        }
+        for _ in 0..<8 where !edit.isHittable { app.swipeUp() }
+        tapWhenHittable(edit)
+        XCTAssertTrue(app.navigationBars["Edit Profile"].waitForExistence(timeout: 10))
+        let limit = app.staticTexts["Photo limit reached"]
+        XCTAssertTrue(limit.waitForExistence(timeout: 10), "A profile with nine photos must reject a tenth upload")
+        let evidence = XCTAttachment(screenshot: app.screenshot())
+        evidence.name = "step06b-tenth-photo-rejected"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+    }
+
+    func testStep06BAccessibilityLargeDarkOnDevice() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-authenticated",
+            "-ui-testing-health-success",
+            "-ui-testing-reset-state",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL",
+            "-AppleInterfaceStyle", "Dark"
+        ]
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10))
+        app.tabBars.firstMatch.buttons["Match"].tap()
+        XCTAssertTrue(app.buttons["Start matching"].waitForExistence(timeout: 10))
+        app.buttons["Start matching"].tap()
+        XCTAssertTrue(app.buttons["Like"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Pass"].exists)
+        XCTAssertTrue(app.buttons["View Profile"].exists)
+        XCTAssertEqual(app.buttons["Like"].label, "Like")
+        XCTAssertEqual(app.buttons["Pass"].label, "Pass")
+        let evidence = XCTAttachment(screenshot: app.screenshot())
+        evidence.name = "step06b-large-dark-accessibility"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+    }
+
+    func testStep06BAccessibilitySmallLightOnDevice() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-authenticated",
+            "-ui-testing-health-success",
+            "-ui-testing-reset-state",
+            "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXS",
+            "-AppleInterfaceStyle", "Light"
+        ]
+        app.launch()
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 10))
+        for tab in ["Discover", "Match", "Events", "Messages", "Profile"] {
+            XCTAssertTrue(app.tabBars.firstMatch.buttons[tab].exists)
+        }
+        app.tabBars.firstMatch.buttons["Match"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["screen-match"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["match-filters"].exists)
+        let evidence = XCTAttachment(screenshot: app.screenshot())
+        evidence.name = "step06b-small-light-accessibility"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+    }
+
     func testAuthenticatedShellContainsApprovedTabsAndMatchFlow() {
         let app = launchAuthenticatedShell()
         let tabBar = app.tabBars.firstMatch
@@ -557,6 +722,60 @@ final class LauverUITests: XCTestCase {
         attachment.name = "step14a-\(name)"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func login(email: String, password: String, in app: XCUIApplication) {
+        app.launchArguments = ["-ui-testing-reset-auth"]
+        app.launch()
+        if app.buttons["auth-login"].waitForExistence(timeout: 8) {
+            typeText(email, into: app.textFields["auth-email"], app: app)
+            typeText(password, into: app.secureTextFields["auth-password"], app: app)
+            app.buttons["auth-login"].tap()
+        }
+        XCTAssertTrue(app.tabBars.firstMatch.waitForExistence(timeout: 30))
+        app.launchArguments = []
+    }
+
+    private func openMatch(in app: XCUIApplication) {
+        let button = app.tabBars.firstMatch.buttons["Match"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        button.tap()
+        let selected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isSelected == true"),
+            object: button
+        )
+        _ = XCTWaiter.wait(for: [selected], timeout: 5)
+        if !app.descendants(matching: .any)["screen-match"].exists {
+            button.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        XCTAssertTrue(app.descendants(matching: .any)["screen-match"].waitForExistence(timeout: 15))
+    }
+
+    private func scrollToHittable(_ element: XCUIElement, in app: XCUIApplication) {
+        let scrollView = app.scrollViews["screen-match"]
+        for _ in 0..<8 {
+            if element.isHittable { return }
+            if scrollView.exists { scrollView.swipeUp() } else { app.swipeUp() }
+        }
+        XCTAssertTrue(element.isHittable, "Match control must be reachable by scrolling")
+    }
+
+    private func sendLiveMessage(_ message: String, in app: XCUIApplication) {
+        let input = app.textFields["chat-message-input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 15))
+        input.tap()
+        input.typeText(message)
+        app.buttons["chat-message-send"].tap()
+        XCTAssertTrue(app.staticTexts[message].waitForExistence(timeout: 15))
+    }
+
+    private func signOut(in app: XCUIApplication) {
+        app.tabBars.firstMatch.buttons["Profile"].tap()
+        let signOut = app.buttons["auth-sign-out"]
+        XCTAssertTrue(signOut.waitForExistence(timeout: 10))
+        signOut.tap()
+        XCTAssertTrue(app.buttons["auth-login"].waitForExistence(timeout: 15))
+        app.terminate()
     }
 
     private func assertDiscoverSummary(_ text: String, in app: XCUIApplication) {

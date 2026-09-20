@@ -48,6 +48,11 @@ export class SafetyService implements SafetyServicing {
       }
       await tx.block.upsert({ where: { blockerId_blockedId: { blockerId: actorId, blockedId: targetId } },
         create: { blockerId: actorId, blockedId: targetId }, update: {} });
+      // A block is a server-side revocation, not only a visibility preference.
+      // Remove pending Like/Pass state and close the active Match in the same
+      // transaction so a retry or an already-open client cannot recreate chat
+      // access from stale relationship data.
+      await this.revokeMatchPair(tx, actorId, targetId);
       await tx.safetyAuditEvent.create({ data: { actorId, targetId, action: 'block', requestId } });
     });
   }
@@ -86,9 +91,22 @@ export class SafetyService implements SafetyServicing {
         targetType: 'user', source: 'profile', reason: input.reason, details: input.details ?? null, snapshot, requestId } });
       if (input.blockUser) await tx.block.upsert({ where: { blockerId_blockedId: { blockerId: actorId, blockedId: input.targetId } },
         create: { blockerId: actorId, blockedId: input.targetId }, update: {} });
+      if (input.blockUser) await this.revokeMatchPair(tx, actorId, input.targetId);
       await tx.safetyAuditEvent.create({ data: { actorId, targetId: input.targetId,
         action: input.blockUser ? 'report_and_block' : 'report', requestId, reportId: report.id } });
       return { referenceId: report.id, blockedUser: input.blockUser };
+    });
+  }
+
+  private async revokeMatchPair(tx: Prisma.TransactionClient, actorId: string, targetId: string): Promise<void> {
+    const lowerUserId = actorId < targetId ? actorId : targetId;
+    const higherUserId = actorId < targetId ? targetId : actorId;
+    await tx.match.updateMany({
+      where: { lowerUserId, higherUserId, unmatchedAt: null },
+      data: { unmatchedBy: actorId, unmatchedAt: new Date() },
+    });
+    await tx.swipe.deleteMany({
+      where: { OR: [{ actorId, targetId }, { actorId: targetId, targetId: actorId }] },
     });
   }
 

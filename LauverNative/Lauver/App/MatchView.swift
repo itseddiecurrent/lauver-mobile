@@ -1,4 +1,5 @@
 import SwiftUI
+import StreamChat
 
 struct MatchCandidate: Decodable, Identifiable, Equatable {
     let id: String
@@ -48,6 +49,11 @@ struct MatchSummary: Decodable, Identifiable, Equatable {
     let id: String
     let matchedAt: String
     let user: MatchCandidate
+}
+
+struct MatchConversationPreview: Equatable {
+    let lastMessage: String?
+    let unreadCount: Int
 }
 
 struct MatchFilters: Codable, Equatable {
@@ -108,7 +114,9 @@ final class MatchViewModel: ObservableObject {
                 let page = try await service.candidates(filters: filters, cursor: nil)
                 let loadedMatches = try await service.matches()
                 guard request == generation else { return }
-                candidates = page.users; nextCursor = page.nextCursor; matches = loadedMatches
+                candidates = page.users
+                nextCursor = page.nextCursor
+                matches = loadedMatches.sorted { $0.matchedAt > $1.matchedAt }
             }
             hasLoaded = true
         } catch { capture(error) }
@@ -158,6 +166,7 @@ final class MatchViewModel: ObservableObject {
 }
 
 struct MatchView: View {
+    @EnvironmentObject private var chat: ChatConnection
     @StateObject private var model: MatchViewModel
     let profileService: any ProfileServicing
     let matchService: any MatchServicing
@@ -165,6 +174,7 @@ struct MatchView: View {
     let chatService: (any ChatServicing)?
     let filterStore: any MatchFilterStoring
     @State private var showingFilters = false
+    @State private var conversationPreviews: [String: MatchConversationPreview] = [:]
 
     init(matchService: any MatchServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing, chatService: (any ChatServicing)?, filterStore: any MatchFilterStoring) {
         self.matchService = matchService; self.profileService = profileService; self.safetyService = safetyService; self.chatService = chatService
@@ -182,6 +192,14 @@ struct MatchView: View {
         .sheet(isPresented: $showingFilters) { MatchFilterSheet(filters: model.filters) { value in Task { await model.apply(value) } } }
         .sheet(item: $model.toast) { summary in MatchToast(summary: summary, chatService: chatService, safetyService: safetyService) }
         .task { await model.load() }
+        .task(id: model.matches) { await refreshConversationPreviews() }
+        .onAppear { Task { await refreshConversationPreviews() } }
+        .onChange(of: chat.locallyReadTargetUserIDs) { _, readTargets in
+            for match in model.matches where readTargets.contains(match.user.id) {
+                guard let preview = conversationPreviews[match.id], preview.unreadCount > 0 else { continue }
+                conversationPreviews[match.id] = MatchConversationPreview(lastMessage: preview.lastMessage, unreadCount: 0)
+            }
+        }
         .refreshable { await model.load() }
         .accessibilityIdentifier("screen-match")
     }
@@ -193,7 +211,7 @@ struct MatchView: View {
             Text("Match is opt-in. Choose who you want to meet, then browse compatible athletes.").multilineTextAlignment(.center).foregroundStyle(.secondary)
             Button(model.isSubmitting ? "Joining…" : "Start matching") { Task { await model.enableMatch() } }.buttonStyle(LauverPrimaryButtonStyle()).disabled(model.isSubmitting).accessibilityIdentifier("match-start")
             if let error = model.errorMessage { ErrorStateView(message: error, requestID: model.requestID) }
-        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(LauverDesign.ColorToken.background)
+        }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(LauverDesign.ColorToken.background).accessibilityIdentifier("screen-match")
     }
 
     private var matchContent: some View {
@@ -211,12 +229,50 @@ struct MatchView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Your Matches").font(.headline)
                         ForEach(model.matches) { match in
-                            MatchRow(match: match, chatService: chatService, safetyService: safetyService, onUnmatch: { Task { await model.unmatch(match) } })
+                            MatchRow(match: match, preview: conversationPreviews[match.id], chatService: chatService, safetyService: safetyService, onUnmatch: { Task { await model.unmatch(match) } })
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
             }.padding(18)
-        }.background(LauverDesign.ColorToken.background)
+        }.background(LauverDesign.ColorToken.background).accessibilityIdentifier("screen-match")
+    }
+
+    @MainActor
+    private func refreshConversationPreviews() async {
+        guard !ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated"),
+              !ProcessInfo.processInfo.arguments.contains("-ui-testing-auth-flow") else { return }
+        guard let chatService, !model.matches.isEmpty else {
+            conversationPreviews = [:]
+            return
+        }
+
+        do {
+            let client = try await chat.connect(service: chatService)
+            var refreshed: [String: MatchConversationPreview] = [:]
+            for match in model.matches {
+                let channel = try await chatService.directChat(targetUserID: match.user.id)
+                let controller = client.channelController(for: try ChannelId(cid: "\(channel.channelType):\(channel.channelId)"))
+                try await synchronize(controller)
+                guard let state = controller.channel else { continue }
+                refreshed[match.id] = MatchConversationPreview(
+                    lastMessage: state.latestMessages.first?.text,
+                    unreadCount: chat.locallyReadChannelIDs.contains(channel.id) ? 0 : state.unreadCount.messages
+                )
+            }
+            conversationPreviews = refreshed
+        } catch {
+            // Match rows remain usable when Stream is temporarily unavailable.
+            conversationPreviews = [:]
+        }
+    }
+
+    private func synchronize(_ controller: ChatChannelController) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            controller.synchronize { error in
+                if let error { continuation.resume(throwing: error) }
+                else { continuation.resume() }
+            }
+        }
     }
 }
 
@@ -233,7 +289,7 @@ private struct MatchCandidateCard<Profile: View>: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("View (candidate.displayName)'s profile photos")
+            .accessibilityLabel("View \(candidate.displayName)'s profile photos")
             if candidate.photos.count > 1 {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -319,15 +375,34 @@ private struct MatchPhotoViewer: View {
 }
 
 private struct MatchRow: View {
-    let match: MatchSummary; let chatService: (any ChatServicing)?; let safetyService: any SafetyServicing; let onUnmatch: () -> Void
+    let match: MatchSummary; let preview: MatchConversationPreview?; let chatService: (any ChatServicing)?; let safetyService: any SafetyServicing; let onUnmatch: () -> Void
     @State private var confirming = false
     var body: some View {
         HStack {
             ProfileAvatar(photoURL: match.user.photoURL, size: 52)
-            VStack(alignment: .leading) { Text(match.user.displayName).font(.headline); Text("Matched \(match.matchedAt)").font(.caption).foregroundStyle(.secondary); Text("No messages yet").font(.caption).foregroundStyle(.secondary) }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(match.user.displayName).font(.headline)
+                if let lastMessage = preview?.lastMessage, !lastMessage.isEmpty {
+                    Text(lastMessage).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        .accessibilityIdentifier("match-last-message-\(match.id)")
+                } else {
+                    Text("No messages yet").font(.caption).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("match-last-message-\(match.id)")
+                }
+            }
             Spacer()
+            if let unreadCount = preview?.unreadCount, unreadCount > 0 {
+                Text(unreadCount > 99 ? "99+" : "\(unreadCount)")
+                    .font(.caption2.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(LauverDesign.ColorToken.accent, in: Capsule())
+                    .accessibilityLabel("\(unreadCount) unread messages")
+                    .accessibilityIdentifier("match-unread-\(match.id)")
+            }
             if let chatService { NavigationLink { DirectConversationView(service: chatService, safetyService: safetyService, targetUserID: match.user.id) } label: { Image(systemName: "message.fill") }.accessibilityLabel("Message \(match.user.displayName)") }
-            Button { confirming = true } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options").accessibilityIdentifier("match-more-(match.id)")
+            Button { confirming = true } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options").accessibilityIdentifier("match-more-\(match.id)")
         }.padding(.vertical, 6).confirmationDialog("Unmatch \(match.user.displayName)?", isPresented: $confirming) { Button("Unmatch", role: .destructive, action: onUnmatch); Button("Cancel", role: .cancel) {} } message: { Text("You will no longer be able to message each other.") }
     }
 }

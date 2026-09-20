@@ -1024,7 +1024,7 @@ xcodebuild test \
 
 ### Step 06：Discover 手动筛选列表
 
-**状态：🟡 进行中（2026-09-19）。** Discover 的列表筛选、分页、公开 Profile 多照片浏览和未 Match 前的 Direct Message 隔离已完成；Match 数据层已由 Step 06A 完成，原生 Match UI 仍由 Step 06B 负责最终真机验收。
+**状态：✅ 已完成（2026-09-20）。** Discover 的列表筛选、分页、公开 Profile 多照片浏览和未 Match 前的 Direct Message 隔离已完成；Step 06A 的 Match 数据/API 与 Step 06B 的原生 Match UI、照片上限、Stream 和真机可访问性验收均已完成。Render staging Discover 验收 62/62 通过，覆盖固定排序、半径/运动/数值配速筛选、分页无重复遗漏、双向 Block、暂停/删除/未完成排除、参数/游标隔离和新 session；真机已完成列表 → Profile、筛选、分页、断网提示与 Retry 恢复。证据见 `artifacts/acceptance/step-06.md`、`artifacts/acceptance/step-06a-20260919.md` 和 `artifacts/acceptance/step-06b-20260920.md`。
 
 **依赖：** Step 05。
 
@@ -1035,7 +1035,7 @@ xcodebuild test \
 3. 排除自己、未完成、暂停、删除以及任一方向已 Block 的用户；
 4. 实现固定排序和 cursor pagination；
 5. SwiftUI 构建普通 List、Filter Sheet、Profile navigation、空状态和刷新；✅
-6. 保持普通 Discover 列表的确定性过滤，同时明确它与 Match 候选池的数据边界；Match 状态不得绕过 Discover 的 Block、暂停、删除和 Profile completeness 规则。🟡
+6. 保持普通 Discover 列表的确定性过滤，同时明确它与 Match 候选池的数据边界；Match 状态不得绕过 Discover 的 Block、暂停、删除和 Profile completeness 规则。✅（Render staging 62/62）
 7. 公开 Profile 支持浏览全部已发布照片；未 Match 前不提供 Direct Message 绕过入口。✅（2026-09-19）
 
 **可测试 Deliverable：**
@@ -1050,7 +1050,7 @@ xcodebuild test \
 2. 分页前后不重复、不漏用户；
 3. 测试半径边界内、恰好边界、边界外；
 4. 缺 pace 的用户不会进入指定数值范围，准确包含 mm:ss / km/h 范围的两端；
-5. XCUITest 验证列表 → Profile、最多 9 张公开照片/Preview，并确认未 Match 用户没有 Message 入口；公开照片分页浏览和 Match 前私聊入口隔离已在原生代码中完成，待 iPhone 17e 真机 UI 复验。
+5. XCUITest/真机验收列表 → Profile、最多 9 张公开照片/Preview，并确认未 Match 用户没有 Message 入口；公开照片分页浏览和 Match 前私聊入口隔离已完成。
 
 **通过标准：** Discover 是完全可解释、稳定、零 AI 的过滤列表，返回数据不泄露精确位置。
 
@@ -1095,12 +1095,12 @@ xcodebuild test \
 
 ### Step 06B：Native Match UI、Swipe 与 Profile Preview
 
-**状态：🟡 进行中（2026-09-19；主流程已实现，发布验收证据待补）。** 原生 Match 入口、opt-in onboarding、候选卡、Like/Pass 按钮与同源 Swipe 手势、Filter Sheet 本地持久化、互相 Like Match Toast、Say Hi、Keep browsing、Unmatch confirmation、Retry/错误/空状态和 Profile Preview 已接入。候选/Match 数据现已返回最多 9 张公开照片并支持卡片缩略图与全屏分页浏览；未 Match 的 Profile 不提供 Message 入口。两个 staging 测试账号已完成登录 → 开启 Match → 候选 → 双向 Like → Match → Unmatch 的真实 API 验收，之后已恢复为不可见。9 张 Picsum 照片导致的旧 staging 主图清理 bug 已修复、加入回归测试并已部署到 Render；CI 和 Render 部署均已成功。尚未完成：
+**状态：✅ 完成（2026-09-20；Match/Stream、照片上限、VoiceOver 开启状态下的可访问控件、Dynamic Type、浅色/深色和小屏/大屏均已通过真机验收）。** 原生 Match 入口、opt-in onboarding、候选卡、Like/Pass 按钮与同源 Swipe 手势、Filter Sheet 本地持久化、互相 Like Match Toast、Say Hi、Keep browsing、Unmatch confirmation、Retry/错误/空状态和 Profile Preview 已接入。候选/Match 数据现已返回最多 9 张公开照片并支持卡片缩略图与全屏分页浏览；未 Match 的 Profile 不提供 Message 入口。两个 staging 测试账号已在部署后的 Render staging 和连接的 iPhone 17e 上完成登录 → Match → Stream 发消息 → 最后一条消息/未读数 → 打开聊天清零的验收；9 张照片已完成真机手测，第 10 张拒绝已通过真机 UI 和 API 边界测试。VoiceOver 开启状态下的真机可访问性 UI 检查 2/2 通过，覆盖 Match、Start matching、Like、Pass、View Profile、五个 Tab 和 Match Filters。证据见 `artifacts/acceptance/step-06b-20260920.md`。9 张 Picsum 照片导致的旧 staging 主图清理 bug 已修复、加入回归测试并已部署到 Render；CI 和 Render 部署均已成功。验收进度：
 
-1. 用两个测试账号在部署后的 staging 上重新执行 Match 全链路，并保留真实 iPhone 操作证据；
-2. 用 9 张 Picsum 照片完成上传、排序、主照片、删除和 Profile Preview 的部署后截图，并验证第 10 张被拒绝；
-3. 接入并验收 Matches 列表的 Stream 最后一条消息、未读数、打开 Chat 后清零和稳定排序；当前 UI 仍显示 `No messages yet` 占位；
-4. 在真实 iPhone 上完成 VoiceOver、Dynamic Type、浅色/深色和小屏/大屏操作证据。
+1. 用两个测试账号在部署后的 staging 上重新执行 Match 全链路，并保留真实 iPhone 操作证据；✅（2026-09-20，iPhone 17e）
+2. 用 9 张 Picsum 照片完成上传、排序、主照片、删除和 Profile Preview 的部署后截图，并验证第 10 张被拒绝；✅（9 张已手测；第 10 张已在 iPhone 17e 与 API 边界测试通过，2026-09-20）
+3. 接入并验收 Matches 列表的 Stream 最后一条消息、未读数、打开 Chat 后清零和稳定排序；✅（2026-09-20，iPhone 17e）
+4. 在真实 iPhone 上完成 VoiceOver、Dynamic Type、浅色/深色和小屏/大屏操作证据；✅（VoiceOver 开启状态下真机 UI 2/2 通过；Dynamic Type、浅色/深色、小屏/大屏已通过，2026-09-20）
 
 **依赖：** Step 02、Step 05、Step 06A、Step 14A。
 
@@ -1140,7 +1140,7 @@ xcodebuild test \
 
 ### Step 07：Block 与 Report 安全基础
 
-**状态：🟡 未完成（Match/Swipe 安全联动待重新验收）。** 原有双向 Block、Profile 举报、Report and Block 和后台审计证据仍有效；Like、Pass、Match、Unmatch、已打开聊天和 Match 候选池的隔离尚未完成。
+**状态：🟡 进行中（安全联动已补齐，部署后验收待完成）。** 原有双向 Block、Profile 举报、Report and Block 和后台审计证据已通过 Render staging；本轮已补充 Block/Report and Block 在同一事务内撤销双方 Like/Pass、关闭 active Match，Direct Chat 继续由后端 Block gate 强制拒绝。新增代码的 Render 部署后双账号验收仍待完成。
 
 **依赖：** Step 05、Step 06。
 
@@ -1151,8 +1151,8 @@ xcodebuild test \
 3. 实现通用 `POST /v1/reports`，先支持 User Profile 举报；
 4. 在 Other Profile 添加 Block、Report、Report and Block；
 5. 在所有用户查询建立共享 block policy；
-6. 对 Block/Report/Like/Pass/Match/Unmatch 接口加权限校验、rate limit 和 request audit metadata；
-7. Block 后立即撤销候选、Like、Match 和 Direct Chat 权限；
+6. 对 Block/Report/Like/Pass/Match/Unmatch 接口加权限校验、rate limit 和 request audit metadata；✅
+7. Block 后立即撤销候选、Like、Match 和 Direct Chat 权限；✅（本地 PostgreSQL integration 覆盖 Match/Like 撤销；Render 部署后待复验）
 8. Report and Block、暂停用户和删除账户必须覆盖已存在 Match 与已打开 Stream channel。
 
 **可测试 Deliverable：**
@@ -1161,7 +1161,7 @@ xcodebuild test \
 - Settings > Blocked Users 可查看和解除；
 - Report 会生成 reference ID 和不可变目标快照；
 - 双向 Discover 隔离测试。
-- Match 候选池、Like、Match 和 Direct Chat 的双向隔离测试。
+- Match 候选池、Like、Match 和 Direct Chat 的双向隔离测试；新增 Block 后已有 Match/Like 撤销回归测试。
 
 **测试方法：**
 
@@ -1170,7 +1170,7 @@ xcodebuild test \
 3. 重复 block 幂等，自己 block 自己返回 422；
 4. Report target 不存在或 target type 不合法时拒绝；
 5. 修改被举报 Profile 后，report snapshot 仍保留提交时内容。
-6. Match、Unmatch、Block、Report and Block 的组合状态不能绕过聊天权限。
+6. Match、Unmatch、Block、Report and Block 的组合状态不能绕过聊天权限；Block 后旧 Match/Like 不得恢复聊天或重新 Match。
 
 **通过标准：** Block 是后端强制策略而不只是客户端隐藏；Profile 举报已进入可审核的数据队列。
 

@@ -119,6 +119,26 @@ describe('profile routes', () => {
     }]);
   });
 
+  it('rejects a tenth photo before creating upload URLs', async () => {
+    const createPhotoUploads = vi.fn();
+    const photos = Array.from({ length: 10 }, (_, index) => ({
+      clientID: `photo-${index + 1}`,
+      fileName: `${index + 1}.jpg`,
+      contentType: 'image/jpeg',
+      byteSize: 1000,
+    }));
+    const response = await request(createTestApp({
+      authService: authenticated,
+      profileService: createProfileServiceStub({ createPhotoUploads }),
+    }))
+      .post('/v1/me/photos/upload-urls')
+      .set('Authorization', 'Bearer verified-access-token')
+      .send({ photos });
+
+    expect(response.status).toBe(422);
+    expect(createPhotoUploads).not.toHaveBeenCalled();
+  });
+
   it('shares the batch rate limit between legacy single and batch requests and returns Retry-After', async () => {
     const rateLimiter = new InMemoryRateLimiter(60_000, 1);
     const app = createTestApp({

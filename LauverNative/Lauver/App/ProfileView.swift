@@ -479,10 +479,24 @@ private struct EditProfileView: View {
                     HStack {
                         Text("Photos")
                         Spacer()
+                        if editorPhotos.count >= 9 {
+                            Text("Photo limit reached")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("profile-photo-limit-reached")
+                        }
                         EditButton()
                     }
                 } footer: {
-                    Text("Up to 9 photos. Drag to reorder; the first photo is primary.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Up to 9 photos. Drag to reorder; the first photo is primary.")
+                        if editorPhotos.count >= 9 {
+                            Text("Photo limit reached")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("profile-photo-limit-reached")
+                        }
+                    }
                 }
 
                 Section("Basics") {

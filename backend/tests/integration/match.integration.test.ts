@@ -123,4 +123,19 @@ describe('Match PostgreSQL invariants', () => {
     const rematchCandidatePage = await service.candidates(concurrentA, { limit: 50, gender: undefined, maxDistanceKm: null, sport: undefined });
     expect(rematchCandidatePage.users.some(candidate => candidate.id === concurrentB)).toBe(true);
   });
+
+  it('revokes existing Match and Like state when either user blocks the other', async () => {
+    await expect(service.swipe(viewer, target, 'like')).resolves.toMatchObject({ matched: true });
+    expect(await service.list(viewer)).toHaveLength(1);
+
+    await database.safetyService.block(viewer, target, 'match-block-revocation');
+
+    expect(await service.list(viewer)).toEqual([]);
+    expect(await database.client.swipe.count({ where: { OR: [
+      { actorId: viewer, targetId: target },
+      { actorId: target, targetId: viewer },
+    ] } })).toBe(0);
+    await expect(service.swipe(target, viewer, 'like')).rejects.toMatchObject({ code: 'match_blocked' });
+    await database.safetyService.unblock(viewer, target, 'match-block-revocation-cleanup');
+  });
 });
