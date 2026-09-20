@@ -71,3 +71,11 @@ npx tsx scripts/verify-step-10-staging.ts /tmp/step10-login.json /tmp/lauver-ste
 - 第三用户无法读取、发送既有 direct channel；Block 后已打开会话发送被服务端拒绝。
 - Report Message 成功保存 channel/message ID、发送者和文本快照，并写入 `report_message` 审计事件。
 - 断网发送、恢复后重试和幂等行为已在真机手动验证，无重复消息。
+
+## 2026-09-20 iPhone 17e 与 Render 复验
+
+- 修复 `LauverUITests.swift` 两处消息文本插值：由字面量 `String(UUID().uuidString.prefix(8))` 改为 Swift 插值 `\(UUID().uuidString.prefix(8))`，避免该调试字符串进入真实 Chat 消息和 Matches 预览。
+- Backend lint、typecheck、build 和 unit tests **186/186** 通过；原生 XCTest **108/108** 通过。
+- Render staging `https://lauver-api-staging.onrender.com`：`/healthz` 200、`/readyz` 200 且 database 为 `ok`；未认证访问 `/v1/chat/token` 和 `/v1/chat/direct` 均返回 401，确认 Chat 路由仍受 Lauver session 保护。
+- iPhone 17e（iOS 26.6.1，CoreDevice `16753B2D-88AB-5D77-82BF-B1EA68946526`）最新 Staging 包构建、安装和启动成功，设备进程可见 `Lauver.app/Lauver`。
+- 真机 UI 测试 `testLiveStreamChatConnectsOnDevice` 在设备解锁后通过，耗时约 **18.9 秒**；Messages 页面成功连接且没有 `state-error`。此前两次 `Timed out while enabling automation mode` 属于设备自动化初始化状态，解锁并重试后已恢复。

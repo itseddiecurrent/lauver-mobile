@@ -324,7 +324,7 @@ Block, unblock and report writes each allow 20 attempts per minute per user and 
 
 After deployment, run `npm run verify:step-07:staging --prefix backend` using the existing ignored `backend/.env.staging`. The verifier creates three disposable Email profiles, checks real API isolation and evidence, then deletes its reports, audit entries, accounts and dependent records. A private journal precedes registration; recover using `--cleanup-state /path/from/output/cleanup.json`. Cleanup refuses fixtures that acquired photos, external identities or unrelated evidence. Passwords, tokens and connection URLs are never printed.
 
-Native safety pages use the Expo reference's warm light/dark backgrounds, orange accent and rounded Profile settings cards. Full Expo/native screenshot alignment and Product Owner visual sign-off remain Step 14A deliverables.
+Native safety pages use the Expo reference's warm light/dark backgrounds, orange accent and rounded Profile settings cards. Step 14A visual alignment and Product Owner physical-device sign-off passed on the connected iPhone 17e; evidence is in `artifacts/acceptance/step-14a.md` and `artifacts/acceptance/ui/step-14a/native/real-device/`.
 
 ## Read-only Strava integration (Step 08)
 

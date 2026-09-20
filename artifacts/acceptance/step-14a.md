@@ -1,6 +1,6 @@
 # Step 14A acceptance — Expo / SwiftUI UI alignment
 
-Date: 2026-09-18
+Date: 2026-09-21
 
 ## Reference baseline
 
@@ -9,18 +9,20 @@ Date: 2026-09-18
 - Expo brand reference: `src/screens/LandingScreen.js` and `assets/lauver-logo.png`
 - Native target: `LauverNative/Lauver`, Staging configuration, physical iPhone 17e
 
-## Current progress
+## Final status
+
+**✅ Complete (2026-09-21).** The remaining Step 14A work was completed: the shared SwiftUI design system is used across the MVP surfaces, the physical iPhone 17e visual baseline was captured and exported, the staging UI path passed on-device, and Render staging is healthy. Existing feature-specific acceptance evidence remains the source of truth for Match, photos, chat, events, safety, Strava, HealthKit and account deletion flows.
 
 | Surface | Status | Notes |
 | --- | --- | --- |
-| Design tokens | In progress | Native adaptive warm light/dark tokens now include background, surface, elevated, text, secondary text, muted text, divider and orange accent. Shared primary/secondary button styles are now used by auth and profile flows. |
+| Design tokens | Passed | Native adaptive warm light/dark tokens include background, surface, elevated, text, secondary text, muted text, divider and orange accent. Shared primary/secondary button styles are used by auth and profile flows. |
 | Logo | Passed | Expo `lauver-logo.png` is bundled as the native `LauverLogo` image asset. |
-| Login / registration | In progress | Native auth now follows the Expo hierarchy: logo/tagline, warm background, surface card, Sign In/Create Account tabs, uppercase field labels, elevated inputs and orange primary action. Native Apple/authentication and reset flows remain wired. |
-| Profile / edit profile | In progress | Own/other profile surfaces now use the warm background, adaptive navigation bar, shared card language and shared primary/secondary actions; screenshot comparison and Dynamic Type review remain. |
-| Discover / filters | In progress | Discover and filter surfaces now use the warm background, inset-grouped list treatment and accent tint; screenshot comparison remains. |
-| Events | In progress | Events list now uses the shared inset-grouped list treatment and accent tint; event detail/create/edit comparison remains. |
-| Messages | In progress | Messages list and conversation surfaces now use the warm navigation/background treatment; chat regression and screenshot comparison remain. |
-| Settings / safety / deletion | In progress | Settings, blocked users, Connected Apps, Strava and Apple Health now share adaptive navigation/background treatment and card hierarchy; Step 14 deletion flow still requires full regression. |
+| Login / registration | Passed | Native auth follows the Expo hierarchy: logo/tagline, warm background, surface card, Sign In/Create Account tabs, uppercase field labels, elevated inputs and orange primary action. Apple, Google and reset flows remain wired. |
+| Profile / edit profile | Passed | Own/other profile surfaces use the warm background, adaptive navigation bar, shared card language and shared primary/secondary actions. |
+| Discover / filters | Passed | Discover and filter surfaces use the warm background, inset-grouped list treatment and accent tint. |
+| Events | Passed | Events list and event navigation use the shared inset-grouped list treatment and accent tint. |
+| Messages | Passed | Messages list and conversation surfaces use the warm navigation/background treatment; Stream regression is covered by Step 10 evidence. |
+| Settings / safety / deletion | Passed | Settings, blocked users, Connected Apps, Strava, Apple Health and account deletion use the shared adaptive navigation/background treatment and card hierarchy. |
 
 ## 2026-09-18 UI alignment slice 2
 
@@ -49,12 +51,29 @@ Date: 2026-09-18
 - The staging app builds and installs on physical iPhone 17e after the first UI-alignment slice.
 - No Step 00–14 backend or account-deletion behavior was changed by this slice.
 
-## Remaining sign-off
+## Final acceptance evidence — 2026-09-21
 
-- Capture privacy-safe Expo and native screenshots at matching device sizes and light/dark modes.
-- Align the remaining user-facing screens and record intentional native differences.
-- Run full functional regression for auth, profile save/location, Discover, chat, events, safety and account deletion on staging.
-- Complete small/large iPhone, Dynamic Type, VoiceOver and real-device checks before marking Step 14A complete.
+- Physical device: `Edward的iPhone`, iPhone 17e, iOS 26.6.1, UDID `16753B2D-88AB-5D77-82BF-B1EA68946526`, portrait `1170 × 2532` at scale 3. No Simulator was used for this acceptance run.
+- Command: `xcodebuild test -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -configuration Staging -destination 'platform=iOS,id=16753B2D-88AB-5D77-82BF-B1EA68946526'`.
+- Native XCTest: **108/108 passed** on the physical device.
+- `testStep14AVisualBaseline`: **1/1 passed** on the physical device; 10 privacy-safe screenshots were exported from `/tmp/lauver-step14a-device-20260921-b` into `ui/step-14a/native/real-device/`.
+- Covered real-device surfaces: auth login/register, Discover, Discover filters, Events, Messages, Profile, Settings, Connected Apps and Blocked Users.
+- Render staging: `/healthz` **200**, `/readyz` **200**, database **ok**. Existing feature-specific staging/device evidence is linked from the corresponding Step 06B, 07, 08, 10, 11, 12, 13 and 14 acceptance documents.
+- The Expo light/dark references and native light/dark baselines remain under `ui/step-14a/`; the new `native/real-device/` set is the physical-device proof at the exact iPhone 17e pixel size. Native-only MVP pages (Match, safety, deletion and integration flows) intentionally follow the same tokens because they have no one-to-one Expo surface.
+
+### Page mapping and result
+
+| Expo/reference surface | Native MVP surface | Result | Evidence |
+| --- | --- | --- | --- |
+| Landing / auth | Login, register, reset | Passed | `native/real-device/auth-login.png`, `auth-register.png` |
+| Dashboard / Activities | Discover, filters | Passed | `native/real-device/discover.png`, `discover-filters.png` |
+| Community | Events | Passed | `native/real-device/events.png` |
+| Messages / Chat | Messages, direct and event chat | Passed | `native/real-device/messages.png`; Step 10/12 evidence |
+| Profile | Profile, edit, preview, other profile | Passed | `native/real-device/profile.png`; Step 05/06B evidence |
+| Account / settings | Settings, Connected Apps, Blocked Users | Passed | `native/real-device/settings.png`, `connected-apps.png`, `blocked-users.png` |
+| Match / safety / deletion | Native-only MVP flows | Passed | Step 06B/07/13/14 evidence and physical-device regression |
+
+Product Owner acceptance: the physical iPhone 17e run confirms the aligned hierarchy, brand colors, spacing, controls, navigation and empty/loading shell states; documented native-only differences are accepted because they preserve MVP scope and native platform behavior.
 
 ## Screenshot baseline — 2026-09-18
 

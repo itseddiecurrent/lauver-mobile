@@ -45,7 +45,7 @@ final class LauverUITests: XCTestCase {
             throw XCTSkip("Requires explicit two-account live Match acceptance opt-in")
         }
 
-        let message = "Step 06B live (String(UUID().uuidString.prefix(8)))"
+        let message = "Step 06B live (\(UUID().uuidString.prefix(8)))"
         let app = XCUIApplication()
 
         login(email: email1, password: password1, in: app)
@@ -99,7 +99,7 @@ final class LauverUITests: XCTestCase {
         let messageButton = app.buttons["Message Step 06B Tester Two"]
         XCTAssertTrue(messageButton.waitForExistence(timeout: 15))
         messageButton.tap()
-        let message = "iPhone 17e Match (String(UUID().uuidString.prefix(8)))"
+        let message = "iPhone 17e Match (\(UUID().uuidString.prefix(8)))"
         sendLiveMessage(message, in: app)
         app.navigationBars.buttons.firstMatch.tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(

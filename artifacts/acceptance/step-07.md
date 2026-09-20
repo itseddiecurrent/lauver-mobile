@@ -70,3 +70,10 @@ Step 07 功能验收通过：Block 是后端双向强制策略，直接 Profile 
 - 重新检查归档原始 CI 日志 `/tmp/lauver-step07-final-regression-ci-logs.zip`：XCTest 88/88、完整 UI 14/14、`TEST SUCCEEDED`、staging/production 配置检查通过，production dependency audit 为 0 vulnerabilities。完整云端回归已完成，原有中断结果不再构成待办。
 - 本次本地重新执行 Step 07 structure、MVP scope、secret scan、Backend lint/typecheck、unit 129/129、production build 与 `git diff --check`，全部通过。
 - 本次没有重跑真机、staging fixtures 或 PostgreSQL integration；这些项沿用上方已完成的实际验收及清理证据。Step 07 功能验收无剩余项，页面视觉签收继续按 Step 14A 执行。
+
+## 2026-09-20 Render 复验与 iPhone 17e 部署
+
+- Render staging `https://lauver-api-staging.onrender.com` 的 Step 07 verifier 通过 **34/34**：readyz、认证边界、三账号注册/资料、双向 Profile/Discover 隔离、Block 幂等、Blocked Users 所有权、解锁方向隔离、Report reference、不可变快照、坐标/secret 隐私、重复举报、Report and Block 原子操作、非法 target/伪造 reporter/自举报拒绝及删除后 session 401 均通过。
+- verifier 精确清理本轮 **3 个账号、举报、审计和级联关系数据**，未重置 staging schema。
+- 本地回归：Step 07 structure、MVP scope、secret scan、Backend lint/typecheck/build 和 Backend unit **186/186** 通过；Staging/Production configuration 检查通过。
+- 连接设备：iPhone 17e，iOS 26.6.1，CoreDevice `16753B2D-88AB-5D77-82BF-B1EA68946526`。Staging `ai.lauver.app.staging` 构建成功、安装成功并在设备解锁后启动成功；`devicectl` 返回 `Launched application`，设备进程可见 `/private/var/containers/Bundle/Application/.../Lauver.app/Lauver`。主机对同一 Render staging `/healthz` 请求返回 200。第一次锁屏拒绝属于设备状态，解锁后已重试通过。

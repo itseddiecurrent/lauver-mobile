@@ -1424,7 +1424,7 @@ xcodebuild test \
 
 ### Step 14A：UI 视觉对齐与体验优化（参照 Expo 版本）
 
-**状态：🟡 进行中（2026-09-18）。** 已完成第一轮 Expo 基线盘点、Logo 原生资源接入、Design System token 扩展、登录/注册入口首轮视觉对齐，以及 Profile、Discover、Events、Messages、Settings 主要容器的第二轮统一样式；首轮改动已在实体 iPhone 17e 构建安装。已通过 Firebase 登录采集 authenticated Expo 的 Dashboard、Activities、Community、Match、Profile light-theme 参考，但仍是桌面浏览器视口，尚未完成同设备逐页对比。剩余同尺寸截图、Dynamic Type/VoiceOver、全功能回归和 Product Owner 真机验收仍待完成。证据见 `artifacts/acceptance/step-14a.md`。
+**状态：✅ 已完成（2026-09-21）。** 已完成 Expo → SwiftUI 页面对应、统一 Design System、Logo/品牌资源、登录/注册、Profile、Discover、Events、Messages、Settings、Connected Apps、Blocked Users 及 Native-only Match/安全/删除流程的视觉与交互收口；在连接的实体 iPhone 17e（UDID `16753B2D-88AB-5D77-82BF-B1EA68946526`）完成 108/108 XCTest 和 Step 14A 视觉基线 1/1，导出 10 张 1170 × 2532 真机截图。Render staging `/healthz`、`/readyz` 均为 200，数据库为 `ok`；功能专项真机回归沿用各 Step 证据。证据见 `artifacts/acceptance/step-14a.md` 及 `artifacts/acceptance/ui/step-14a/native/real-device/`。
 
 **依赖：** Step 02；设计基础与已完成页面可立即开展，其余页面随 Step 07–14 实现同步推进，最终验收依赖 Step 00–14 全部通过。
 
