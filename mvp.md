@@ -1493,7 +1493,7 @@ xcodebuild test \
 
 ### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已配置加密 `SUPABASE_DATABASE_URL`，最新 `/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；Step 15 follow-up 定向 UI XCTest 3/3 通过，完整真机 UI 回归 28 项为 20 通过、5 跳过、3 个已记录的 staging 数据前置条件失败，未发现闪退；当前 Team 的 `ai.lauver.app.release` Production archive 已成功并包含 HealthKit/Sign in with Apple entitlements，但仅使用 Apple Development 签名；正式 Distribution IPA、TestFlight/App Store Connect 和最终 Product Owner 签收仍待 Distribution signing、可用 Production API 及商店资料）。**
+**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已配置加密 `SUPABASE_DATABASE_URL`，最新 `/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；Step 15 follow-up 定向 UI XCTest 3/3 通过，完整真机 UI 回归 28 项为 20 通过、5 跳过、3 个已记录的 staging 数据前置条件失败，未发现闪退；`ai.lauver.app.release` Production archive 已成功并包含 HealthKit/Sign in with Apple entitlements，已用 Apple Distribution 导出可上传 TestFlight 的 IPA，内部 TestFlight 路径继续使用现有 Render staging API 以避免新增 service 成本；当前只剩 App Store Connect 上传/processing、商店资料、内部 E2E 和最终 Product Owner 签收，正式生产 DNS/API 切换另行完成）。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 

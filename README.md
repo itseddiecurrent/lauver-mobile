@@ -283,7 +283,7 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 
 ### Step 15 release acceptance (2026-09-21)
 
-The current release evidence is recorded in [`report.md`](report.md), [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md), and [`docs/testflight-release.md`](docs/testflight-release.md). The connected physical iPhone 17e passed all 109 native XCTest cases on the current commit; the targeted Step 15 UI follow-up passed 3/3, and the latest full UI run had 20 passes, 5 explicit skips, and 3 known staging-data prerequisite failures. No app crash was observed. A Production archive for `ai.lauver.app.release` succeeded with the required HealthKit and Sign in with Apple entitlements; it is currently development-signed, so TestFlight upload still awaits Apple Distribution signing and a reachable Production API.
+The current release evidence is recorded in [`report.md`](report.md), [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md), and [`docs/testflight-release.md`](docs/testflight-release.md). The connected physical iPhone 17e passed all 109 native XCTest cases on the current commit; the targeted Step 15 UI follow-up passed 3/3, and the latest full UI run had 20 passes, 5 explicit skips, and 3 known staging-data prerequisite failures. No app crash was observed. The `ai.lauver.app.release` App Store Connect export is now an Apple Distribution-signed IPA using the existing Render staging API for the no-extra-service internal TestFlight path; upload/processing and internal E2E remain. The `api.lauver.ai` production DNS/TLS cutover remains separate.
 
 The Step 15 follow-up UI fixes are covered by three targeted physical-device UI tests: the pre-login staging label is absent, an incomplete profile shows the localized location prompt in both Discover and Match in English and Simplified Chinese without the connection-error state, and the Simplified Chinese Discover/Events titles, distance note, tab labels and event filters are visible. The Render staging service has `SUPABASE_DATABASE_URL` configured and remains the deployment target for verified pushes.
 
@@ -291,9 +291,9 @@ The Render staging source remains `main`/`render.yaml`; pushing a verified commi
 
 Step 01 Render staging acceptance is complete. Before the final external handoff, the project owner will still need to provide or confirm:
 
-- Apple Distribution certificate and App Store provisioning profile for the existing `ai.lauver.app.release` App ID with HealthKit and Sign in with Apple enabled;
+- App Store Connect upload/processing and internal TestFlight E2E for the existing `ai.lauver.app.release` App ID; the local Distribution certificate/profile and IPA are already verified;
 - a Render production project (staging is defined by `render.yaml`);
-- a reachable Production API matching `LauverNative/Config/Production.xcconfig` (the current `https://api.lauver.ai` endpoint failed TLS health probes);
+- a Production API and DNS/TLS cutover before any public release; the current internal TestFlight config intentionally uses `https://lauver-api-staging.onrender.com`;
 - Strava staging/production applications;
 - Stream Chat staging/production applications;
 - an S3-compatible object-storage bucket;

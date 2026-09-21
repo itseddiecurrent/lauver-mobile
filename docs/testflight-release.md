@@ -9,10 +9,10 @@
 - Render staging：`/healthz` 和 `/readyz` 均为 HTTP 200，`/readyz` 报告 `database: ok`。
 - Backend：190/190 Vitest 通过；migration-from-zero/integration：17 个 migration、71/71 通过。
 - 真机：连接的 iPhone 17e（UDID `00008150-00010C6E22C0C01C`）原生 XCTest 109/109 通过。Step 15 的测试只允许使用这个 physical-device destination，不使用 Simulator。
-- `Lauver-Production` archive 已成功，bundle ID 为 `ai.lauver.app.release`，Team ID 为 `94KFUD562T`，HealthKit 和 Sign in with Apple entitlements 已包含；当前 archive 使用 Apple Development 签名，尚不是可上传 TestFlight 的 Distribution archive。
+- `Lauver-Production` archive 已成功，bundle ID 为 `ai.lauver.app.release`，Team ID 为 `94KFUD562T`，HealthKit 和 Sign in with Apple entitlements 已包含。随后 `exportArchive` 已成功生成可上传 TestFlight 的 Distribution IPA：[`Lauver.ipa`](../artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa)，签名为 Apple Distribution，`beta-reports-active=true` 且 `get-task-allow=false`。
 - scope check 和 secret scan 已通过。
 
-证据见 [`report.md`](../report.md)、[`artifacts/acceptance/final-test-report.md`](../artifacts/acceptance/final-test-report.md)、真机日志 [`step-15-iphone17e-unit-current.log`](../artifacts/acceptance/step-15-iphone17e-unit-current.log) 和 Production archive 日志 [`step-15-production-release-archive-20260921.log`](../artifacts/acceptance/step-15-production-release-archive-20260921.log)。
+证据见 [`report.md`](../report.md)、[`artifacts/acceptance/final-test-report.md`](../artifacts/acceptance/final-test-report.md)、真机日志 [`step-15-iphone17e-unit-current.log`](../artifacts/acceptance/step-15-iphone17e-unit-current.log)、archive 日志 [`step-15-production-distribution-archive-20260921.log`](../artifacts/acceptance/step-15-production-distribution-archive-20260921.log) 和 export 日志 [`step-15-production-distribution-export-20260921.log`](../artifacts/acceptance/step-15-production-distribution-export-20260921.log)。
 
 ## Render 部署
 
@@ -48,22 +48,20 @@ xcodebuild \
 
 不要使用 `platform=iOS Simulator`、`-destination ... Simulator` 或 `xcrun simctl` 代替这一步。
 
-## 还不能在本机完成的原因
+## 还需要在 App Store Connect 完成的外部步骤
 
-本机当前只有 Apple Development 证书，没有 Apple Distribution 证书或 App Store provisioning profile。Production archive 已能以当前 Team 的 `ai.lauver.app.release` 构建成功，记录在 [`step-15-production-release-archive-20260921.log`](../artifacts/acceptance/step-15-production-release-archive-20260921.log)；它只能用于本机验证，不能直接上传 TestFlight。
+本机已经具备 team `94KFUD562T` 的 Apple Distribution certificate 和 `ai.lauver.app.release` Store provisioning profile，并已生成可上传 IPA。剩余步骤是：
 
-需要在 Apple Developer / Xcode 账号中完成以下外部配置：
+- 在 App Store Connect 补齐 Privacy Policy、Terms、App Privacy、Export Compliance、Review Notes 和审核账号；
+- 上传下方生成的 `Lauver.ipa`，等待 processing 完成；
+- 先加入 Internal Testers，并用两普通用户 + 一管理员完成 TestFlight E2E；
+- 由于不新增 Render service，当前内部 TestFlight build 使用现有 staging backend；公开生产提交前仍需完成正式 API/DNS/TLS 切换。
 
-- 确认 team `94KFUD562T` 对 `ai.lauver.app.release` 有权；
-- 为该 App ID 开启 HealthKit 和 Sign in with Apple；
-- 创建/下载 Apple Distribution certificate 和 App Store provisioning profile；
-- 创建或下载 Apple Distribution certificate 和 App Store provisioning profile，并在 Xcode Organizer Validate App；App Store Connect 中补齐 Privacy Policy、Terms、App Privacy、Export Compliance、Review Notes 和审核账号。
+为了不新增 Render service 费用，当前 `Lauver-Production` 的内部 TestFlight build 暂时指向现有 `https://lauver-api-staging.onrender.com`。这类 build 必须只分发给 Internal Testers，并在 App Store Connect / Review Notes 中明确是 staging backend；它使用 staging 数据、staging secrets 和 Render free-plan 的可用性，不应提交为公开生产版本。`api.lauver.ai` 的 DNS/TLS 修复仍保留为未来正式生产切换事项。
 
-此外，当前 Production 配置指向 `https://api.lauver.ai`，本次核验中该域名 TLS 连接失败；正式 TestFlight build 不能在没有确认的生产 API 时提交。若暂时使用 Render staging 做内部 TestFlight，必须明确标为内部测试 build，并确认 App Store Connect 的 `ai.lauver.app.release` 与服务端环境策略一致。
+## 可重复的 archive/export 命令
 
-## 有 Apple 交付权限后的命令
-
-先在 `LauverNative/Config/Production.xcconfig` 配置已经上线并通过 `/readyz` 的生产 API，再使用 Xcode 自动签名归档：
+当前按用户要求继续使用现有 Render staging，不新增 Render service。先确认 `/readyz` 为 200，再执行：
 
 ```bash
 xcodebuild \
@@ -76,7 +74,17 @@ xcodebuild \
   archive
 ```
 
-在 Xcode Organizer 中选择该 archive，执行 Validate App，然后 Distribute App → App Store Connect → Upload。上传完成后，在 App Store Connect 的 TestFlight 页面等待 processing，再先给内部测试组发放 build。
+然后用仓库中的 [`step-15-export-options.plist`](../artifacts/acceptance/step-15-export-options.plist) 导出 Distribution IPA：
+
+```bash
+xcodebuild -exportArchive \
+  -archivePath artifacts/acceptance/lauver-production.xcarchive \
+  -exportOptionsPlist artifacts/acceptance/step-15-export-options.plist \
+  -exportPath artifacts/acceptance/testflight-export \
+  -allowProvisioningUpdates
+```
+
+本轮已验证的 IPA 在 [`artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa`](../artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa)。可在 Xcode Organizer 选择 archive Validate App，也可直接在 Transporter/Xcode Organizer 中上传 IPA。上传完成后，在 App Store Connect 的 TestFlight 页面等待 processing，再先给内部测试组发放 build。
 
 导出或上传前检查：bundle ID、版本号/build 号、API endpoint、签名 entitlements、HealthKit purpose string、无数据库/Stream/Apple/Strava secret，并重新运行 scope 和 secret scan。
 

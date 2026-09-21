@@ -2,7 +2,7 @@
 
 详细记录见根目录 [report.md](../../report.md)。
 
-当前状态：🟡 Render→Supabase schema-only cutover、post-cutover API smoke、archive、真机 XCTest、两账号 Match/Stream live E2E 和账户删除真机 UI 流程完成；仅正式签名 IPA、TestFlight/App Store Connect 和最终 Product Owner 签收仍未完成。未发现 App 闪退。
+当前状态：🟡 Render→Supabase schema-only cutover、post-cutover API smoke、archive、Distribution IPA、真机 XCTest、两账号 Match/Stream live E2E 和账户删除真机 UI 流程完成；IPA 已到可上传 TestFlight 的阶段，仍需 App Store Connect 上传/processing、商店资料、内测 E2E 和最终 Product Owner 签收。未发现 App 闪退。
 
 设备证据：实体 iPhone 17e（UDID `00008150-00010C6E22C0C01C`），未使用 Simulator。结果 bundle：`step-15-device-tests-unlocked.xcresult`；补跑结果记录在根目录 `report.md`。
 
@@ -20,7 +20,7 @@
 - 定向中文 UI XCTest 3/3 passed；Stream 空频道视觉文案还需要一个真实登录账号的空频道进行最终人工点验。详细记录见 [`step-15-chat-localization.md`](step-15-chat-localization.md)。
 - 最新 Render `/healthz` 和 `/readyz` 均为 HTTP 200，`/readyz` 报告 `database: ok`；已配置的加密 `SUPABASE_DATABASE_URL` 未进入仓库。
 
-## Production archive handoff (2026-09-21)
+## Production archive/export handoff (2026-09-21)
 
-- 当前 commit 的 `Lauver-Production` archive 已成功，目标为 `generic/platform=iOS`，没有启动 Simulator；bundle ID 为 `ai.lauver.app.release`，HealthKit 和 Sign in with Apple entitlements 已包含。完整输出见 [`step-15-production-release-archive-20260921.log`](step-15-production-release-archive-20260921.log)。
-- 当前 archive 使用 Apple Development 证书；本机没有 Apple Distribution certificate/profile，因此尚不能导出可上传 TestFlight 的 IPA。TestFlight 提交前还需完成 Distribution signing、App Privacy/Review Notes、审核账号和可用的 Production API。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。
+- 当前 commit 的 `Lauver-Production` archive 已成功，目标为 `generic/platform=iOS`，没有启动 Simulator；bundle ID 为 `ai.lauver.app.release`，HealthKit 和 Sign in with Apple entitlements 已包含。输出见 [`step-15-production-distribution-archive-20260921.log`](step-15-production-distribution-archive-20260921.log)。
+- `exportArchive` 已成功生成 [`Lauver.ipa`](step-15-production-distribution-20260921/Lauver.ipa)，并验证 Apple Distribution、Store provisioning profile、`beta-reports-active=true`、`get-task-allow=false`；输出见 [`step-15-production-distribution-export-20260921.log`](step-15-production-distribution-export-20260921.log)。TestFlight 提交前只剩 App Store Connect 上传/processing、商店资料和内测验收。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。

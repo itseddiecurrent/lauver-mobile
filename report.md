@@ -6,7 +6,7 @@
 
 ## 结论
 
-本轮没有发现 App 闪退。真机 XCTest 109/109 通过；完整 XCUITest 28 个用例为 20 通过、5 跳过、3 失败。失败均为 XCTest 断言或 staging 测试数据前置条件，不是 crash。当前 `ai.lauver.app.release` Production archive 已成功生成并包含 HealthKit/Sign in with Apple entitlements，但仍是 Apple Development 签名，尚未导出可上传 TestFlight 的 Distribution IPA。
+本轮没有发现 App 闪退。真机 XCTest 109/109 通过；完整 XCUITest 28 个用例为 20 通过、5 跳过、3 失败。失败均为 XCTest 断言或 staging 测试数据前置条件，不是 crash。当前 `ai.lauver.app.release` 内部 TestFlight 配置已指向现有 Render staging API，Production archive 包含 HealthKit/Sign in with Apple entitlements，并已导出 Apple Distribution 签名的可上传 TestFlight IPA。
 
 ## 真机执行记录
 
@@ -40,8 +40,8 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 ## 尚未签收的事项
 
 1. 两账号 Match/Stream live E2E 已使用本机测试账号在实体 iPhone 17e 重跑通过；账户删除 UI 已改为可滚动、大尺寸真机 sheet，并在有效签名下重跑通过（1/1）。
-2. TestFlight 上传、App Store Connect App Privacy/Review Notes 和正式 Distribution IPA 尚未在本机完成；Production archive 已成功，但当前只有 Apple Development 证书。
-3. 当前 Production 配置的 `https://api.lauver.ai` TLS 健康探针失败；Render staging `/healthz` 和 `/readyz` 均已恢复 HTTP 200，`database: ok`。
+2. IPA 已完成 Distribution export；仍需在 App Store Connect 上传并等待 processing，补齐 App Privacy/Review Notes、审核账号和内部 E2E。
+3. 内部 TestFlight 使用 Render staging：`/healthz` 和 `/readyz` 均已恢复 HTTP 200，`database: ok`；正式 `api.lauver.ai` DNS/TLS 切换仍未完成。
 4. 根目录旧 Expo `__tests__/schema/db_schema.test.js` 针对历史 Supabase schema，当前仓库没有对应 Supabase CLI/目标 schema；本轮未将其失败误算为当前 Express/Prisma backend 的 Step 15 失败。
 
 ## Supabase / native runtime verification (2026-09-21)
@@ -107,4 +107,11 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - Re-ran `LauverTests` on the connected physical iPhone 17e with UDID `00008150-00010C6E22C0C01C`; 109/109 passed. The command used an explicit `-destination id=...` and did not use a Simulator. Log: `artifacts/acceptance/step-15-iphone17e-current-unit.log`.
 - Render probes at handoff: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `database: ok`.
 - The current `Lauver-Production` archive with `generic/platform=iOS` succeeded for `ai.lauver.app.release` and includes HealthKit and Sign in with Apple entitlements. Log: `artifacts/acceptance/step-15-production-release-archive-20260921.log`.
-- This leaves an actionable external handoff, not an app-code blocker: provide Apple Distribution signing, confirm a reachable Production API, complete App Store Connect metadata, then validate and upload from Xcode Organizer. The exact checklist is `docs/testflight-release.md`.
+- Distribution signing and Store profile are now available locally. The latest archive/export produced an upload-ready IPA at `artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa`; signature and entitlements were scanned successfully. The remaining handoff is App Store Connect upload/processing, metadata, internal TestFlight E2E, and final sign-off. The exact checklist is `docs/testflight-release.md`.
+
+## Distribution export verification (2026-09-21)
+
+- `xcodebuild -exportArchive` succeeded with `app-store-connect`; IPA SHA-256 is `2f5f58159766af6f125c44899f17bc59d09b7f921fa512aca125842f0a1f0648`.
+- IPA metadata is `ai.lauver.app.release`, version `1.0.0 (1)`, API endpoint `https://lauver-api-staging.onrender.com`.
+- Codesign is `Apple Distribution: Qianfu Tang (94KFUD562T)`; embedded profile is `iOS Team Store Provisioning Profile: ai.lauver.app.release`; `beta-reports-active=true`, `get-task-allow=false`, HealthKit and Sign in with Apple are present.
+- Render probes immediately before handoff: `/healthz` and `/readyz` HTTP 200; `/readyz` reports `database: ok`.

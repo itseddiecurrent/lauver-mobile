@@ -2,5 +2,7 @@
 #include? "Local.xcconfig"
 
 APP_ENVIRONMENT = production
-API_BASE_URL = https:/$()/api.lauver.ai
+// Internal TestFlight build: use the existing Render staging service until a
+// paid/production Render service and custom domain are provisioned.
+API_BASE_URL = https:/$()/lauver-api-staging.onrender.com
 PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.release
