@@ -44,9 +44,19 @@ removing the fallback or deleting the Render database.
 
 ## Current evidence
 
-The migration files and cutover scripts are committed locally. Remote schema
-push/data copy and post-cutover iPhone acceptance are not marked complete until
-the Supabase credentialed commands above and the deployed Render checks succeed.
+On 2026-09-21, the linked Supabase project `lauver`
+(`kmwfgkibdqartalfsajy`) accepted
+`supabase/migrations/20260921000000_native_api_schema.sql` through the
+authenticated Management API database-query path. The remote verification
+reported 30 native tables, 209 native columns, 61 native constraints and 17
+Prisma migration ledger rows. No native schema existed before this operation.
+
+The Render data-copy phase is still pending: the current Render staging
+external database connection accepts TCP/TLS negotiation but closes the
+PostgreSQL session before authentication from this machine. `psql`, `pg_dump`
+and Node `pg` reproduced the same failure. No source data was deleted or
+modified. Post-cutover iPhone acceptance remains pending until data copy and
+Render `SUPABASE_DATABASE_URL` cutover succeed.
 
 The non-simulator verification run on 2026-09-21 used the connected physical
 iPhone 17e (`16753B2D-88AB-5D77-82BF-B1EA68946526`): native XCTest 109/109

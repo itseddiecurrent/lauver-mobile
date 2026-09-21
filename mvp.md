@@ -1490,7 +1490,7 @@ xcodebuild test \
 
 ### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 真机签名测试、两账号 Match/Stream live E2E、账户删除 1/1、Render health/ready 检查、原生 XCTest 和 staging archive；本次已提交 Render → Supabase native schema migration、数据导入脚本与 Render 切换配置，但尚未在带凭据的 Supabase/Render 环境执行远端 cutover；TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。**
+**状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 真机签名测试、两账号 Match/Stream live E2E、账户删除 1/1、Render health/ready 检查、原生 XCTest 和 staging archive；Supabase 远端 native schema 已成功应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render 数据复制因当前机器到 Render PostgreSQL 的会话在认证前被关闭而待重试；Render 切换与 TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 
