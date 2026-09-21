@@ -400,7 +400,8 @@ struct SafetySettingsView: View {
                 Text("This action cannot be undone. You will be signed out immediately.")
             }
             .sheet(isPresented: $showingDeleteReauthentication) {
-                VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: LauverDesign.Spacing.large) {
                     Text("Re-authenticate to delete").font(.title2.weight(.bold))
                     Text("Enter your current password to permanently delete this account.")
                         .foregroundStyle(.secondary)
@@ -442,8 +443,12 @@ struct SafetySettingsView: View {
                     .accessibilityIdentifier("settings-delete-account-apple")
                     Button("Cancel") { showingDeleteReauthentication = false }
                 }
-                .padding(LauverDesign.Spacing.large)
-                .presentationDetents([.medium])
+                    .padding(LauverDesign.Spacing.large)
+                }
+                .scrollDismissesKeyboard(.interactively)
+                // Keep the destructive action above the keyboard on compact
+                // physical devices; the form remains scrollable for Dynamic Type.
+                .presentationDetents([.large])
             }
     }
 

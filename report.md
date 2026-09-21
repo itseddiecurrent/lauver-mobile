@@ -39,7 +39,14 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 
 ## 尚未签收的事项
 
-1. 上述 3 个 UI 失败需要分别补齐 staging Match/Stream 测试数据和 Delete Account UI 可点击性后重跑。
+1. 两账号 Match/Stream live E2E 已使用本机测试账号在实体 iPhone 17e 重跑通过；账户删除 UI 已改为可滚动、大尺寸真机 sheet，并在有效签名下重跑通过（1/1）。
 2. TestFlight 上传、App Store Connect App Privacy/Review Notes 和正式签名 IPA 尚未在本机完成；当前仅完成 staging archive 和真机开发签名安装。
 3. 根目录旧 Expo `__tests__/schema/db_schema.test.js` 针对历史 Supabase schema，当前仓库没有对应 Supabase CLI/目标 schema；本轮未将其失败误算为当前 Express/Prisma backend 的 Step 15 失败。
 
+## Supabase / native runtime verification (2026-09-21)
+
+- Native `Lauver-Staging` build settings: `API_BASE_URL=https://lauver-api-staging.onrender.com`, version `1.0.0` (build `1`); no Supabase URL/key or Supabase SDK is present in the native target.
+- Render staging `/healthz` and `/readyz` returned HTTP 200; `/readyz` reported `database: ok`.
+- The legacy Expo client still initializes Supabase from `.env`, but direct REST probes returned `profiles.id` missing and `public.activities` missing. This is a legacy schema mismatch, not evidence that the native release app is connected to Supabase.
+- Live Match/Stream acceptance rerun: 1/1 passed on the connected iPhone 17e; result bundle: `artifacts/acceptance/step-15-live-match-rerun.xcresult`.
+- Account deletion UI rerun: 1/1 passed on the connected iPhone 17e; result bundle: `artifacts/acceptance/step-15-delete-final-2.xcresult`.

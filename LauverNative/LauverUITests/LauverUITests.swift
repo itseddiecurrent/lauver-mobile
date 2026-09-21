@@ -659,7 +659,9 @@ final class LauverUITests: XCTestCase {
     func testConnectedAppsShowsStravaSummariesAndConfirmsDisconnect() {
         let app = launchAuthenticatedShell()
         selectTab("Profile", in: app)
-        tapWhenHittable(app.buttons["profile-settings"])
+        let settings = app.buttons["profile-settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         tapWhenHittable(app.buttons["settings-connected-apps"])
         tapWhenHittable(app.buttons["connected-apps-strava"])
         XCTAssertTrue(app.staticTexts["strava-connected"].waitForExistence(timeout: 5))
@@ -689,18 +691,30 @@ final class LauverUITests: XCTestCase {
         }
         XCTAssertTrue(deleteAccount.waitForExistence(timeout: 5))
 
-        tapWhenHittable(deleteAccount)
+        deleteAccount.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.alerts["Delete your account?"].waitForExistence(timeout: 5))
         app.alerts.buttons["Cancel"].tap()
         XCTAssertTrue(deleteAccount.exists)
+        let alertDismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: app.alerts["Delete your account?"]
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [alertDismissed], timeout: 5), .completed)
 
-        tapWhenHittable(deleteAccount)
+        // Dismissing the alert can restore the settings scroll view above the
+        // account section on a physical device. Bring the control back into
+        // the viewport before opening the confirmation a second time.
+        for _ in 0..<8 where !deleteAccount.isHittable { app.swipeUp() }
+        XCTAssertTrue(deleteAccount.exists)
+        deleteAccount.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         app.alerts.buttons["Delete Account"].tap()
         let password = app.secureTextFields["settings-delete-account-password"]
         XCTAssertTrue(password.waitForExistence(timeout: 5))
         password.tap()
         password.typeText("test-password")
-        tapWhenHittable(app.buttons["settings-delete-account-submit"])
+        let submit = app.buttons["settings-delete-account-submit"]
+        XCTAssertTrue(submit.exists)
+        submit.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["auth-login"].waitForExistence(timeout: 5))
     }
 

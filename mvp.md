@@ -1490,7 +1490,7 @@ xcodebuild test \
 
 ### Step 15：Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 全量 XCTest、staging archive、Render health/ready 检查和大部分 XCUITest；3 个 UI 断言与 TestFlight/App Store Connect 仍未签收）。未发现 App 闪退。详细记录见 `report.md` 和 `artifacts/acceptance/step-15.md`。**
+**状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 真机签名测试、两账号 Match/Stream live E2E、账户删除 1/1、Render health/ready 检查、原生 XCTest 和 staging archive；仅 TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。当前原生发布 App 连接 Render API，不连接 Supabase；旧 Expo Supabase 数据层探针返回 schema 不匹配，详见根目录 `README.md` 与 `report.md`。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过。
 
