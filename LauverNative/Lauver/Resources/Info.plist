@@ -39,7 +39,7 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIImageName</key>
-		<string>SplashScreen</string>
+		<string>LauverLogo</string>
 	</dict>
 </dict>
 </plist>
