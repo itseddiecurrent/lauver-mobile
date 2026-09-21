@@ -28,5 +28,6 @@
 ## Upload validation follow-up (2026-09-21)
 
 - Transporter 对 build `1.0.0 (1)` 返回 Apple error `90683`：HealthKit entitlement 还要求 `NSHealthUpdateUsageDescription`。原生 `Info.plist` 已补充明确的用户说明，即使 Lauver 只读 Apple Health Workout 摘要、不会写入健康数据。
-- build 已递增为 `1.0.0 (2)`，实体 iPhone 17e 原生 XCTest 109/109 通过，未使用 Simulator。新的 archive 和 Distribution export 均成功。
-- 新 IPA：`artifacts/acceptance/testflight-build2-20260921/Lauver.ipa`；签名为 Apple Distribution，包含 HealthKit 两个 purpose strings、Sign in with Apple、`beta-reports-active=true` 与 `get-task-allow=false`。等待重新上传到 App Store Connect。
+- archive 同时发现 App Icon catalog 缺少 iPhone 和 `ios-marketing` slots；已由既有 1024px 品牌图生成完整图标集，后续 archive 不再产生该 warning。
+- build 已递增为 `1.0.0 (3)`，实体 iPhone 17e 原生 XCTest 109/109 通过，未使用 Simulator。新的 archive 和 Distribution export 均成功。
+- 新 IPA：`artifacts/acceptance/testflight-build3-20260921/Lauver.ipa`；签名为 Apple Distribution，包含 HealthKit 两个 purpose strings、完整 App Icon catalog、Sign in with Apple、`beta-reports-active=true` 与 `get-task-allow=false`。等待重新上传到 App Store Connect。

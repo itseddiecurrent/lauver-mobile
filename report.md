@@ -121,3 +121,9 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - Apple Transporter rejected build `1.0.0 (1)` with error `90683` because the HealthKit entitlement requires `NSHealthUpdateUsageDescription` in addition to the existing read-purpose string.
 - Added a truthful update-purpose string explaining that Lauver does not write to Apple Health, increased `CURRENT_PROJECT_VERSION` to `2`, and reran native XCTest on the physical iPhone 17e: 109/109 passed.
 - Archive and Apple Distribution export for `ai.lauver.app.release` build `1.0.0 (2)` succeeded. The new IPA is `artifacts/acceptance/testflight-build2-20260921/Lauver.ipa` (SHA-256 `35c6e92f64c090237c4337eb9182b74193bec2b8f15c4876c0dc1a6240557a1a`); its final `Info.plist` contains both Health purpose strings, and its signature/entitlements remain valid for internal TestFlight.
+
+## App Icon validation follow-up (2026-09-21)
+
+- The initial App Icon catalog used only a universal entry and archive emitted warnings for missing iPhone and App Store icon slots. The catalog now contains the required iPhone sizes and an `ios-marketing` 1024px entry, all derived from the existing 1024px approved brand source.
+- The final archive no longer has App Icon warnings. Physical iPhone 17e native XCTest again passed 109/109, without a Simulator.
+- The final upload candidate is build `1.0.0 (3)`: `artifacts/acceptance/testflight-build3-20260921/Lauver.ipa`, SHA-256 `fe572f921d37c6979bdb7b994b000beaf065812b07a1cea09da728b3c3c26068`. It is Apple Distribution signed and includes both required HealthKit purpose strings.
