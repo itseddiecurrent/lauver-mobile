@@ -77,5 +77,6 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - Backend regression: 190/190 tests passed. Physical iPhone 17e native XCTest
   rerun: 109/109 passed; result log is
   `artifacts/acceptance/step-15-iphone17e-unit-after-tls.log`.
-- The fix is pushed in the current working tree and requires the next Render
-  deployment before `/readyz` can be expected to recover.
+- Render manually deployed `b92f29b`; `/healthz` and `/readyz` now both return
+  HTTP 200, with `/readyz` reporting `database: ok`. The certificate-chain
+  readiness blocker is cleared.

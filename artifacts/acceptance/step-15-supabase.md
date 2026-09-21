@@ -93,5 +93,7 @@ destination was used.
 - Backend tests now pass 190/190, including three transport regression tests.
 - The connected physical iPhone 17e rerun passed 109/109 native XCTest cases
   using UDID `00008150-00010C6E22C0C01C`; no Simulator destination was used.
-- Commit `a6d6401` contains the preceding readiness record; the TLS fix is
-  pending its Render deployment before `/readyz` can be rechecked.
+- Render manually deployed the TLS fix from commit `b92f29b`. Post-deploy
+  probes now return `/healthz` HTTP 200 and `/readyz` HTTP 200 with
+  `{"database":"ok"}`. The Supabase database readiness blocker is cleared;
+  post-cutover live E2E remains a separate acceptance step.
