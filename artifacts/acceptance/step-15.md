@@ -31,3 +31,9 @@
 - archive 同时发现 App Icon catalog 缺少 iPhone 和 `ios-marketing` slots；已由既有 1024px 品牌图生成完整图标集，后续 archive 不再产生该 warning。
 - build 已递增为 `1.0.0 (3)`，实体 iPhone 17e 原生 XCTest 109/109 通过，未使用 Simulator。新的 archive 和 Distribution export 均成功。
 - 新 IPA：`artifacts/acceptance/testflight-build3-20260921/Lauver.ipa`；签名为 Apple Distribution，包含 HealthKit 两个 purpose strings、完整 App Icon catalog、Sign in with Apple、`beta-reports-active=true` 与 `get-task-allow=false`。等待重新上传到 App Store Connect。
+
+## Transporter 90683 follow-up (2026-09-21)
+
+- Transporter 随后报告缺少 `NSPhotoLibraryUsageDescription` 和 `NSMicrophoneUsageDescription`。前者已如实说明仅访问用户选择的 Profile 照片；后者及二进制已引用的 Camera API 均如实说明 Lauver 不采集音频或相机内容，而是由未使用的聊天 framework API 引用触发声明要求。
+- build 已递增为 `1.0.0 (4)`。实体 iPhone 17e 原生 XCTest 109/109 再次通过；Production archive/export 成功，最终 IPA 已逐项校验包含五个 required purpose strings、Apple Distribution 签名和正确 bundle ID。
+- 请上传 `artifacts/acceptance/testflight-build4-20260921/Lauver.ipa`，SHA-256 `d9f40fecbc68c00ea321f45892f7e4d6d69a2a1e9e0ddcfcab781648b291f7a4`。

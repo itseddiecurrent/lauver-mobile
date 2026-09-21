@@ -36,6 +36,12 @@
 	<string>Lauver reads workout summaries you choose to import. It does not read heart rate, routes, sleep, or medical data.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Lauver does not write to Apple Health. This description is included because the HealthKit entitlement requires it while Lauver imports only the workout summaries you choose.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Lauver lets you choose photos from your library for your workout profile. It accesses only the photos you select.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Lauver does not record or collect audio. This description is included because its chat framework references microphone APIs that Lauver does not use.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Lauver does not access your camera. This description is included because an included framework references camera APIs that Lauver does not use.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Lauver uses your location to show your position on the map and find nearby public events. Your location is not stored.</string>
 	<key>UILaunchScreen</key>

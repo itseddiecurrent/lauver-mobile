@@ -127,3 +127,9 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - The initial App Icon catalog used only a universal entry and archive emitted warnings for missing iPhone and App Store icon slots. The catalog now contains the required iPhone sizes and an `ios-marketing` 1024px entry, all derived from the existing 1024px approved brand source.
 - The final archive no longer has App Icon warnings. Physical iPhone 17e native XCTest again passed 109/109, without a Simulator.
 - The final upload candidate is build `1.0.0 (3)`: `artifacts/acceptance/testflight-build3-20260921/Lauver.ipa`, SHA-256 `fe572f921d37c6979bdb7b994b000beaf065812b07a1cea09da728b3c3c26068`. It is Apple Distribution signed and includes both required HealthKit purpose strings.
+
+## Additional privacy-string validation follow-up (2026-09-21)
+
+- Transporter reported missing Photo Library and Microphone purpose strings. The final `Info.plist` now includes user-facing strings for Health read/update, photo selection, microphone, and camera. The microphone/camera strings truthfully state that Lauver does not record or collect that content; the declarations are required because the included chat framework references those APIs.
+- Physical iPhone 17e XCTest passed 109/109 after this change, with no Simulator. Archive and Apple Distribution export for build `1.0.0 (4)` succeeded.
+- Final IPA: `artifacts/acceptance/testflight-build4-20260921/Lauver.ipa`, SHA-256 `d9f40fecbc68c00ea321f45892f7e4d6d69a2a1e9e0ddcfcab781648b291f7a4`.
