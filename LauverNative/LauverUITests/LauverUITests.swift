@@ -36,6 +36,31 @@ final class LauverUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
+    func testIncompleteProfileShowsChineseLocationPrompt() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-authenticated",
+            "-ui-testing-incomplete-profile",
+            "-ui-testing-reset-state",
+            "-ui-testing-reset-auth",
+            "-AppleLanguages",
+            "(zh-Hans)",
+            "-AppleLocale",
+            "zh_CN",
+        ]
+        app.launch()
+
+        let prompt = app.staticTexts["请完善个人资料中的位置，以开始发现/匹配"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
+
+        // Tab accessibility labels are currently kept language-neutral even when
+        // the content strings switch to Simplified Chinese.
+        app.tabBars.firstMatch.buttons.element(boundBy: 1).tap()
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
+    }
+
     func testLiveStreamChatConnectsOnDevice() {
         let app = XCUIApplication()
         app.launch()

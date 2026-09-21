@@ -11,7 +11,7 @@ Date: 2026-09-21
 | Scope and secret scans | `artifacts/acceptance/step-15-release-hardening.log` | Passed for source and archive |
 | iOS archive | `artifacts/acceptance/step-15-archive-latest.log` | `ARCHIVE SUCCEEDED`, Staging, arm64 iPhoneOS |
 | Physical iPhone 17e native tests | `artifacts/acceptance/step-15-iphone17e-unit-after-tls.log` | 109/109 passed, no Simulator |
-| Step 15 UI follow-up on physical iPhone 17e | `artifacts/acceptance/step-15.md` | 2/2 targeted UI tests passed; login environment label removed and incomplete-profile Discover/Match prompt verified |
+| Step 15 UI follow-up on physical iPhone 17e | `artifacts/acceptance/step-15.md` | 3/3 targeted UI tests passed; login environment label removed and incomplete-profile Discover/Match prompts verified in English and Simplified Chinese |
 | Render/Supabase readiness | `/healthz`, `/readyz` | HTTP 200; database `ok` |
 | Post-cutover API smoke | `artifacts/acceptance/step-15-post-cutover-smoke.log` | Two disposable users, Match and account deletion passed |
 
