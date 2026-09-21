@@ -72,3 +72,13 @@ destination was used.
 - The secret value is intentionally not stored in this repository. After the
   deployment, `/readyz` must return HTTP 200 and the post-cutover staging
   checks can proceed against the Supabase native schema.
+
+## Render deployment follow-up (2026-09-21)
+
+- The project owner manually triggered the Render deployment for commit
+  `4c690b2`; the Render deployment completed successfully.
+- Immediate and delayed probes still report `/healthz` HTTP 200 and `/readyz`
+  HTTP 503 (`service_unavailable`). This means the web process is reachable,
+  but its database `SELECT 1` readiness check is still failing. Supabase
+  post-cutover E2E is therefore not marked passed until Render logs confirm
+  the configured `SUPABASE_DATABASE_URL` connects and `/readyz` returns 200.

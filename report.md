@@ -62,3 +62,7 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - Render already has the encrypted `SUPABASE_DATABASE_URL` configured; the
   current verified push triggers the cutover deployment. Post-cutover live E2E
   is signed off only after `/readyz` returns HTTP 200 again.
+- The project owner manually triggered Render deployment for `4c690b2` and
+  Render reported it successful. Repeated probes after deployment still show
+  `/healthz` HTTP 200 and `/readyz` HTTP 503, so the database readiness issue
+  remains open and no post-cutover live E2E is claimed.

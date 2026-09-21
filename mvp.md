@@ -1490,7 +1490,7 @@ xcodebuild test \
 
 ### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已配置加密 `SUPABASE_DATABASE_URL`，本次 verified commit 推送后将触发 Render 部署并重新检查 `/readyz`；实体 iPhone 17e 原生测试使用真机 destination，未使用模拟器；post-cutover E2E 与 TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。**
+**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已手动成功部署 commit `4c690b2`，但部署后 `/healthz` 为 200、`/readyz` 仍为 503，需根据 Render 日志修复数据库 readiness 后才能完成 post-cutover E2E；实体 iPhone 17e 原生测试使用真机 destination，未使用模拟器；TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 
