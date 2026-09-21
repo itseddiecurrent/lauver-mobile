@@ -108,3 +108,9 @@ destination was used.
   removed through the production deletion orchestration, with no direct write
   to the old Render database. Evidence:
   `artifacts/acceptance/step-15-post-cutover-smoke.log`.
+
+## Latest Render readiness (2026-09-21)
+
+- The encrypted Render `SUPABASE_DATABASE_URL` remains configured outside git.
+- Latest probes after the verified push/deploy path: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `database: ok`.
+- A push to `origin/main` is the deployment trigger; no database credential is written to `render.yaml` or repository documentation.

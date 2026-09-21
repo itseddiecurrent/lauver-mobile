@@ -79,3 +79,10 @@
 "Walking" = "步行";
 "Hiking" = "徒步";
 "Rowing" = "划船";
+"channelList.empty.title" = "让我们开始聊天吧！";
+"channelList.empty.subtitle" = "给朋友发送第一条消息吧？";
+"channelList.empty.button" = "开始聊天";
+"channel.no-content.title" = "开始聊天吧";
+"channel.no-content.message" = "给朋友发送第一条消息吧？";
+"channel.no-content.start" = "开始聊天";
+"channel.item.empty-messages" = "暂无消息";

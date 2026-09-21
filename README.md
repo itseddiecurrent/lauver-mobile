@@ -4,7 +4,7 @@ This repository contains the legacy React Native prototype plus the new native i
 
 ## Runtime backend and Supabase status
 
-The current SwiftUI MVP (`LauverNative`, `Lauver-Staging` and `Lauver-Production`) uses the Express API configured by `API_BASE_URL`; staging points to `https://lauver-api-staging.onrender.com`. The API can now use the Supabase PostgreSQL native schema through Render's encrypted `SUPABASE_DATABASE_URL` setting; the cutover procedure is recorded in [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md). Render `/healthz` and `/readyz` are the release readiness checks.
+The current SwiftUI MVP (`LauverNative`, `Lauver-Staging` and `Lauver-Production`) uses the Express API configured by `API_BASE_URL`; staging points to `https://lauver-api-staging.onrender.com`. The API can now use the Supabase PostgreSQL native schema through Render's configured encrypted `SUPABASE_DATABASE_URL` setting; pushing `origin/main` triggers the Render deployment. The cutover procedure is recorded in [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md). Render `/healthz` and `/readyz` are the release readiness checks.
 
 The `src/` Expo prototype is legacy/reference code and still contains a Supabase client configured by `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. That path is not the native release app. On 2026-09-21, direct REST probes of the linked Supabase project returned `profiles.id` missing and `public.activities` missing; do not treat the legacy Expo Supabase path as a working backend until its schema is migrated or the prototype is retired.
 

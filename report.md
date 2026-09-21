@@ -93,3 +93,10 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
   Match preferences, mutual Match, Matches listing, account deletion and old
   session rejection. Disposable accounts were deleted through the API.
 - Full final report: `artifacts/acceptance/final-test-report.md`.
+
+## Latest chat localization follow-up (2026-09-21)
+
+- Stream Chat empty-state keys are now resolved through the selected native App language. English and Simplified Chinese cover `channelList.empty.*`, `channel.no-content.*`, and `channel.item.empty-messages`; the Chinese copy is recorded in `artifacts/acceptance/step-15-chat-localization.md`.
+- The connected physical iPhone 17e ran the updated `Lauver-Staging` build with no Simulator destination: native XCTest 109/109 passed; full UI XCTest was 28 total, 20 passed, 5 skipped, and 3 existing staging prerequisite/data failures. No crash, SIGABRT, SIGSEGV, watchdog, or termination was recorded.
+- The targeted Chinese UI regression remains 3/3 passed on the same device. The Stream empty-channel visual state itself needs a live account with an empty Stream channel for final manual confirmation.
+- Latest Render probes after the verified deployment path: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `{"status":"ready","service":"lauver-api","database":"ok"}`. The encrypted `SUPABASE_DATABASE_URL` is configured in Render and is not stored in git.

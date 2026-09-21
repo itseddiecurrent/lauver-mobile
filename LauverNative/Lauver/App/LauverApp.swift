@@ -1,4 +1,5 @@
 import SwiftUI
+import StreamChatSwiftUI
 
 @main
 struct LauverApp: App {
@@ -40,6 +41,23 @@ struct LauverApp: App {
             }
             .environmentObject(languageStore)
             .environment(\.locale, languageStore.locale)
+            .onAppear { Self.configureStreamLocalization(for: languageStore.selection) }
+            .onChange(of: languageStore.selection) { _, selection in
+                Self.configureStreamLocalization(for: selection)
+            }
+        }
+    }
+
+    private static func configureStreamLocalization(for language: AppLanguage) {
+        let resourcePath = Bundle.main.path(forResource: language.locale.identifier, ofType: "lproj")
+        let fallback = Appearance.default.localizationProvider
+        Appearance.default.localizationProvider = { key, table in
+            if let resourcePath,
+               let bundle = Bundle(path: resourcePath) {
+                let localized = bundle.localizedString(forKey: key, value: nil, table: table)
+                if localized != key { return localized }
+            }
+            return fallback(key, table)
         }
     }
 

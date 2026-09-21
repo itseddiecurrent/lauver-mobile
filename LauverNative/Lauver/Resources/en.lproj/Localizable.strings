@@ -80,3 +80,10 @@
 "Walking" = "Walking";
 "Hiking" = "Hiking";
 "Rowing" = "Rowing";
+"channelList.empty.title" = "Let's start chatting!";
+"channelList.empty.subtitle" = "How about sending your first message to a friend?";
+"channelList.empty.button" = "Start a chat";
+"channel.no-content.title" = "Let's start chatting";
+"channel.no-content.message" = "How about sending your first message to a friend?";
+"channel.no-content.start" = "Start a chat";
+"channel.item.empty-messages" = "No messages yet";
