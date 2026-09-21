@@ -1,0 +1,627 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -configuration Staging -destination id=00008150-00010C6E22C0C01C "-only-testing:LauverTests" test CODE_SIGN_STYLE=Automatic
+
+Build settings from command line:
+    CODE_SIGN_STYLE = Automatic
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  StreamChatSwiftUI: https://github.com/GetStream/stream-chat-swiftui.git @ 5.11.0
+  StreamChat: https://github.com/GetStream/stream-chat-swift.git @ 5.11.0
+  StreamCore: https://github.com/GetStream/stream-core-swift.git @ 0.10.1
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (14 targets)
+    Target 'LauverUITests' in project 'Lauver'
+        ➜ Explicit dependency on target 'Lauver' in project 'Lauver'
+    Target 'LauverTests' in project 'Lauver'
+        ➜ Explicit dependency on target 'Lauver' in project 'Lauver'
+    Target 'Lauver' in project 'Lauver'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat_StreamChatCommonUI' in project 'StreamChat' (no dependencies)
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore' (no dependencies)
+    Target 'StreamChat_StreamChat' in project 'StreamChat' (no dependencies)
+    Target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/momc --dry-run --action generate --swift-version 6 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --iphoneos-deployment-target 13.0 --module StreamChat /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift/Sources/StreamChat/Database/StreamChatModel.xcdatamodeld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/DerivedSources/CoreDataGenerated/StreamChatModel
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 2566d265085b60ac0484cf66b391eb29
+Build description path: /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/XCBuildData/2566d265085b60ac0484cf66b391eb29.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChat.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChat.build/empty-StreamChat_StreamChat.plist (in target 'StreamChat_StreamChat' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChat.build/empty-StreamChat_StreamChat.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChat.bundle/Info.plist
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.o normal (in target 'StreamCore' from project 'StreamCore')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-core-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios13.0 -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -w -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore_lto.o -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore-linker-args.resp -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.o
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChatCommonUI.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/empty-StreamChat_StreamChatCommonUI.plist (in target 'StreamChat_StreamChatCommonUI' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/empty-StreamChat_StreamChatCommonUI.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/assetcatalog_generated_info.plist -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChatCommonUI.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/empty-StreamChatSwiftUI_StreamChatSwiftUI.plist (in target 'StreamChatSwiftUI_StreamChatSwiftUI' from project 'StreamChatSwiftUI')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swiftui
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/empty-StreamChatSwiftUI_StreamChatSwiftUI.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/assetcatalog_generated_info.plist -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist
+
+ExtractAppIntentsMetadata (in target 'StreamCore' from project 'StreamCore')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-core-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name StreamCore --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 13.0 --bundle-identifier stream-core-swift.StreamCore --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.appintents --target-triple arm64-apple-ios13.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.o --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/StreamCore.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/StreamCore.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:55:57.600 appintentsmetadataprocessor[74183:7560180] Starting appintentsmetadataprocessor export
+2026-09-21 14:55:57.660 appintentsmetadataprocessor[74183:7560180] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.o (in target 'StreamCore' from project 'StreamCore')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-core-swift
+    builtin-RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamCore.o
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.o normal (in target 'StreamChat' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios13.0 -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -w -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat_lto.o -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat-linker-args.resp -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.o
+
+ExtractAppIntentsMetadata (in target 'StreamChat' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name StreamChat --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 13.0 --bundle-identifier stream-chat-swift.StreamChat --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.appintents --target-triple arm64-apple-ios13.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.o --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/StreamChat.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/StreamChat.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:55:58.052 appintentsmetadataprocessor[74188:7560214] Starting appintentsmetadataprocessor export
+2026-09-21 14:55:58.064 appintentsmetadataprocessor[74188:7560214] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.o (in target 'StreamChat' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat.o
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.o normal (in target 'StreamChatCommonUI' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios13.0 -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -w -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI_lto.o -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI-linker-args.resp -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.o
+
+ExtractAppIntentsMetadata (in target 'StreamChatCommonUI' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name StreamChatCommonUI --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 13.0 --bundle-identifier stream-chat-swift.StreamChatCommonUI --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.appintents --target-triple arm64-apple-ios13.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.o --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/StreamChatCommonUI.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/StreamChatCommonUI.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:55:58.155 appintentsmetadataprocessor[74191:7560237] Starting appintentsmetadataprocessor export
+2026-09-21 14:55:58.162 appintentsmetadataprocessor[74191:7560237] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.o (in target 'StreamChatCommonUI' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatCommonUI.o
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.o normal (in target 'StreamChatSwiftUI' from project 'StreamChatSwiftUI')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swiftui
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios14.0 -r -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -w -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI.LinkFileList -nostdlib -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI_lto.o -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI-linker-args.resp -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.o
+
+ExtractAppIntentsMetadata (in target 'StreamChatSwiftUI' from project 'StreamChatSwiftUI')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swiftui
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name StreamChatSwiftUI --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 14.0 --bundle-identifier stream-chat-swiftui.StreamChatSwiftUI --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.appintents --target-triple arm64-apple-ios14.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.o --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/StreamChatSwiftUI.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/StreamChatSwiftUI.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI.SwiftConstValuesFileList --force --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:55:58.416 appintentsmetadataprocessor[74195:7560258] Starting appintentsmetadataprocessor export
+2026-09-21 14:55:58.427 appintentsmetadataprocessor[74195:7560258] Extracted no relevant App Intents symbols, skipping writing output
+
+RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.o (in target 'StreamChatSwiftUI' from project 'StreamChatSwiftUI')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swiftui
+    builtin-RegisterExecutionPolicyException /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI.o
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib normal (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -install_name @rpath/Lauver.debug.dylib -Xlinker -dead_strip -rdynamic -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver_dependency_info.dat -Xlinker -no_adhoc_codesign -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Info.plist /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Info.plist (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-infoPlistUtility /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChat_StreamChat.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChat_StreamChatCommonUI.bundle -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Info.plist
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib normal (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver.LinkFileList -install_name @rpath/Lauver.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver_lto.o -rdynamic -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver-linker-args.resp -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -Xlinker -no_adhoc_codesign -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI.build/Objects-normal/arm64/StreamChatSwiftUI-linker-args.resp -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/Objects-normal/arm64/StreamChat-linker-args.resp -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamCore.build/Staging-iphoneos/StreamCore.build/Objects-normal/arm64/StreamCore-linker-args.resp -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChatCommonUI.build/Objects-normal/arm64/StreamChatCommonUI-linker-args.resp
+
+ConstructStubExecutorLinkFileList /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver-ExecutorLinkFileList-normal-arm64.txt (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    construct-stub-executor-link-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'Lauver' from project 'Lauver')
+
+GenerateDSYMFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app.dSYM /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app.dSYM
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver normal (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -Xlinker -rpath -Xlinker @executable_path -rdynamic -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver-ExecutorLinkFileList-normal-arm64.txt /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib -Xlinker -no_adhoc_codesign -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver
+
+GenerateDSYMFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app.dSYM /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil -q /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app.dSYM
+
+CopySwiftLibs /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-swiftStdLibTool --copy --verbose --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --scan-executable /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Frameworks --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/SystemExtensions --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name Lauver --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 17.0 --bundle-identifier ai.lauver.app.staging --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app --target-triple arm64-apple-ios17.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Objects-normal/arm64/Lauver.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:55:59.429 appintentsmetadataprocessor[74204:7560323] Starting appintentsmetadataprocessor export
+2026-09-21 14:55:59.443 appintentsmetadataprocessor[74204:7560323] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/empty-LauverTests.plist (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/empty-LauverTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphoneos -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/StreamChatSwiftUI_StreamChatSwiftUI.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/StreamChat_StreamChat.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/StreamChat_StreamChatCommonUI.bundle -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/Info.plist
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests normal (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0 -bundle -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -L/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/PackageFrameworks -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/Frameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -bundle_loader /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests_lto.o -rdynamic -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests-linker-args.resp -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib -Xlinker -no_adhoc_codesign -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests
+
+CopySwiftLibs /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-swiftStdLibTool --copy --verbose --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --scan-executable /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/Frameworks --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/PlugIns --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/SystemExtensions --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name LauverTests --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 17.0 --bundle-identifier ai.lauver.app.tests --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest --target-triple arm64-apple-ios17.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/LauverTests.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/LauverTests.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverTests.build/Objects-normal/arm64/LauverTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:56:04.163 appintentsmetadataprocessor[74218:7560514] Starting appintentsmetadataprocessor export
+2026-09-21 14:56:04.173 appintentsmetadataprocessor[74218:7560514] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+GenerateDSYMFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest.dSYM /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest/LauverTests -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest.dSYM
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest (in target 'LauverTests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns/LauverTests.xctest
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --entitlements /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app
+
+Validate /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-validationUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app -shallow-bundle -infoplist-subpath Info.plist
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/Info.plist /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/LauverUITests/Info.plist (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-infoPlistUtility /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/LauverUITests/Info.plist -producttype com.apple.product-type.bundle.ui-testing -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/ProductTypeInfoPlistAdditions.plist -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/Info.plist
+
+Ld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests normal (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0 -bundle -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -Os -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -L/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -L/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/EagerLinkingTBDs/Staging-iphoneos -F/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/Library/Frameworks -iframework /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk/Developer/Library/Frameworks -filelist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests_lto.o -rdynamic -Xlinker -dependency_info -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests.swiftmodule @/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests-linker-args.resp -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport -Xlinker -no_adhoc_codesign -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests
+
+GenerateDSYMFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest.dSYM /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest.dSYM
+
+CopySwiftLibs /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-swiftStdLibTool --copy --verbose --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --scan-executable /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/Frameworks --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/PlugIns --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/SystemExtensions --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name LauverUITests --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --xcode-version 17F113 --platform-family iOS --deployment-target 17.0 --bundle-identifier ai.lauver.app.uitests --output /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest --target-triple arm64-apple-ios17.0 --binary-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest/LauverUITests --dependency-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests_dependency_info.dat --stringsdata-file /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests.SwiftFileList --metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/LauverUITests.DependencyMetadataFileList --static-metadata-file-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/LauverUITests.DependencyStaticMetadataFileList --swift-const-vals-list /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/Objects-normal/arm64/LauverUITests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-21 14:56:05.259 appintentsmetadataprocessor[74227:7560575] Starting appintentsmetadataprocessor export
+2026-09-21 14:56:05.261 appintentsmetadataprocessor[74227:7560575] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest (in target 'LauverUITests' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (7e634bcf-95a0-4aa7-a92c-544e7eed66d9)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --entitlements /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/LauverUITests.build/LauverUITests.xctest.xcent --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/LauverUITests-Runner.app/PlugIns/LauverUITests.xctest
+
+Test Suite 'All tests' started at 2026-09-21 14:56:11.466.
+Test Suite 'LauverTests.xctest' started at 2026-09-21 14:56:11.467.
+Test Suite 'APIClientTests' started at 2026-09-21 14:56:11.467.
+Test Case '-[LauverTests.APIClientTests testCancelledIdempotentPatchIsNotRetried]' started.
+Test Case '-[LauverTests.APIClientTests testCancelledIdempotentPatchIsNotRetried]' passed (0.002 seconds).
+Test Case '-[LauverTests.APIClientTests testDecodesSuccessfulResponse]' started.
+Test Case '-[LauverTests.APIClientTests testDecodesSuccessfulResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testExplicitlyIdempotentPatchRecoversFromLostConnection]' started.
+2026-09-21 14:56:11.470022+0800 Lauver[4807:2508673] [Default] Task <B9CAD6B2-9EFB-4A2A-8C7F-AB8904780615>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <B9CAD6B2-9EFB-4A2A-8C7F-AB8904780615>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <B9CAD6B2-9EFB-4A2A-8C7F-AB8904780615>.<1>}
+Test Case '-[LauverTests.APIClientTests testExplicitlyIdempotentPatchRecoversFromLostConnection]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps401AndDoesNotRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps401AndDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps404WithPublicMessageAndRequestID]' started.
+Test Case '-[LauverTests.APIClientTests testMaps404WithPublicMessageAndRequestID]' passed (0.000 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps409And429WithoutRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps409And429WithoutRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps422PayloadAndDoesNotRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps422PayloadAndDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPatchWithoutExplicitOptInDoesNotRetry]' started.
+2026-09-21 14:56:11.473399+0800 Lauver[4807:2508669] [Default] Task <AA8A9CE1-407F-4844-A019-C347ADC80FDB>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <AA8A9CE1-407F-4844-A019-C347ADC80FDB>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <AA8A9CE1-407F-4844-A019-C347ADC80FDB>.<1>}
+Test Case '-[LauverTests.APIClientTests testPatchWithoutExplicitOptInDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPostConnectionRetriesRequireOptInAndRespectFailureBoundaries]' started.
+2026-09-21 14:56:11.474029+0800 Lauver[4807:2508674] [Default] Task <068CA5F0-13CD-4943-9F56-D72C931A53F8>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <068CA5F0-13CD-4943-9F56-D72C931A53F8>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <068CA5F0-13CD-4943-9F56-D72C931A53F8>.<1>}
+2026-09-21 14:56:11.474136+0800 Lauver[4807:2508673] [Default] Task <DA844E30-7481-4834-A4FD-88A29BAEA4DB>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <DA844E30-7481-4834-A4FD-88A29BAEA4DB>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <DA844E30-7481-4834-A4FD-88A29BAEA4DB>.<2>}
+2026-09-21 14:56:11.474231+0800 Lauver[4807:2508674] [Default] Task <18365E8E-9A5B-48BD-BC85-4B28249260BA>.<3> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <18365E8E-9A5B-48BD-BC85-4B28249260BA>.<3>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <18365E8E-9A5B-48BD-BC85-4B28249260BA>.<3>}
+2026-09-21 14:56:11.474342+0800 Lauver[4807:2508681] [Default] Task <342A1F15-6B35-4AC9-A761-25BA3C492FE0>.<4> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <342A1F15-6B35-4AC9-A761-25BA3C492FE0>.<4>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <342A1F15-6B35-4AC9-A761-25BA3C492FE0>.<4>}
+2026-09-21 14:56:11.474415+0800 Lauver[4807:2508681] [Default] Task <A70DC8DF-070B-425D-B771-0D30BDD14E9A>.<5> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <A70DC8DF-070B-425D-B771-0D30BDD14E9A>.<5>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <A70DC8DF-070B-425D-B771-0D30BDD14E9A>.<5>}
+2026-09-21 14:56:11.474606+0800 Lauver[4807:2508673] [Default] Task <984708E8-F37A-41AD-AC4E-72C19BD77E78>.<7> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <984708E8-F37A-41AD-AC4E-72C19BD77E78>.<7>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <984708E8-F37A-41AD-AC4E-72C19BD77E78>.<7>}
+Test Case '-[LauverTests.APIClientTests testPostConnectionRetriesRequireOptInAndRespectFailureBoundaries]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPostRequestsNeverRetry]' started.
+Test Case '-[LauverTests.APIClientTests testPostRequestsNeverRetry]' passed (0.000 seconds).
+Test Case '-[LauverTests.APIClientTests testRetries500WithinBoundaryThenReturnsServerError]' started.
+Test Case '-[LauverTests.APIClientTests testRetries500WithinBoundaryThenReturnsServerError]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testRetriesNoNetworkWithinBoundary]' started.
+2026-09-21 14:56:11.476486+0800 Lauver[4807:2508673] [Default] Task <678CC3D0-2822-4A13-96B0-28288D2A0B07>.<1> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <678CC3D0-2822-4A13-96B0-28288D2A0B07>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <678CC3D0-2822-4A13-96B0-28288D2A0B07>.<1>}
+2026-09-21 14:56:11.476573+0800 Lauver[4807:2508681] [Default] Task <5E5FB81B-F9A0-495C-9816-43D5E5DA6BD2>.<2> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <5E5FB81B-F9A0-495C-9816-43D5E5DA6BD2>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <5E5FB81B-F9A0-495C-9816-43D5E5DA6BD2>.<2>}
+Test Case '-[LauverTests.APIClientTests testRetriesNoNetworkWithinBoundary]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testRetriesTimeoutWithinBoundary]' started.
+2026-09-21 14:56:11.477113+0800 Lauver[4807:2508674] [Default] Task <DC9DE299-7402-4871-8931-981261CF79E1>.<1> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <DC9DE299-7402-4871-8931-981261CF79E1>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <DC9DE299-7402-4871-8931-981261CF79E1>.<1>}
+2026-09-21 14:56:11.477185+0800 Lauver[4807:2508673] [Default] Task <A68297F4-6697-49EB-9F13-4396EE6DBB01>.<2> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <A68297F4-6697-49EB-9F13-4396EE6DBB01>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <A68297F4-6697-49EB-9F13-4396EE6DBB01>.<2>}
+Test Case '-[LauverTests.APIClientTests testRetriesTimeoutWithinBoundary]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testSignedPutRetriesTheSameURLOnConnectionLoss]' started.
+2026-09-21 14:56:11.477852+0800 Lauver[4807:2508669] [Default] Task <9500FD11-ECE9-4397-B184-718AEF36565D>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <9500FD11-ECE9-4397-B184-718AEF36565D>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <9500FD11-ECE9-4397-B184-718AEF36565D>.<1>}
+Test Case '-[LauverTests.APIClientTests testSignedPutRetriesTheSameURLOnConnectionLoss]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testSignedPutRetryIsBoundedAndDoesNotRetryCancellationOrHTTPFailures]' started.
+2026-09-21 14:56:11.478675+0800 Lauver[4807:2508673] [Default] Task <6751E9AE-7E83-4FFC-A967-C21D565A49A5>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <6751E9AE-7E83-4FFC-A967-C21D565A49A5>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <6751E9AE-7E83-4FFC-A967-C21D565A49A5>.<1>}
+2026-09-21 14:56:11.478793+0800 Lauver[4807:2508681] [Default] Task <10F93EF0-27B7-49AB-A638-0703E46B7BFF>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <10F93EF0-27B7-49AB-A638-0703E46B7BFF>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <10F93EF0-27B7-49AB-A638-0703E46B7BFF>.<2>}
+Test Case '-[LauverTests.APIClientTests testSignedPutRetryIsBoundedAndDoesNotRetryCancellationOrHTTPFailures]' passed (0.001 seconds).
+Test Suite 'APIClientTests' passed at 2026-09-21 14:56:11.479.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.011 (0.013) seconds
+Test Suite 'AppConfigurationTests' started at 2026-09-21 14:56:11.479.
+Test Case '-[LauverTests.AppConfigurationTests testAppLanguageUsesSupportedLocaleAndPersistsSelection]' started.
+Test Case '-[LauverTests.AppConfigurationTests testAppLanguageUsesSupportedLocaleAndPersistsSelection]' passed (0.001 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationLoadsStagingValues]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationLoadsStagingValues]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsInsecureAPIURL]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsInsecureAPIURL]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsMissingEnvironment]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsMissingEnvironment]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsUnknownEnvironment]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsUnknownEnvironment]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsURLWithoutHost]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsURLWithoutHost]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testEnvironmentCasesRemainExplicit]' started.
+Test Case '-[LauverTests.AppConfigurationTests testEnvironmentCasesRemainExplicit]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testMetadataUsesExpectedDisplayName]' started.
+Test Case '-[LauverTests.AppConfigurationTests testMetadataUsesExpectedDisplayName]' passed (0.000 seconds).
+Test Suite 'AppConfigurationTests' passed at 2026-09-21 14:56:11.484.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'AppViewModelTests' started at 2026-09-21 14:56:11.484.
+Test Case '-[LauverTests.AppViewModelTests testAppleSignInSavesOnlyTheLocalCredentialIdentifierAfterBackendSuccess]' started.
+Test Case '-[LauverTests.AppViewModelTests testAppleSignInSavesOnlyTheLocalCredentialIdentifierAfterBackendSuccess]' passed (0.001 seconds).
+Test Case '-[LauverTests.AppViewModelTests testAuthenticationShellAndSignOutFlow]' started.
+Test Case '-[LauverTests.AppViewModelTests testAuthenticationShellAndSignOutFlow]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testDeletedKeychainTokensReturnToLoginWithoutNetworkAuth]' started.
+Test Case '-[LauverTests.AppViewModelTests testDeletedKeychainTokensReturnToLoginWithoutNetworkAuth]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testHealthFailurePreservesPublicRequestIDForSupport]' started.
+Test Case '-[LauverTests.AppViewModelTests testHealthFailurePreservesPublicRequestIDForSupport]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testHealthSuccessShowsOnlineAndRestoresNonSensitiveTabState]' started.
+Test Case '-[LauverTests.AppViewModelTests testHealthSuccessShowsOnlineAndRestoresNonSensitiveTabState]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testInvalidRefreshTokenClearsSavedSessionAndReturnsToLogin]' started.
+Test Case '-[LauverTests.AppViewModelTests testInvalidRefreshTokenClearsSavedSessionAndReturnsToLogin]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testLoginTimeoutStopsSubmittingAndAllowsSuccessfulRetry]' started.
+Test Case '-[LauverTests.AppViewModelTests testLoginTimeoutStopsSubmittingAndAllowsSuccessfulRetry]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRegisterSavesTokensAndAuthenticates]' started.
+Test Case '-[LauverTests.AppViewModelTests testRegisterSavesTokensAndAuthenticates]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRevokedAppleCredentialClearsSessionBeforeCallingBackendRestore]' started.
+Test Case '-[LauverTests.AppViewModelTests testRevokedAppleCredentialClearsSessionBeforeCallingBackendRestore]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRuntimeSessionExpiryReturnsToLoginAndClearsAccountState]' started.
+Test Case '-[LauverTests.AppViewModelTests testRuntimeSessionExpiryReturnsToLoginAndClearsAccountState]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken]' started.
+Test Case '-[LauverTests.AppViewModelTests testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken]' passed (0.000 seconds).
+Test Suite 'AppViewModelTests' passed at 2026-09-21 14:56:11.490.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'AppleSignInTests' started at 2026-09-21 14:56:11.490.
+Test Case '-[LauverTests.AppleSignInTests testNonceHashUsesSHA256Hex]' started.
+Test Case '-[LauverTests.AppleSignInTests testNonceHashUsesSHA256Hex]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppleSignInTests testNonceIsRandomURLSafeAndLongEnough]' started.
+Test Case '-[LauverTests.AppleSignInTests testNonceIsRandomURLSafeAndLongEnough]' passed (0.000 seconds).
+Test Suite 'AppleSignInTests' passed at 2026-09-21 14:56:11.491.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'AuthServiceTests' started at 2026-09-21 14:56:11.491.
+Test Case '-[LauverTests.AuthServiceTests testAppleSignInSendsProofAndFirstLoginDataButNotTheLocalUserIdentifier]' started.
+Test Case '-[LauverTests.AuthServiceTests testAppleSignInSendsProofAndFirstLoginDataButNotTheLocalUserIdentifier]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testForgotPasswordUsesTheContractPathAndOnlySendsEmail]' started.
+Test Case '-[LauverTests.AuthServiceTests testForgotPasswordUsesTheContractPathAndOnlySendsEmail]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testLogoutAcceptsAnEmptySuccessResponse]' started.
+Test Case '-[LauverTests.AuthServiceTests testLogoutAcceptsAnEmptySuccessResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testRegisterSendsCredentialsAndDecodesSession]' started.
+Test Case '-[LauverTests.AuthServiceTests testRegisterSendsCredentialsAndDecodesSession]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testResetPasswordUsesTheContractPathAndDoesNotSendAnIdentity]' started.
+Test Case '-[LauverTests.AuthServiceTests testResetPasswordUsesTheContractPathAndDoesNotSendAnIdentity]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testRestoreUsesBearerTokenRatherThanARequestBodyUserID]' started.
+Test Case '-[LauverTests.AuthServiceTests testRestoreUsesBearerTokenRatherThanARequestBodyUserID]' passed (0.001 seconds).
+Test Suite 'AuthServiceTests' passed at 2026-09-21 14:56:11.495.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'AuthSessionStoreTests' started at 2026-09-21 14:56:11.495.
+Test Case '-[LauverTests.AuthSessionStoreTests testAppleUserIdentifierUsesTheDedicatedSecureAccountAndCanBeCleared]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testAppleUserIdentifierUsesTheDedicatedSecureAccountAndCanBeCleared]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testMissingOneTokenDeletesTheIncompleteSession]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testMissingOneTokenDeletesTheIncompleteSession]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testPartialSaveFailureRollsBackEveryToken]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testPartialSaveFailureRollsBackEveryToken]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testSavesReadsAndClearsBothTokens]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testSavesReadsAndClearsBothTokens]' passed (0.000 seconds).
+Test Suite 'AuthSessionStoreTests' passed at 2026-09-21 14:56:11.497.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'DesignSystemTests' started at 2026-09-21 14:56:11.497.
+Test Case '-[LauverTests.DesignSystemTests testFourStateComponentsHaveStableDistinctIdentifiers]' started.
+Test Case '-[LauverTests.DesignSystemTests testFourStateComponentsHaveStableDistinctIdentifiers]' passed (0.000 seconds).
+Test Case '-[LauverTests.DesignSystemTests testMVPContainsOnlyApprovedTabs]' started.
+Test Case '-[LauverTests.DesignSystemTests testMVPContainsOnlyApprovedTabs]' passed (0.000 seconds).
+Test Suite 'DesignSystemTests' passed at 2026-09-21 14:56:11.498.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'DiscoverTests' started at 2026-09-21 14:56:11.498.
+Test Case '-[LauverTests.DiscoverTests testCancellationDoesNotShowConnectionError]' started.
+Test Case '-[LauverTests.DiscoverTests testCancellationDoesNotShowConnectionError]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testChangedCursorRetriesFromFirstPage]' started.
+Test Case '-[LauverTests.DiscoverTests testChangedCursorRetriesFromFirstPage]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testDurationAndSpeedRangeSummariesUseActualUnits]' started.
+Test Case '-[LauverTests.DiscoverTests testDurationAndSpeedRangeSummariesUseActualUnits]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testExpiredSessionClearsPreviouslyVisibleProfilesAndCursor]' started.
+Test Case '-[LauverTests.DiscoverTests testExpiredSessionClearsPreviouslyVisibleProfilesAndCursor]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testFailedFilterChangeDoesNotShowOldRowsUnderNewFilters]' started.
+Test Case '-[LauverTests.DiscoverTests testFailedFilterChangeDoesNotShowOldRowsUnderNewFilters]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testFilterPathEncodesQueryAndOmitsPaceWithoutSport]' started.
+Test Case '-[LauverTests.DiscoverTests testFilterPathEncodesQueryAndOmitsPaceWithoutSport]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testPaginationRetryPreservesRowsAndCursor]' started.
+Test Case '-[LauverTests.DiscoverTests testPaginationRetryPreservesRowsAndCursor]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testStalePageCannotOverwriteNewFilters]' started.
+Test Case '-[LauverTests.DiscoverTests testStalePageCannotOverwriteNewFilters]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testUnlimitedRadiusIsExplicitAndChangingRadiusStartsANewTraversal]' started.
+Test Case '-[LauverTests.DiscoverTests testUnlimitedRadiusIsExplicitAndChangingRadiusStartsANewTraversal]' passed (0.000 seconds).
+Test Suite 'DiscoverTests' passed at 2026-09-21 14:56:11.504.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'EventsPaginationTests' started at 2026-09-21 14:56:11.505.
+Test Case '-[LauverTests.EventsPaginationTests testCreatedEventBeyondFirstPageSurvivesRefreshAndPaginationWithoutDuplicates]' started.
+Test Case '-[LauverTests.EventsPaginationTests testCreatedEventBeyondFirstPageSurvivesRefreshAndPaginationWithoutDuplicates]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testFailedNextPageKeepsRowsAndCursorForRetry]' started.
+Test Case '-[LauverTests.EventsPaginationTests testFailedNextPageKeepsRowsAndCursorForRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testMutationDuringOlderListRequestSurvivesResponse]' started.
+Test Case '-[LauverTests.EventsPaginationTests testMutationDuringOlderListRequestSurvivesResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testServerCancellationReplacesLocallySavedEventOnRefresh]' started.
+Test Case '-[LauverTests.EventsPaginationTests testServerCancellationReplacesLocallySavedEventOnRefresh]' passed (0.001 seconds).
+Test Suite 'EventsPaginationTests' passed at 2026-09-21 14:56:11.508.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'KeychainStoreTests' started at 2026-09-21 14:56:11.508.
+Test Case '-[LauverTests.KeychainStoreTests testTokenSurvivesAdapterRecreationAndCanBeDeleted]' started.
+Test Case '-[LauverTests.KeychainStoreTests testTokenSurvivesAdapterRecreationAndCanBeDeleted]' passed (0.002 seconds).
+Test Case '-[LauverTests.KeychainStoreTests testUpdatingTokenReplacesExistingValue]' started.
+Test Case '-[LauverTests.KeychainStoreTests testUpdatingTokenReplacesExistingValue]' passed (0.002 seconds).
+Test Suite 'KeychainStoreTests' passed at 2026-09-21 14:56:11.512.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'ProfileServiceTests' started at 2026-09-21 14:56:11.512.
+Test Case '-[LauverTests.ProfileServiceTests testBlockedUsersCursorAndPrivateCityContract]' started.
+Test Case '-[LauverTests.ProfileServiceTests testBlockedUsersCursorAndPrivateCityContract]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testConcurrentProfileAndSafetyRequestsRotateRefreshTokenOnlyOnce]' started.
+Test Case '-[LauverTests.ProfileServiceTests testConcurrentProfileAndSafetyRequestsRotateRefreshTokenOnlyOnce]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testCreateEventDoesNotReplayWhenCommittedResponseIsLost]' started.
+2026-09-21 14:56:11.515118+0800 Lauver[4807:2508681] [Default] Task <AC69DA2F-A096-4265-AC49-8C0CEC2AB265>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <AC69DA2F-A096-4265-AC49-8C0CEC2AB265>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <AC69DA2F-A096-4265-AC49-8C0CEC2AB265>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testCreateEventDoesNotReplayWhenCommittedResponseIsLost]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDeleteAccountUsesBearerTokenAndDecodesDeletionJob]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDeleteAccountUsesBearerTokenAndDecodesDeletionJob]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDraftBackfillsPaceAsMinutesAndSeconds]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDraftBackfillsPaceAsMinutesAndSeconds]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDurationPaceFormattingAndParsing]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDurationPaceFormattingAndParsing]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testFailedPhotoPutDoesNotCompleteUpload]' started.
+2026-09-21 14:56:11.518447+0800 Lauver[4807:2508668] [Default] Task <D2D9D8D9-5224-4348-A345-4D033E2FCC32>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <D2D9D8D9-5224-4348-A345-4D033E2FCC32>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <D2D9D8D9-5224-4348-A345-4D033E2FCC32>.<2>}
+Test Case '-[LauverTests.ProfileServiceTests testFailedPhotoPutDoesNotCompleteUpload]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testInvalidDurationPaceDoesNotSendRequest]' started.
+Test Case '-[LauverTests.ProfileServiceTests testInvalidDurationPaceDoesNotSendRequest]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testLargePhotoOutputIsBoundedInPixelsRegardlessOfScreenScale]' started.
+Test Case '-[LauverTests.ProfileServiceTests testLargePhotoOutputIsBoundedInPixelsRegardlessOfScreenScale]' passed (0.057 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testMatchVisibilityReadsAndPersistsWithExistingPreferences]' started.
+Test Case '-[LauverTests.ProfileServiceTests testMatchVisibilityReadsAndPersistsWithExistingPreferences]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testOfflineRefreshPreservesTokensForRecovery]' started.
+Test Case '-[LauverTests.ProfileServiceTests testOfflineRefreshPreservesTokensForRecovery]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPhotoProcessingCenterCropsAndCompressesToJPEG]' started.
+Test Case '-[LauverTests.ProfileServiceTests testPhotoProcessingCenterCropsAndCompressesToJPEG]' passed (0.018 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPhotoUploadRecoversFromConnectionLossAtEveryStage]' started.
+2026-09-21 14:56:11.596938+0800 Lauver[4807:2508668] [Default] Task <CE748C83-9469-4A8B-9C08-16BB321ECBB3>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <CE748C83-9469-4A8B-9C08-16BB321ECBB3>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <CE748C83-9469-4A8B-9C08-16BB321ECBB3>.<1>}
+2026-09-21 14:56:11.597772+0800 Lauver[4807:2508669] [Default] Task <83BD2EF0-6953-4821-9CD2-90741E1DB4A7>.<6> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <83BD2EF0-6953-4821-9CD2-90741E1DB4A7>.<6>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <83BD2EF0-6953-4821-9CD2-90741E1DB4A7>.<6>}
+2026-09-21 14:56:11.598959+0800 Lauver[4807:2508669] [Default] Task <65901753-5060-4716-87E2-670D12D4B5AC>.<11> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <65901753-5060-4716-87E2-670D12D4B5AC>.<11>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <65901753-5060-4716-87E2-670D12D4B5AC>.<11>}
+Test Case '-[LauverTests.ProfileServiceTests testPhotoUploadRecoversFromConnectionLossAtEveryStage]' passed (0.003 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPublicProfileContractDecodesWithoutCoordinates]' started.
+Test Case '-[LauverTests.ProfileServiceTests testPublicProfileContractDecodesWithoutCoordinates]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testReadsOwnProfileWithBearerToken]' started.
+Test Case '-[LauverTests.ProfileServiceTests testReadsOwnProfileWithBearerToken]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotOverwriteANewlySignedInAccount]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotOverwriteANewlySignedInAccount]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotRestoreTokensAfterSignOut]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotRestoreTokensAfterSignOut]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRejectedRefreshClearsTokensAndNotifiesSessionExpiry]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRejectedRefreshClearsTokensAndNotifiesSessionExpiry]' passed (0.003 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testReportsDoNotAutomaticallyRetryLostResponses]' started.
+2026-09-21 14:56:11.605701+0800 Lauver[4807:2508669] [Default] Task <A0D71922-3531-49EB-94F7-191E9013F440>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <A0D71922-3531-49EB-94F7-191E9013F440>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <A0D71922-3531-49EB-94F7-191E9013F440>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testReportsDoNotAutomaticallyRetryLostResponses]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testSafetyWritesDeriveIdentityFromTokensAndDecodeReportReference]' started.
+Test Case '-[LauverTests.ProfileServiceTests testSafetyWritesDeriveIdentityFromTokensAndDecodeReportReference]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testStravaRequestsUseSharedAuthenticationAndOnlyReturnSummaries]' started.
+Test Case '-[LauverTests.ProfileServiceTests testStravaRequestsUseSharedAuthenticationAndOnlyReturnSummaries]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testStravaStartDoesNotAutomaticallyReplayLostResponse]' started.
+2026-09-21 14:56:11.608642+0800 Lauver[4807:2508681] [Default] Task <61090189-58E5-4336-A5B0-96DEB898CA0B>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <61090189-58E5-4336-A5B0-96DEB898CA0B>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <61090189-58E5-4336-A5B0-96DEB898CA0B>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testStravaStartDoesNotAutomaticallyReplayLostResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUnauthorizedProfileRequestRefreshesAndPersistsRotatedTokens]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUnauthorizedProfileRequestRefreshesAndPersistsRotatedTokens]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUpdateEncodesMissingCityRegionAsExplicitNull]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUpdateEncodesMissingCityRegionAsExplicitNull]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUpdateSendsCityCenterAndPaceValueWithoutDerivedFieldsOrIdentity]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUpdateSendsCityCenterAndPaceValueWithoutDerivedFieldsOrIdentity]' passed (0.001 seconds).
+Test Suite 'ProfileServiceTests' passed at 2026-09-21 14:56:11.611.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.096 (0.099) seconds
+Test Suite 'ProfileViewModelCancellationTests' started at 2026-09-21 14:56:11.611.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testActualNetworkFailureIsStillShownWithTheExistingProfile]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testActualNetworkFailureIsStillShownWithTheExistingProfile]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAllCancellationRepresentationsAreSilentAndAllowAnotherLoad]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAllCancellationRepresentationsAreSilentAndAllowAnotherLoad]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAlreadyCancelledLoadDoesNotSendARequest]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAlreadyCancelledLoadDoesNotSendARequest]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledLoadCannotOverwriteANewerSavedPhoto]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledLoadCannotOverwriteANewerSavedPhoto]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledReloadKeepsTheUploadedPhotoWithoutAnError]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledReloadKeepsTheUploadedPhotoWithoutAnError]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testRetryAfterReorderFailureDoesNotReuploadCommittedPhotos]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testRetryAfterReorderFailureDoesNotReuploadCommittedPhotos]' passed (0.001 seconds).
+Test Suite 'ProfileViewModelCancellationTests' passed at 2026-09-21 14:56:11.616.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'SafetyViewModelTests' started at 2026-09-21 14:56:11.616.
+Test Case '-[LauverTests.SafetyViewModelTests testBlockedPageFailureKeepsCursorButFailedRefreshRetriesFirstPage]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testBlockedPageFailureKeepsCursorButFailedRefreshRetriesFirstPage]' passed (0.001 seconds).
+Test Case '-[LauverTests.SafetyViewModelTests testFailedUnblockKeepsEntryAndSuccessfulRetryRemovesIt]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testFailedUnblockKeepsEntryAndSuccessfulRetryRemovesIt]' passed (0.000 seconds).
+Test Case '-[LauverTests.SafetyViewModelTests testReportFailureCanRetryButSuccessCannotBeSubmittedTwice]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testReportFailureCanRetryButSuccessCannotBeSubmittedTwice]' passed (0.001 seconds).
+Test Suite 'SafetyViewModelTests' passed at 2026-09-21 14:56:11.618.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'StravaTests' started at 2026-09-21 14:56:11.618.
+Test Case '-[LauverTests.StravaTests testActivityDatesAcceptFractionalSecondsAndRejectInvalidDates]' started.
+Test Case '-[LauverTests.StravaTests testActivityDatesAcceptFractionalSecondsAndRejectInvalidDates]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testAuthorizationURLAndCallbackRequireExpectedHostReadOnlyScopeAndExactState]' started.
+Test Case '-[LauverTests.StravaTests testAuthorizationURLAndCallbackRequireExpectedHostReadOnlyScopeAndExactState]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testLoadAndConnectUseServerStatusRatherThanCallbackClaim]' started.
+Test Case '-[LauverTests.StravaTests testLoadAndConnectUseServerStatusRatherThanCallbackClaim]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testLostDisconnectResponseNotifiesProfileToRemoveRevokedActivities]' started.
+Test Case '-[LauverTests.StravaTests testLostDisconnectResponseNotifiesProfileToRemoveRevokedActivities]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testOfflineDisconnectKeepsConnectionAndReportsFailure]' started.
+Test Case '-[LauverTests.StravaTests testOfflineDisconnectKeepsConnectionAndReportsFailure]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testPendingDisconnectRemovesCachedDisplayAndRetryShowsAuthoritativeCompletion]' started.
+Test Case '-[LauverTests.StravaTests testPendingDisconnectRemovesCachedDisplayAndRetryShowsAuthoritativeCompletion]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testRefreshFailureRechecksExpiredAuthorizationAndAllowsLaterRecovery]' started.
+Test Case '-[LauverTests.StravaTests testRefreshFailureRechecksExpiredAuthorizationAndAllowsLaterRecovery]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testRejectedScopesAndInvalidStateAreActionable]' started.
+Test Case '-[LauverTests.StravaTests testRejectedScopesAndInvalidStateAreActionable]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testUserCancellationIsExplainedWithoutAnErrorOrAutomaticReconnect]' started.
+Test Case '-[LauverTests.StravaTests testUserCancellationIsExplainedWithoutAnErrorOrAutomaticReconnect]' passed (0.000 seconds).
+Test Suite 'StravaTests' passed at 2026-09-21 14:56:11.624.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'UIStateStoreTests' started at 2026-09-21 14:56:11.625.
+Test Case '-[LauverTests.UIStateStoreTests testPersistsOnlySelectedTabAsNonSensitiveUIState]' started.
+Test Case '-[LauverTests.UIStateStoreTests testPersistsOnlySelectedTabAsNonSensitiveUIState]' passed (0.001 seconds).
+Test Case '-[LauverTests.UIStateStoreTests testUnknownTabFallsBackToDiscoverAndResetRemovesState]' started.
+Test Case '-[LauverTests.UIStateStoreTests testUnknownTabFallsBackToDiscoverAndResetRemovesState]' passed (0.001 seconds).
+Test Suite 'UIStateStoreTests' passed at 2026-09-21 14:56:11.627.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'LauverTests.xctest' passed at 2026-09-21 14:56:11.627.
+	 Executed 109 tests, with 0 failures (0 unexpected) in 0.145 (0.160) seconds
+Test Suite 'All tests' passed at 2026-09-21 14:56:11.627.
+	 Executed 109 tests, with 0 failures (0 unexpected) in 0.145 (0.160) seconds
+
+Test session results, code coverage, and logs:
+	/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Logs/Test/Test-Lauver-Staging-2026.09.21_14-55-48-+0800.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

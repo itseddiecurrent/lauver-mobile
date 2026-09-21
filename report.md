@@ -100,3 +100,10 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - The connected physical iPhone 17e ran the updated `Lauver-Staging` build with no Simulator destination: native XCTest 109/109 passed; full UI XCTest was 28 total, 20 passed, 5 skipped, and 3 existing staging prerequisite/data failures. No crash, SIGABRT, SIGSEGV, watchdog, or termination was recorded.
 - The targeted Chinese UI regression remains 3/3 passed on the same device. The Stream empty-channel visual state itself needs a live account with an empty Stream channel for final manual confirmation.
 - Latest Render probes after the verified deployment path: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `{"status":"ready","service":"lauver-api","database":"ok"}`. The encrypted `SUPABASE_DATABASE_URL` is configured in Render and is not stored in git.
+
+## Current release handoff (2026-09-21)
+
+- Re-ran `LauverTests` on the connected physical iPhone 17e with UDID `00008150-00010C6E22C0C01C`; 109/109 passed. The command used an explicit `-destination id=...` and did not use a Simulator. Log: `artifacts/acceptance/step-15-iphone17e-current-unit.log`.
+- Render probes at handoff: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `database: ok`.
+- Attempted a signed Production archive with `generic/platform=iOS`; it failed before compilation because the current Apple Developer team cannot register `ai.lauver.app`, and the available wildcard profile lacks HealthKit and Sign in with Apple. Log: `artifacts/acceptance/step-15-production-archive-20260921.log`.
+- This leaves an actionable external handoff, not an app-code blocker: register/confirm the Production App ID and capabilities, provide distribution signing, confirm a reachable Production API, then validate and upload from Xcode Organizer. The exact checklist is `docs/testflight-release.md`.

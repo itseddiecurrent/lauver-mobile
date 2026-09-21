@@ -19,3 +19,9 @@
 - 实体 iPhone 17e 更新包真机回归：原生 XCTest 109/109 passed；完整 UI XCTest 28 项为 20 passed、5 skipped、3 个既有 staging 前置条件失败；未使用 Simulator，未发现闪退。
 - 定向中文 UI XCTest 3/3 passed；Stream 空频道视觉文案还需要一个真实登录账号的空频道进行最终人工点验。详细记录见 [`step-15-chat-localization.md`](step-15-chat-localization.md)。
 - 最新 Render `/healthz` 和 `/readyz` 均为 HTTP 200，`/readyz` 报告 `database: ok`；已配置的加密 `SUPABASE_DATABASE_URL` 未进入仓库。
+
+## Production archive handoff (2026-09-21)
+
+- 当前 commit 的 Production archive 已实际尝试，目标为 `generic/platform=iOS`，没有启动 Simulator。
+- Archive 被 Apple Developer provisioning 阻止：bundle ID `ai.lauver.app` 无法由当前 team 注册，通配 profile 不包含 HealthKit 和 Sign in with Apple。完整输出见 [`step-15-production-archive-20260921.log`](step-15-production-archive-20260921.log)。
+- TestFlight 提交前还需完成 Apple Developer App ID/capabilities、Distribution certificate/profile、App Store Connect App、Privacy/Terms URL、App Privacy、Review Notes 和可用的 Production API。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。
