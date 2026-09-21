@@ -6,7 +6,7 @@
 
 ## 结论
 
-本轮没有发现 App 闪退。真机 XCTest 109/109 通过；完整 XCUITest 26 个用例为 18 通过、5 跳过、3 失败。失败均为 XCTest 断言或测试数据前置条件，不是 crash。报告中的“失败节点”已全部列出，避免把测试失败误记为闪退。
+本轮没有发现 App 闪退。真机 XCTest 109/109 通过；完整 XCUITest 28 个用例为 20 通过、5 跳过、3 失败。失败均为 XCTest 断言或 staging 测试数据前置条件，不是 crash。当前 `ai.lauver.app.release` Production archive 已成功生成并包含 HealthKit/Sign in with Apple entitlements，但仍是 Apple Development 签名，尚未导出可上传 TestFlight 的 Distribution IPA。
 
 ## 真机执行记录
 
@@ -40,8 +40,9 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 ## 尚未签收的事项
 
 1. 两账号 Match/Stream live E2E 已使用本机测试账号在实体 iPhone 17e 重跑通过；账户删除 UI 已改为可滚动、大尺寸真机 sheet，并在有效签名下重跑通过（1/1）。
-2. TestFlight 上传、App Store Connect App Privacy/Review Notes 和正式签名 IPA 尚未在本机完成；当前仅完成 staging archive 和真机开发签名安装。
-3. 根目录旧 Expo `__tests__/schema/db_schema.test.js` 针对历史 Supabase schema，当前仓库没有对应 Supabase CLI/目标 schema；本轮未将其失败误算为当前 Express/Prisma backend 的 Step 15 失败。
+2. TestFlight 上传、App Store Connect App Privacy/Review Notes 和正式 Distribution IPA 尚未在本机完成；Production archive 已成功，但当前只有 Apple Development 证书。
+3. 当前 Production 配置的 `https://api.lauver.ai` TLS 健康探针失败；Render staging `/healthz` 和 `/readyz` 均已恢复 HTTP 200，`database: ok`。
+4. 根目录旧 Expo `__tests__/schema/db_schema.test.js` 针对历史 Supabase schema，当前仓库没有对应 Supabase CLI/目标 schema；本轮未将其失败误算为当前 Express/Prisma backend 的 Step 15 失败。
 
 ## Supabase / native runtime verification (2026-09-21)
 
@@ -105,5 +106,5 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 
 - Re-ran `LauverTests` on the connected physical iPhone 17e with UDID `00008150-00010C6E22C0C01C`; 109/109 passed. The command used an explicit `-destination id=...` and did not use a Simulator. Log: `artifacts/acceptance/step-15-iphone17e-current-unit.log`.
 - Render probes at handoff: `/healthz` HTTP 200 and `/readyz` HTTP 200 with `database: ok`.
-- Attempted a signed Production archive with `generic/platform=iOS`; it failed before compilation because the current Apple Developer team cannot register `ai.lauver.app`, and the available wildcard profile lacks HealthKit and Sign in with Apple. Log: `artifacts/acceptance/step-15-production-archive-20260921.log`.
-- This leaves an actionable external handoff, not an app-code blocker: register/confirm the Production App ID and capabilities, provide distribution signing, confirm a reachable Production API, then validate and upload from Xcode Organizer. The exact checklist is `docs/testflight-release.md`.
+- The current `Lauver-Production` archive with `generic/platform=iOS` succeeded for `ai.lauver.app.release` and includes HealthKit and Sign in with Apple entitlements. Log: `artifacts/acceptance/step-15-production-release-archive-20260921.log`.
+- This leaves an actionable external handoff, not an app-code blocker: provide Apple Distribution signing, confirm a reachable Production API, complete App Store Connect metadata, then validate and upload from Xcode Organizer. The exact checklist is `docs/testflight-release.md`.

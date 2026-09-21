@@ -3,3 +3,4 @@
 
 APP_ENVIRONMENT = production
 API_BASE_URL = https:/$()/api.lauver.ai
+PRODUCT_BUNDLE_IDENTIFIER = ai.lauver.app.release

@@ -779,7 +779,10 @@ npm run typecheck
 npm test
 npm run test:integration
 
-# iOS；SIMULATOR_UDID 由本机 xcrun simctl list devices 获取
+# iOS Step 15；如果本机已连接 iPhone 17e，只允许使用实体设备
+./scripts/test-step-15-device.sh
+
+# 只有检测不到可用 iPhone 17e 时，才使用早期步骤的 Simulator 回归命令
 xcodebuild test \
   -project LauverNative/Lauver.xcodeproj \
   -scheme Lauver-Staging \
@@ -1490,7 +1493,7 @@ xcodebuild test \
 
 ### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已配置加密 `SUPABASE_DATABASE_URL`，当前 `/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；Step 15 follow-up 定向 UI XCTest 3/3 通过，完整真机 UI 回归 28 项为 20 通过、5 跳过、3 个已记录的 staging 数据前置条件失败，未发现闪退；本机已尝试 Production archive，但 `ai.lauver.app` 不可由当前 Apple Developer team 注册，通配 profile 也缺少 HealthKit/Sign in with Apple capability；正式签名 IPA、TestFlight/App Store Connect 和最终 Product Owner 签收仍待 Apple Developer/App Store Connect 外部配置）。**
+**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Render 已配置加密 `SUPABASE_DATABASE_URL`，最新 `/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；Step 15 follow-up 定向 UI XCTest 3/3 通过，完整真机 UI 回归 28 项为 20 通过、5 跳过、3 个已记录的 staging 数据前置条件失败，未发现闪退；当前 Team 的 `ai.lauver.app.release` Production archive 已成功并包含 HealthKit/Sign in with Apple entitlements，但仅使用 Apple Development 签名；正式 Distribution IPA、TestFlight/App Store Connect 和最终 Product Owner 签收仍待 Distribution signing、可用 Production API 及商店资料）。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 

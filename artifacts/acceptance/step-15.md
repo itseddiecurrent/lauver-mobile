@@ -22,6 +22,5 @@
 
 ## Production archive handoff (2026-09-21)
 
-- 当前 commit 的 Production archive 已实际尝试，目标为 `generic/platform=iOS`，没有启动 Simulator。
-- Archive 被 Apple Developer provisioning 阻止：bundle ID `ai.lauver.app` 无法由当前 team 注册，通配 profile 不包含 HealthKit 和 Sign in with Apple。完整输出见 [`step-15-production-archive-20260921.log`](step-15-production-archive-20260921.log)。
-- TestFlight 提交前还需完成 Apple Developer App ID/capabilities、Distribution certificate/profile、App Store Connect App、Privacy/Terms URL、App Privacy、Review Notes 和可用的 Production API。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。
+- 当前 commit 的 `Lauver-Production` archive 已成功，目标为 `generic/platform=iOS`，没有启动 Simulator；bundle ID 为 `ai.lauver.app.release`，HealthKit 和 Sign in with Apple entitlements 已包含。完整输出见 [`step-15-production-release-archive-20260921.log`](step-15-production-release-archive-20260921.log)。
+- 当前 archive 使用 Apple Development 证书；本机没有 Apple Distribution certificate/profile，因此尚不能导出可上传 TestFlight 的 IPA。TestFlight 提交前还需完成 Distribution signing、App Privacy/Review Notes、审核账号和可用的 Production API。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。

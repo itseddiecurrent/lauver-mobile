@@ -9,9 +9,10 @@
 - Render staging：`/healthz` 和 `/readyz` 均为 HTTP 200，`/readyz` 报告 `database: ok`。
 - Backend：190/190 Vitest 通过；migration-from-zero/integration：17 个 migration、71/71 通过。
 - 真机：连接的 iPhone 17e（UDID `00008150-00010C6E22C0C01C`）原生 XCTest 109/109 通过。Step 15 的测试只允许使用这个 physical-device destination，不使用 Simulator。
-- Staging archive 已成功；scope check 和 secret scan 已通过。
+- `Lauver-Production` archive 已成功，bundle ID 为 `ai.lauver.app.release`，Team ID 为 `94KFUD562T`，HealthKit 和 Sign in with Apple entitlements 已包含；当前 archive 使用 Apple Development 签名，尚不是可上传 TestFlight 的 Distribution archive。
+- scope check 和 secret scan 已通过。
 
-证据见 [`report.md`](../report.md)、[`artifacts/acceptance/final-test-report.md`](../artifacts/acceptance/final-test-report.md) 和本次真机日志 [`step-15-iphone17e-current-unit.log`](../artifacts/acceptance/step-15-iphone17e-current-unit.log)。
+证据见 [`report.md`](../report.md)、[`artifacts/acceptance/final-test-report.md`](../artifacts/acceptance/final-test-report.md)、真机日志 [`step-15-iphone17e-unit-current.log`](../artifacts/acceptance/step-15-iphone17e-unit-current.log) 和 Production archive 日志 [`step-15-production-release-archive-20260921.log`](../artifacts/acceptance/step-15-production-release-archive-20260921.log)。
 
 ## Render 部署
 
@@ -49,20 +50,16 @@ xcodebuild \
 
 ## 还不能在本机完成的原因
 
-本机当前只有 Apple Development 证书，没有 App Store distribution 证书或 provisioning profile。Production archive 的实际结果记录在 [`step-15-production-archive-20260921.log`](../artifacts/acceptance/step-15-production-archive-20260921.log)：
+本机当前只有 Apple Development 证书，没有 Apple Distribution 证书或 App Store provisioning profile。Production archive 已能以当前 Team 的 `ai.lauver.app.release` 构建成功，记录在 [`step-15-production-release-archive-20260921.log`](../artifacts/acceptance/step-15-production-release-archive-20260921.log)；它只能用于本机验证，不能直接上传 TestFlight。
 
-1. Apple Developer team 不能注册 bundle ID `ai.lauver.app`；
-2. 当前通配 provisioning profile 不包含 HealthKit；
-3. 当前通配 provisioning profile 不包含 Sign in with Apple。
+需要在 Apple Developer / Xcode 账号中完成以下外部配置：
 
-这不是代码或 Render 故障。需要在 Apple Developer / Xcode 账号中完成以下外部配置后再 archive：
-
-- 确认 team `94KFUD562T` 对 `ai.lauver.app` 有权，或把 Production bundle ID 改成团队实际拥有的唯一 ID；
+- 确认 team `94KFUD562T` 对 `ai.lauver.app.release` 有权；
 - 为该 App ID 开启 HealthKit 和 Sign in with Apple；
 - 创建/下载 Apple Distribution certificate 和 App Store provisioning profile；
-- 在 App Store Connect 创建同 bundle ID 的 App，并补齐 Privacy Policy、Terms、App Privacy、Export Compliance、Review Notes 和审核账号。
+- 创建或下载 Apple Distribution certificate 和 App Store provisioning profile，并在 Xcode Organizer Validate App；App Store Connect 中补齐 Privacy Policy、Terms、App Privacy、Export Compliance、Review Notes 和审核账号。
 
-此外，当前 Production 配置指向 `https://api.lauver.ai`，本次核验中该域名未返回健康检查；正式 TestFlight build 不能在没有确认的生产 API 时提交。若暂时使用 Render staging 做内部 TestFlight，必须明确标为内部测试 build，并确认 App Store Connect 的 bundle ID 与服务端环境策略一致。
+此外，当前 Production 配置指向 `https://api.lauver.ai`，本次核验中该域名 TLS 连接失败；正式 TestFlight build 不能在没有确认的生产 API 时提交。若暂时使用 Render staging 做内部 TestFlight，必须明确标为内部测试 build，并确认 App Store Connect 的 `ai.lauver.app.release` 与服务端环境策略一致。
 
 ## 有 Apple 交付权限后的命令
 

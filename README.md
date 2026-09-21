@@ -175,7 +175,7 @@ cd ..
 ./scripts/test-ios-config.sh
 ```
 
-The iOS script prefers an already booted iPhone Simulator, then falls back to the first available iPhone. Set `SIMULATOR_UDID` to choose a specific device or `IOS_TEST_TIMEOUT_SECONDS` to override the 15-minute safety timeout. The staging scheme calls `https://lauver-api-staging.onrender.com/healthz`; production remains configured independently.
+For Step 15, use `./scripts/test-step-15-device.sh`: it requires the connected physical iPhone 17e and refuses to use a Simulator. The general iOS script can still run the earlier simulator-compatible regression suite; the staging scheme calls `https://lauver-api-staging.onrender.com/healthz`, while production remains configured independently.
 
 ## Configuration boundaries
 
@@ -283,16 +283,17 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 
 ### Step 15 release acceptance (2026-09-21)
 
-The current release evidence is recorded in [`report.md`](report.md), [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md), and [`docs/testflight-release.md`](docs/testflight-release.md). The connected physical iPhone 17e passed all 109 native XCTest cases on the current commit; the targeted Step 15 UI follow-up passed 3/3, and the latest full UI run had 20 passes, 5 explicit skips, and 3 known staging-data prerequisite failures. No app crash was observed. A Production archive was attempted and is currently blocked by Apple Developer bundle-ID/capability provisioning, not by the source build. TestFlight/App Store Connect upload remains pending those external Apple settings.
+The current release evidence is recorded in [`report.md`](report.md), [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md), and [`docs/testflight-release.md`](docs/testflight-release.md). The connected physical iPhone 17e passed all 109 native XCTest cases on the current commit; the targeted Step 15 UI follow-up passed 3/3, and the latest full UI run had 20 passes, 5 explicit skips, and 3 known staging-data prerequisite failures. No app crash was observed. A Production archive for `ai.lauver.app.release` succeeded with the required HealthKit and Sign in with Apple entitlements; it is currently development-signed, so TestFlight upload still awaits Apple Distribution signing and a reachable Production API.
 
 The Step 15 follow-up UI fixes are covered by three targeted physical-device UI tests: the pre-login staging label is absent, an incomplete profile shows the localized location prompt in both Discover and Match in English and Simplified Chinese without the connection-error state, and the Simplified Chinese Discover/Events titles, distance note, tab labels and event filters are visible. The Render staging service has `SUPABASE_DATABASE_URL` configured and remains the deployment target for verified pushes.
 
 The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment. The current probes return HTTP 200 and `/readyz` reports `database: ok`; HTTP 503 means the encrypted `SUPABASE_DATABASE_URL` Render secret is missing or the Supabase database is unreachable. The physical-device-only release command and Apple handoff checklist are in [`docs/testflight-release.md`](docs/testflight-release.md).
 
-Step 01 Render staging acceptance is complete. Before later steps, the project owner will still need to provide or create:
+Step 01 Render staging acceptance is complete. Before the final external handoff, the project owner will still need to provide or confirm:
 
-- Apple Developer Program access and the `ai.lauver.app` App ID;
+- Apple Distribution certificate and App Store provisioning profile for the existing `ai.lauver.app.release` App ID with HealthKit and Sign in with Apple enabled;
 - a Render production project (staging is defined by `render.yaml`);
+- a reachable Production API matching `LauverNative/Config/Production.xcconfig` (the current `https://api.lauver.ai` endpoint failed TLS health probes);
 - Strava staging/production applications;
 - Stream Chat staging/production applications;
 - an S3-compatible object-storage bucket;
