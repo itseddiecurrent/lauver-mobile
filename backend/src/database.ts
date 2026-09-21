@@ -6,6 +6,7 @@ import { SafetyService } from './safety.js';
 import { PrismaAuthRepository, type AuthRepository } from './auth-repository.js';
 import { PrismaProfileRepository, type ProfileRepository } from './profile-repository.js';
 import { PgStravaRepository } from './strava-repository.js';
+import { postgresConnectionOptions } from './postgres-connection.js';
 
 export interface Database {
   checkHealth(): Promise<void>;
@@ -21,18 +22,10 @@ export class PrismaDatabase implements Database {
   readonly stravaRepository: PgStravaRepository;
 
   constructor(databaseURL: string) {
-    const databaseURLObject = new URL(databaseURL);
-    const useTLS = databaseURLObject.hostname.endsWith('.render.com')
-      || databaseURLObject.hostname.endsWith('.supabase.com')
-      || databaseURLObject.hostname.endsWith('.supabase.co')
-      || databaseURLObject.searchParams.has('sslmode');
-    databaseURLObject.searchParams.delete('sslmode');
-    databaseURLObject.searchParams.delete('uselibpqcompat');
     const adapter = new PrismaPg({
-      connectionString: databaseURLObject.toString(),
+      ...postgresConnectionOptions(databaseURL),
       connectionTimeoutMillis: 15_000,
       max: 10,
-      ...(useTLS ? { ssl: { rejectUnauthorized: true } } : {}),
     });
 
     this.client = new PrismaClient({ adapter });

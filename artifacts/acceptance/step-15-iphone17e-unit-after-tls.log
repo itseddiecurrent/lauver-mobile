@@ -1,0 +1,418 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -configuration Staging -destination platform=iOS,id=00008150-00010C6E22C0C01C "-only-testing:LauverTests" -parallel-testing-enabled NO -resultBundlePath artifacts/acceptance/step-15-iphone17e-unit-after-tls.xcresult
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  StreamCore: https://github.com/GetStream/stream-core-swift.git @ 0.10.1
+  StreamChat: https://github.com/GetStream/stream-chat-swift.git @ 5.11.0
+  StreamChatSwiftUI: https://github.com/GetStream/stream-chat-swiftui.git @ 5.11.0
+
+Writing result bundle at path:
+	/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-iphone17e-unit-after-tls.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (14 targets)
+    Target 'LauverUITests' in project 'Lauver'
+        ➜ Explicit dependency on target 'Lauver' in project 'Lauver'
+    Target 'LauverTests' in project 'Lauver'
+        ➜ Explicit dependency on target 'Lauver' in project 'Lauver'
+    Target 'Lauver' in project 'Lauver'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat_StreamChatCommonUI' in project 'StreamChat' (no dependencies)
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore' (no dependencies)
+    Target 'StreamChat_StreamChat' in project 'StreamChat' (no dependencies)
+    Target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+Test Suite 'All tests' started at 2026-09-21 11:33:51.330.
+Test Suite 'LauverTests.xctest' started at 2026-09-21 11:33:51.331.
+Test Suite 'APIClientTests' started at 2026-09-21 11:33:51.331.
+Test Case '-[LauverTests.APIClientTests testCancelledIdempotentPatchIsNotRetried]' started.
+Test Case '-[LauverTests.APIClientTests testCancelledIdempotentPatchIsNotRetried]' passed (0.002 seconds).
+Test Case '-[LauverTests.APIClientTests testDecodesSuccessfulResponse]' started.
+Test Case '-[LauverTests.APIClientTests testDecodesSuccessfulResponse]' passed (0.003 seconds).
+Test Case '-[LauverTests.APIClientTests testExplicitlyIdempotentPatchRecoversFromLostConnection]' started.
+2026-09-21 11:33:51.336211+0800 Lauver[4610:2428032] [Default] Task <78AFBC82-DAAD-44C2-A8D7-F781FD22D039>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <78AFBC82-DAAD-44C2-A8D7-F781FD22D039>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <78AFBC82-DAAD-44C2-A8D7-F781FD22D039>.<1>}
+Test Case '-[LauverTests.APIClientTests testExplicitlyIdempotentPatchRecoversFromLostConnection]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps401AndDoesNotRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps401AndDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps404WithPublicMessageAndRequestID]' started.
+Test Case '-[LauverTests.APIClientTests testMaps404WithPublicMessageAndRequestID]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps409And429WithoutRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps409And429WithoutRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testMaps422PayloadAndDoesNotRetry]' started.
+Test Case '-[LauverTests.APIClientTests testMaps422PayloadAndDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPatchWithoutExplicitOptInDoesNotRetry]' started.
+2026-09-21 11:33:51.339966+0800 Lauver[4610:2428020] [Default] Task <2228F6D4-C9B2-4A28-80DE-0FCF86CA9C46>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <2228F6D4-C9B2-4A28-80DE-0FCF86CA9C46>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <2228F6D4-C9B2-4A28-80DE-0FCF86CA9C46>.<1>}
+Test Case '-[LauverTests.APIClientTests testPatchWithoutExplicitOptInDoesNotRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPostConnectionRetriesRequireOptInAndRespectFailureBoundaries]' started.
+2026-09-21 11:33:51.340697+0800 Lauver[4610:2428020] [Default] Task <4E4CB148-B736-47EC-90C0-8D2F9AF46BED>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <4E4CB148-B736-47EC-90C0-8D2F9AF46BED>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <4E4CB148-B736-47EC-90C0-8D2F9AF46BED>.<1>}
+2026-09-21 11:33:51.340803+0800 Lauver[4610:2428023] [Default] Task <9EDA757E-FFE6-409B-BAA8-58BD8F84E9D0>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <9EDA757E-FFE6-409B-BAA8-58BD8F84E9D0>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <9EDA757E-FFE6-409B-BAA8-58BD8F84E9D0>.<2>}
+2026-09-21 11:33:51.340902+0800 Lauver[4610:2428032] [Default] Task <055B4833-E29F-483D-A2BB-533DB4079185>.<3> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <055B4833-E29F-483D-A2BB-533DB4079185>.<3>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <055B4833-E29F-483D-A2BB-533DB4079185>.<3>}
+2026-09-21 11:33:51.341004+0800 Lauver[4610:2428020] [Default] Task <BC802598-81B5-4C79-A022-22AC86EBAF1F>.<4> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <BC802598-81B5-4C79-A022-22AC86EBAF1F>.<4>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <BC802598-81B5-4C79-A022-22AC86EBAF1F>.<4>}
+2026-09-21 11:33:51.341095+0800 Lauver[4610:2428023] [Default] Task <0468B391-5ED1-4580-9836-B9C95EB62EE5>.<5> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <0468B391-5ED1-4580-9836-B9C95EB62EE5>.<5>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <0468B391-5ED1-4580-9836-B9C95EB62EE5>.<5>}
+2026-09-21 11:33:51.341301+0800 Lauver[4610:2428023] [Default] Task <E2D9BA67-9B17-42BB-919E-D4CF0B6AF348>.<7> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <E2D9BA67-9B17-42BB-919E-D4CF0B6AF348>.<7>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <E2D9BA67-9B17-42BB-919E-D4CF0B6AF348>.<7>}
+Test Case '-[LauverTests.APIClientTests testPostConnectionRetriesRequireOptInAndRespectFailureBoundaries]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testPostRequestsNeverRetry]' started.
+Test Case '-[LauverTests.APIClientTests testPostRequestsNeverRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testRetries500WithinBoundaryThenReturnsServerError]' started.
+Test Case '-[LauverTests.APIClientTests testRetries500WithinBoundaryThenReturnsServerError]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testRetriesNoNetworkWithinBoundary]' started.
+2026-09-21 11:33:51.343422+0800 Lauver[4610:2428020] [Default] Task <EABD74DD-0C56-45F1-A877-31252AC83415>.<1> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <EABD74DD-0C56-45F1-A877-31252AC83415>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <EABD74DD-0C56-45F1-A877-31252AC83415>.<1>}
+2026-09-21 11:33:51.343507+0800 Lauver[4610:2428020] [Default] Task <BA74D6EF-A2E9-4A56-838B-67BB3D54C993>.<2> finished with error [-1009] Error Domain=NSURLErrorDomain Code=-1009 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <BA74D6EF-A2E9-4A56-838B-67BB3D54C993>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <BA74D6EF-A2E9-4A56-838B-67BB3D54C993>.<2>}
+Test Case '-[LauverTests.APIClientTests testRetriesNoNetworkWithinBoundary]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testRetriesTimeoutWithinBoundary]' started.
+2026-09-21 11:33:51.344185+0800 Lauver[4610:2428031] [Default] Task <D0936FD1-EFC2-42DF-8A6F-0BC7AE058FF6>.<1> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <D0936FD1-EFC2-42DF-8A6F-0BC7AE058FF6>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <D0936FD1-EFC2-42DF-8A6F-0BC7AE058FF6>.<1>}
+2026-09-21 11:33:51.344266+0800 Lauver[4610:2428032] [Default] Task <F7B90127-C9F0-449B-9282-68ACFEDF9A43>.<2> finished with error [-1001] Error Domain=NSURLErrorDomain Code=-1001 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <F7B90127-C9F0-449B-9282-68ACFEDF9A43>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <F7B90127-C9F0-449B-9282-68ACFEDF9A43>.<2>}
+Test Case '-[LauverTests.APIClientTests testRetriesTimeoutWithinBoundary]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testSignedPutRetriesTheSameURLOnConnectionLoss]' started.
+2026-09-21 11:33:51.344947+0800 Lauver[4610:2428023] [Default] Task <A3016461-DA64-4561-B4E7-C03D1B767934>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <A3016461-DA64-4561-B4E7-C03D1B767934>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <A3016461-DA64-4561-B4E7-C03D1B767934>.<1>}
+Test Case '-[LauverTests.APIClientTests testSignedPutRetriesTheSameURLOnConnectionLoss]' passed (0.001 seconds).
+Test Case '-[LauverTests.APIClientTests testSignedPutRetryIsBoundedAndDoesNotRetryCancellationOrHTTPFailures]' started.
+2026-09-21 11:33:51.345761+0800 Lauver[4610:2428020] [Default] Task <9FFD4FAD-DB2A-407C-AA18-83751AFACC90>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <9FFD4FAD-DB2A-407C-AA18-83751AFACC90>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <9FFD4FAD-DB2A-407C-AA18-83751AFACC90>.<1>}
+2026-09-21 11:33:51.345849+0800 Lauver[4610:2428020] [Default] Task <E6CDEB71-02B9-420B-8ED0-4B9AFF9F377E>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <E6CDEB71-02B9-420B-8ED0-4B9AFF9F377E>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <E6CDEB71-02B9-420B-8ED0-4B9AFF9F377E>.<2>}
+Test Case '-[LauverTests.APIClientTests testSignedPutRetryIsBoundedAndDoesNotRetryCancellationOrHTTPFailures]' passed (0.001 seconds).
+Test Suite 'APIClientTests' passed at 2026-09-21 11:33:51.346.
+	 Executed 15 tests, with 0 failures (0 unexpected) in 0.014 (0.016) seconds
+Test Suite 'AppConfigurationTests' started at 2026-09-21 11:33:51.346.
+Test Case '-[LauverTests.AppConfigurationTests testAppLanguageUsesSupportedLocaleAndPersistsSelection]' started.
+Test Case '-[LauverTests.AppConfigurationTests testAppLanguageUsesSupportedLocaleAndPersistsSelection]' passed (0.002 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationLoadsStagingValues]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationLoadsStagingValues]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsInsecureAPIURL]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsInsecureAPIURL]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsMissingEnvironment]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsMissingEnvironment]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsUnknownEnvironment]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsUnknownEnvironment]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsURLWithoutHost]' started.
+Test Case '-[LauverTests.AppConfigurationTests testConfigurationRejectsURLWithoutHost]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testEnvironmentCasesRemainExplicit]' started.
+Test Case '-[LauverTests.AppConfigurationTests testEnvironmentCasesRemainExplicit]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppConfigurationTests testMetadataUsesExpectedDisplayName]' started.
+Test Case '-[LauverTests.AppConfigurationTests testMetadataUsesExpectedDisplayName]' passed (0.000 seconds).
+Test Suite 'AppConfigurationTests' passed at 2026-09-21 11:33:51.351.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'AppViewModelTests' started at 2026-09-21 11:33:51.351.
+Test Case '-[LauverTests.AppViewModelTests testAppleSignInSavesOnlyTheLocalCredentialIdentifierAfterBackendSuccess]' started.
+Test Case '-[LauverTests.AppViewModelTests testAppleSignInSavesOnlyTheLocalCredentialIdentifierAfterBackendSuccess]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testAuthenticationShellAndSignOutFlow]' started.
+Test Case '-[LauverTests.AppViewModelTests testAuthenticationShellAndSignOutFlow]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testDeletedKeychainTokensReturnToLoginWithoutNetworkAuth]' started.
+Test Case '-[LauverTests.AppViewModelTests testDeletedKeychainTokensReturnToLoginWithoutNetworkAuth]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testHealthFailurePreservesPublicRequestIDForSupport]' started.
+Test Case '-[LauverTests.AppViewModelTests testHealthFailurePreservesPublicRequestIDForSupport]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testHealthSuccessShowsOnlineAndRestoresNonSensitiveTabState]' started.
+Test Case '-[LauverTests.AppViewModelTests testHealthSuccessShowsOnlineAndRestoresNonSensitiveTabState]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testInvalidRefreshTokenClearsSavedSessionAndReturnsToLogin]' started.
+Test Case '-[LauverTests.AppViewModelTests testInvalidRefreshTokenClearsSavedSessionAndReturnsToLogin]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testLoginTimeoutStopsSubmittingAndAllowsSuccessfulRetry]' started.
+Test Case '-[LauverTests.AppViewModelTests testLoginTimeoutStopsSubmittingAndAllowsSuccessfulRetry]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRegisterSavesTokensAndAuthenticates]' started.
+Test Case '-[LauverTests.AppViewModelTests testRegisterSavesTokensAndAuthenticates]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRevokedAppleCredentialClearsSessionBeforeCallingBackendRestore]' started.
+Test Case '-[LauverTests.AppViewModelTests testRevokedAppleCredentialClearsSessionBeforeCallingBackendRestore]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testRuntimeSessionExpiryReturnsToLoginAndClearsAccountState]' started.
+Test Case '-[LauverTests.AppViewModelTests testRuntimeSessionExpiryReturnsToLoginAndClearsAccountState]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppViewModelTests testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken]' started.
+Test Case '-[LauverTests.AppViewModelTests testSessionRestoreRotatesRefreshTokenAfterUnauthorizedAccessToken]' passed (0.000 seconds).
+Test Suite 'AppViewModelTests' passed at 2026-09-21 11:33:51.357.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'AppleSignInTests' started at 2026-09-21 11:33:51.357.
+Test Case '-[LauverTests.AppleSignInTests testNonceHashUsesSHA256Hex]' started.
+Test Case '-[LauverTests.AppleSignInTests testNonceHashUsesSHA256Hex]' passed (0.000 seconds).
+Test Case '-[LauverTests.AppleSignInTests testNonceIsRandomURLSafeAndLongEnough]' started.
+Test Case '-[LauverTests.AppleSignInTests testNonceIsRandomURLSafeAndLongEnough]' passed (0.000 seconds).
+Test Suite 'AppleSignInTests' passed at 2026-09-21 11:33:51.358.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'AuthServiceTests' started at 2026-09-21 11:33:51.358.
+Test Case '-[LauverTests.AuthServiceTests testAppleSignInSendsProofAndFirstLoginDataButNotTheLocalUserIdentifier]' started.
+Test Case '-[LauverTests.AuthServiceTests testAppleSignInSendsProofAndFirstLoginDataButNotTheLocalUserIdentifier]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testForgotPasswordUsesTheContractPathAndOnlySendsEmail]' started.
+Test Case '-[LauverTests.AuthServiceTests testForgotPasswordUsesTheContractPathAndOnlySendsEmail]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testLogoutAcceptsAnEmptySuccessResponse]' started.
+Test Case '-[LauverTests.AuthServiceTests testLogoutAcceptsAnEmptySuccessResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testRegisterSendsCredentialsAndDecodesSession]' started.
+Test Case '-[LauverTests.AuthServiceTests testRegisterSendsCredentialsAndDecodesSession]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testResetPasswordUsesTheContractPathAndDoesNotSendAnIdentity]' started.
+Test Case '-[LauverTests.AuthServiceTests testResetPasswordUsesTheContractPathAndDoesNotSendAnIdentity]' passed (0.001 seconds).
+Test Case '-[LauverTests.AuthServiceTests testRestoreUsesBearerTokenRatherThanARequestBodyUserID]' started.
+Test Case '-[LauverTests.AuthServiceTests testRestoreUsesBearerTokenRatherThanARequestBodyUserID]' passed (0.001 seconds).
+Test Suite 'AuthServiceTests' passed at 2026-09-21 11:33:51.363.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'AuthSessionStoreTests' started at 2026-09-21 11:33:51.363.
+Test Case '-[LauverTests.AuthSessionStoreTests testAppleUserIdentifierUsesTheDedicatedSecureAccountAndCanBeCleared]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testAppleUserIdentifierUsesTheDedicatedSecureAccountAndCanBeCleared]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testMissingOneTokenDeletesTheIncompleteSession]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testMissingOneTokenDeletesTheIncompleteSession]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testPartialSaveFailureRollsBackEveryToken]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testPartialSaveFailureRollsBackEveryToken]' passed (0.000 seconds).
+Test Case '-[LauverTests.AuthSessionStoreTests testSavesReadsAndClearsBothTokens]' started.
+Test Case '-[LauverTests.AuthSessionStoreTests testSavesReadsAndClearsBothTokens]' passed (0.000 seconds).
+Test Suite 'AuthSessionStoreTests' passed at 2026-09-21 11:33:51.365.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'DesignSystemTests' started at 2026-09-21 11:33:51.365.
+Test Case '-[LauverTests.DesignSystemTests testFourStateComponentsHaveStableDistinctIdentifiers]' started.
+Test Case '-[LauverTests.DesignSystemTests testFourStateComponentsHaveStableDistinctIdentifiers]' passed (0.000 seconds).
+Test Case '-[LauverTests.DesignSystemTests testMVPContainsOnlyApprovedTabs]' started.
+Test Case '-[LauverTests.DesignSystemTests testMVPContainsOnlyApprovedTabs]' passed (0.000 seconds).
+Test Suite 'DesignSystemTests' passed at 2026-09-21 11:33:51.366.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'DiscoverTests' started at 2026-09-21 11:33:51.366.
+Test Case '-[LauverTests.DiscoverTests testCancellationDoesNotShowConnectionError]' started.
+Test Case '-[LauverTests.DiscoverTests testCancellationDoesNotShowConnectionError]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testChangedCursorRetriesFromFirstPage]' started.
+Test Case '-[LauverTests.DiscoverTests testChangedCursorRetriesFromFirstPage]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testDurationAndSpeedRangeSummariesUseActualUnits]' started.
+Test Case '-[LauverTests.DiscoverTests testDurationAndSpeedRangeSummariesUseActualUnits]' passed (0.001 seconds).
+Test Case '-[LauverTests.DiscoverTests testExpiredSessionClearsPreviouslyVisibleProfilesAndCursor]' started.
+Test Case '-[LauverTests.DiscoverTests testExpiredSessionClearsPreviouslyVisibleProfilesAndCursor]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testFailedFilterChangeDoesNotShowOldRowsUnderNewFilters]' started.
+Test Case '-[LauverTests.DiscoverTests testFailedFilterChangeDoesNotShowOldRowsUnderNewFilters]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testFilterPathEncodesQueryAndOmitsPaceWithoutSport]' started.
+Test Case '-[LauverTests.DiscoverTests testFilterPathEncodesQueryAndOmitsPaceWithoutSport]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testPaginationRetryPreservesRowsAndCursor]' started.
+Test Case '-[LauverTests.DiscoverTests testPaginationRetryPreservesRowsAndCursor]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testStalePageCannotOverwriteNewFilters]' started.
+Test Case '-[LauverTests.DiscoverTests testStalePageCannotOverwriteNewFilters]' passed (0.000 seconds).
+Test Case '-[LauverTests.DiscoverTests testUnlimitedRadiusIsExplicitAndChangingRadiusStartsANewTraversal]' started.
+Test Case '-[LauverTests.DiscoverTests testUnlimitedRadiusIsExplicitAndChangingRadiusStartsANewTraversal]' passed (0.000 seconds).
+Test Suite 'DiscoverTests' passed at 2026-09-21 11:33:51.372.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'EventsPaginationTests' started at 2026-09-21 11:33:51.372.
+Test Case '-[LauverTests.EventsPaginationTests testCreatedEventBeyondFirstPageSurvivesRefreshAndPaginationWithoutDuplicates]' started.
+Test Case '-[LauverTests.EventsPaginationTests testCreatedEventBeyondFirstPageSurvivesRefreshAndPaginationWithoutDuplicates]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testFailedNextPageKeepsRowsAndCursorForRetry]' started.
+Test Case '-[LauverTests.EventsPaginationTests testFailedNextPageKeepsRowsAndCursorForRetry]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testMutationDuringOlderListRequestSurvivesResponse]' started.
+Test Case '-[LauverTests.EventsPaginationTests testMutationDuringOlderListRequestSurvivesResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.EventsPaginationTests testServerCancellationReplacesLocallySavedEventOnRefresh]' started.
+Test Case '-[LauverTests.EventsPaginationTests testServerCancellationReplacesLocallySavedEventOnRefresh]' passed (0.001 seconds).
+Test Suite 'EventsPaginationTests' passed at 2026-09-21 11:33:51.376.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.003 (0.003) seconds
+Test Suite 'KeychainStoreTests' started at 2026-09-21 11:33:51.376.
+Test Case '-[LauverTests.KeychainStoreTests testTokenSurvivesAdapterRecreationAndCanBeDeleted]' started.
+Test Case '-[LauverTests.KeychainStoreTests testTokenSurvivesAdapterRecreationAndCanBeDeleted]' passed (0.002 seconds).
+Test Case '-[LauverTests.KeychainStoreTests testUpdatingTokenReplacesExistingValue]' started.
+Test Case '-[LauverTests.KeychainStoreTests testUpdatingTokenReplacesExistingValue]' passed (0.002 seconds).
+Test Suite 'KeychainStoreTests' passed at 2026-09-21 11:33:51.380.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'ProfileServiceTests' started at 2026-09-21 11:33:51.380.
+Test Case '-[LauverTests.ProfileServiceTests testBlockedUsersCursorAndPrivateCityContract]' started.
+Test Case '-[LauverTests.ProfileServiceTests testBlockedUsersCursorAndPrivateCityContract]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testConcurrentProfileAndSafetyRequestsRotateRefreshTokenOnlyOnce]' started.
+Test Case '-[LauverTests.ProfileServiceTests testConcurrentProfileAndSafetyRequestsRotateRefreshTokenOnlyOnce]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testCreateEventDoesNotReplayWhenCommittedResponseIsLost]' started.
+2026-09-21 11:33:51.382598+0800 Lauver[4610:2428031] [Default] Task <39CFE890-FC70-489C-B381-1120B3035A14>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <39CFE890-FC70-489C-B381-1120B3035A14>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <39CFE890-FC70-489C-B381-1120B3035A14>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testCreateEventDoesNotReplayWhenCommittedResponseIsLost]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDeleteAccountUsesBearerTokenAndDecodesDeletionJob]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDeleteAccountUsesBearerTokenAndDecodesDeletionJob]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDiscoverSendsAuthenticatedFiltersAndDecodesCityWithoutCoordinates]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDraftBackfillsPaceAsMinutesAndSeconds]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDraftBackfillsPaceAsMinutesAndSeconds]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testDurationPaceFormattingAndParsing]' started.
+Test Case '-[LauverTests.ProfileServiceTests testDurationPaceFormattingAndParsing]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testFailedPhotoPutDoesNotCompleteUpload]' started.
+2026-09-21 11:33:51.386216+0800 Lauver[4610:2428020] [Default] Task <76A99EF5-3EBD-4E8D-B253-115DD65161A0>.<2> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <76A99EF5-3EBD-4E8D-B253-115DD65161A0>.<2>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <76A99EF5-3EBD-4E8D-B253-115DD65161A0>.<2>}
+Test Case '-[LauverTests.ProfileServiceTests testFailedPhotoPutDoesNotCompleteUpload]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testInvalidDurationPaceDoesNotSendRequest]' started.
+Test Case '-[LauverTests.ProfileServiceTests testInvalidDurationPaceDoesNotSendRequest]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testLargePhotoOutputIsBoundedInPixelsRegardlessOfScreenScale]' started.
+Test Case '-[LauverTests.ProfileServiceTests testLargePhotoOutputIsBoundedInPixelsRegardlessOfScreenScale]' passed (0.060 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testMatchVisibilityReadsAndPersistsWithExistingPreferences]' started.
+Test Case '-[LauverTests.ProfileServiceTests testMatchVisibilityReadsAndPersistsWithExistingPreferences]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testOfflineRefreshPreservesTokensForRecovery]' started.
+Test Case '-[LauverTests.ProfileServiceTests testOfflineRefreshPreservesTokensForRecovery]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPhotoProcessingCenterCropsAndCompressesToJPEG]' started.
+Test Case '-[LauverTests.ProfileServiceTests testPhotoProcessingCenterCropsAndCompressesToJPEG]' passed (0.018 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPhotoUploadRecoversFromConnectionLossAtEveryStage]' started.
+2026-09-21 11:33:51.467785+0800 Lauver[4610:2428020] [Default] Task <020808A4-91D0-460B-8DC2-F4004B2F0D04>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <020808A4-91D0-460B-8DC2-F4004B2F0D04>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <020808A4-91D0-460B-8DC2-F4004B2F0D04>.<1>}
+2026-09-21 11:33:51.468632+0800 Lauver[4610:2428024] [Default] Task <EDDEF161-926C-4384-B954-EE830E14D5D1>.<6> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalUploadTask <EDDEF161-926C-4384-B954-EE830E14D5D1>.<6>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalUploadTask <EDDEF161-926C-4384-B954-EE830E14D5D1>.<6>}
+2026-09-21 11:33:51.469269+0800 Lauver[4610:2428023] [Default] Task <650E5792-4DDE-46E9-8CB2-9611009016B8>.<11> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <650E5792-4DDE-46E9-8CB2-9611009016B8>.<11>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <650E5792-4DDE-46E9-8CB2-9611009016B8>.<11>}
+Test Case '-[LauverTests.ProfileServiceTests testPhotoUploadRecoversFromConnectionLossAtEveryStage]' passed (0.002 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testPublicProfileContractDecodesWithoutCoordinates]' started.
+Test Case '-[LauverTests.ProfileServiceTests testPublicProfileContractDecodesWithoutCoordinates]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testReadsOwnProfileWithBearerToken]' started.
+Test Case '-[LauverTests.ProfileServiceTests testReadsOwnProfileWithBearerToken]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotOverwriteANewlySignedInAccount]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotOverwriteANewlySignedInAccount]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotRestoreTokensAfterSignOut]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRefreshCannotRestoreTokensAfterSignOut]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testRejectedRefreshClearsTokensAndNotifiesSessionExpiry]' started.
+Test Case '-[LauverTests.ProfileServiceTests testRejectedRefreshClearsTokensAndNotifiesSessionExpiry]' passed (0.003 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testReportsDoNotAutomaticallyRetryLostResponses]' started.
+2026-09-21 11:33:51.475960+0800 Lauver[4610:2428024] [Default] Task <DAAF75B2-9B47-42FD-8711-C4A64D3E618C>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <DAAF75B2-9B47-42FD-8711-C4A64D3E618C>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <DAAF75B2-9B47-42FD-8711-C4A64D3E618C>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testReportsDoNotAutomaticallyRetryLostResponses]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testSafetyWritesDeriveIdentityFromTokensAndDecodeReportReference]' started.
+Test Case '-[LauverTests.ProfileServiceTests testSafetyWritesDeriveIdentityFromTokensAndDecodeReportReference]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testStravaRequestsUseSharedAuthenticationAndOnlyReturnSummaries]' started.
+Test Case '-[LauverTests.ProfileServiceTests testStravaRequestsUseSharedAuthenticationAndOnlyReturnSummaries]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testStravaStartDoesNotAutomaticallyReplayLostResponse]' started.
+2026-09-21 11:33:51.478864+0800 Lauver[4610:2428024] [Default] Task <40F33BA9-C776-432C-85C7-9D8B6ADBC886>.<1> finished with error [-1005] Error Domain=NSURLErrorDomain Code=-1005 "(null)" UserInfo={_NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <40F33BA9-C776-432C-85C7-9D8B6ADBC886>.<1>"
+), _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <40F33BA9-C776-432C-85C7-9D8B6ADBC886>.<1>}
+Test Case '-[LauverTests.ProfileServiceTests testStravaStartDoesNotAutomaticallyReplayLostResponse]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUnauthorizedProfileRequestRefreshesAndPersistsRotatedTokens]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUnauthorizedProfileRequestRefreshesAndPersistsRotatedTokens]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUpdateEncodesMissingCityRegionAsExplicitNull]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUpdateEncodesMissingCityRegionAsExplicitNull]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileServiceTests testUpdateSendsCityCenterAndPaceValueWithoutDerivedFieldsOrIdentity]' started.
+Test Case '-[LauverTests.ProfileServiceTests testUpdateSendsCityCenterAndPaceValueWithoutDerivedFieldsOrIdentity]' passed (0.001 seconds).
+Test Suite 'ProfileServiceTests' passed at 2026-09-21 11:33:51.482.
+	 Executed 26 tests, with 0 failures (0 unexpected) in 0.099 (0.102) seconds
+Test Suite 'ProfileViewModelCancellationTests' started at 2026-09-21 11:33:51.482.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testActualNetworkFailureIsStillShownWithTheExistingProfile]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testActualNetworkFailureIsStillShownWithTheExistingProfile]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAllCancellationRepresentationsAreSilentAndAllowAnotherLoad]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAllCancellationRepresentationsAreSilentAndAllowAnotherLoad]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAlreadyCancelledLoadDoesNotSendARequest]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testAlreadyCancelledLoadDoesNotSendARequest]' passed (0.000 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledLoadCannotOverwriteANewerSavedPhoto]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledLoadCannotOverwriteANewerSavedPhoto]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledReloadKeepsTheUploadedPhotoWithoutAnError]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testCancelledReloadKeepsTheUploadedPhotoWithoutAnError]' passed (0.001 seconds).
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testRetryAfterReorderFailureDoesNotReuploadCommittedPhotos]' started.
+Test Case '-[LauverTests.ProfileViewModelCancellationTests testRetryAfterReorderFailureDoesNotReuploadCommittedPhotos]' passed (0.001 seconds).
+Test Suite 'ProfileViewModelCancellationTests' passed at 2026-09-21 11:33:51.486.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'SafetyViewModelTests' started at 2026-09-21 11:33:51.486.
+Test Case '-[LauverTests.SafetyViewModelTests testBlockedPageFailureKeepsCursorButFailedRefreshRetriesFirstPage]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testBlockedPageFailureKeepsCursorButFailedRefreshRetriesFirstPage]' passed (0.001 seconds).
+Test Case '-[LauverTests.SafetyViewModelTests testFailedUnblockKeepsEntryAndSuccessfulRetryRemovesIt]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testFailedUnblockKeepsEntryAndSuccessfulRetryRemovesIt]' passed (0.000 seconds).
+Test Case '-[LauverTests.SafetyViewModelTests testReportFailureCanRetryButSuccessCannotBeSubmittedTwice]' started.
+Test Case '-[LauverTests.SafetyViewModelTests testReportFailureCanRetryButSuccessCannotBeSubmittedTwice]' passed (0.001 seconds).
+Test Suite 'SafetyViewModelTests' passed at 2026-09-21 11:33:51.488.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'StravaTests' started at 2026-09-21 11:33:51.488.
+Test Case '-[LauverTests.StravaTests testActivityDatesAcceptFractionalSecondsAndRejectInvalidDates]' started.
+Test Case '-[LauverTests.StravaTests testActivityDatesAcceptFractionalSecondsAndRejectInvalidDates]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testAuthorizationURLAndCallbackRequireExpectedHostReadOnlyScopeAndExactState]' started.
+Test Case '-[LauverTests.StravaTests testAuthorizationURLAndCallbackRequireExpectedHostReadOnlyScopeAndExactState]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testLoadAndConnectUseServerStatusRatherThanCallbackClaim]' started.
+Test Case '-[LauverTests.StravaTests testLoadAndConnectUseServerStatusRatherThanCallbackClaim]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testLostDisconnectResponseNotifiesProfileToRemoveRevokedActivities]' started.
+Test Case '-[LauverTests.StravaTests testLostDisconnectResponseNotifiesProfileToRemoveRevokedActivities]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testOfflineDisconnectKeepsConnectionAndReportsFailure]' started.
+Test Case '-[LauverTests.StravaTests testOfflineDisconnectKeepsConnectionAndReportsFailure]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testPendingDisconnectRemovesCachedDisplayAndRetryShowsAuthoritativeCompletion]' started.
+Test Case '-[LauverTests.StravaTests testPendingDisconnectRemovesCachedDisplayAndRetryShowsAuthoritativeCompletion]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testRefreshFailureRechecksExpiredAuthorizationAndAllowsLaterRecovery]' started.
+Test Case '-[LauverTests.StravaTests testRefreshFailureRechecksExpiredAuthorizationAndAllowsLaterRecovery]' passed (0.001 seconds).
+Test Case '-[LauverTests.StravaTests testRejectedScopesAndInvalidStateAreActionable]' started.
+Test Case '-[LauverTests.StravaTests testRejectedScopesAndInvalidStateAreActionable]' passed (0.000 seconds).
+Test Case '-[LauverTests.StravaTests testUserCancellationIsExplainedWithoutAnErrorOrAutomaticReconnect]' started.
+Test Case '-[LauverTests.StravaTests testUserCancellationIsExplainedWithoutAnErrorOrAutomaticReconnect]' passed (0.000 seconds).
+Test Suite 'StravaTests' passed at 2026-09-21 11:33:51.495.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'UIStateStoreTests' started at 2026-09-21 11:33:51.495.
+Test Case '-[LauverTests.UIStateStoreTests testPersistsOnlySelectedTabAsNonSensitiveUIState]' started.
+Test Case '-[LauverTests.UIStateStoreTests testPersistsOnlySelectedTabAsNonSensitiveUIState]' passed (0.003 seconds).
+Test Case '-[LauverTests.UIStateStoreTests testUnknownTabFallsBackToDiscoverAndResetRemovesState]' started.
+Test Case '-[LauverTests.UIStateStoreTests testUnknownTabFallsBackToDiscoverAndResetRemovesState]' passed (0.001 seconds).
+Test Suite 'UIStateStoreTests' passed at 2026-09-21 11:33:51.499.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'LauverTests.xctest' passed at 2026-09-21 11:33:51.499.
+	 Executed 109 tests, with 0 failures (0 unexpected) in 0.153 (0.168) seconds
+Test Suite 'All tests' passed at 2026-09-21 11:33:51.499.
+	 Executed 109 tests, with 0 failures (0 unexpected) in 0.153 (0.169) seconds
+2026-09-21 11:33:51.565 xcodebuild[47071:7077861] [MT] IDETestOperationsObserverDebug: 2.922 elapsed -- Testing started completed.
+2026-09-21 11:33:51.565 xcodebuild[47071:7077861] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-21 11:33:51.565 xcodebuild[47071:7077861] [MT] IDETestOperationsObserverDebug: 2.922 sec, +2.922 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-iphone17e-unit-after-tls.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

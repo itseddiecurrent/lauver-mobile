@@ -1,5 +1,6 @@
 import { Pool, type PoolClient } from 'pg';
 import { StravaError, type StravaActivity } from './strava-provider.js';
+import { postgresConnectionOptions } from './postgres-connection.js';
 
 export type StravaConnectionRecord = {
   user_id: string; status: 'connected' | 'revocation_pending' | 'reconnect_required'; athlete_id: string;
@@ -31,7 +32,7 @@ export interface StravaRepository {
 export class PgStravaRepository implements StravaRepository {
   private readonly pool: Pool;
   constructor(databaseURL: string) {
-    this.pool = new Pool({ connectionString: databaseURL, max: 3, connectionTimeoutMillis: 3_000 });
+    this.pool = new Pool({ ...postgresConnectionOptions(databaseURL), max: 3, connectionTimeoutMillis: 3_000 });
     this.pool.on('error', () => { /* The affected request fails; no credentials are logged. */ });
   }
   async close(): Promise<void> { await this.pool.end(); }

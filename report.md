@@ -66,3 +66,16 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
   Render reported it successful. Repeated probes after deployment still show
   `/healthz` HTTP 200 and `/readyz` HTTP 503, so the database readiness issue
   remains open and no post-cutover live E2E is claimed.
+
+## Supabase TLS remediation (2026-09-21)
+
+- Render logs showed Prisma `SELF_SIGNED_CERT_IN_CHAIN` while querying
+  `ProfilePhotoUpload`.
+- Added shared Supabase PostgreSQL TLS handling for Prisma and the Strava pool;
+  Supabase connections remain encrypted while managed CA verification is
+  relaxed, and Render PostgreSQL remains strict.
+- Backend regression: 190/190 tests passed. Physical iPhone 17e native XCTest
+  rerun: 109/109 passed; result log is
+  `artifacts/acceptance/step-15-iphone17e-unit-after-tls.log`.
+- The fix is pushed in the current working tree and requires the next Render
+  deployment before `/readyz` can be expected to recover.

@@ -82,3 +82,16 @@ destination was used.
   but its database `SELECT 1` readiness check is still failing. Supabase
   post-cutover E2E is therefore not marked passed until Render logs confirm
   the configured `SUPABASE_DATABASE_URL` connects and `/readyz` returns 200.
+
+## TLS fix follow-up (2026-09-21)
+
+- Render logs identified `SELF_SIGNED_CERT_IN_CHAIN` from Prisma's Supabase
+  connection during profile-photo cleanup.
+- Added shared PostgreSQL transport normalization for Prisma and the Strava
+  `pg` pool: Supabase keeps TLS encryption with `rejectUnauthorized: false`
+  for its managed CA chain; Render PostgreSQL keeps strict verification.
+- Backend tests now pass 190/190, including three transport regression tests.
+- The connected physical iPhone 17e rerun passed 109/109 native XCTest cases
+  using UDID `00008150-00010C6E22C0C01C`; no Simulator destination was used.
+- Commit `a6d6401` contains the preceding readiness record; the TLS fix is
+  pending its Render deployment before `/readyz` can be rechecked.
