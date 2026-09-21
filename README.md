@@ -282,7 +282,7 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 
 The current release evidence is recorded in [`report.md`](report.md) and [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md). The connected physical iPhone 17e passed all 109 native XCTest cases; the latest full UI run had 19 passes, 5 explicit skips, and 2 assertion failures. No app crash was observed. The remaining UI failures are the live Match summary and Stream message screen. TestFlight/App Store Connect upload and final signed IPA review are still pending Apple Developer/App Store Connect access.
 
-The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment.
+The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment. `/readyz` must return HTTP 200 before post-cutover app acceptance; HTTP 503 means the encrypted `SUPABASE_DATABASE_URL` Render secret is missing or the Supabase database is unreachable.
 
 Step 01 Render staging acceptance is complete. Before later steps, the project owner will still need to provide or create:
 

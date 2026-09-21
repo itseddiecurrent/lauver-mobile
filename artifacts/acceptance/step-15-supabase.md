@@ -58,3 +58,17 @@ opt-ins were not set, and 2 existing live-staging checks failed (`testLiveMatchS
 `testLiveStreamChatConnectsOnDevice`). No app crash was observed. The run used
 `xcodebuild -destination id=16753B2D-88AB-5D77-82BF-B1EA68946526`; no simulator
 destination was used.
+
+## 2026-09-21 follow-up
+
+- The currently connected physical device is `Edward的iPhone`, iPhone 17e,
+  iOS 26.6.1, UDID `00008150-00010C6E22C0C01C`. The native test command was
+  rerun with `-destination id=00008150-00010C6E22C0C01C`; no simulator
+  destination was used.
+- Render `GET /healthz` returned HTTP 200. Before this follow-up push, Render
+  `GET /readyz` returned HTTP 503 (`service_unavailable`); the configured
+  encrypted `SUPABASE_DATABASE_URL` will be exercised by the deployment
+  triggered from this verified commit.
+- The secret value is intentionally not stored in this repository. After the
+  deployment, `/readyz` must return HTTP 200 and the post-cutover staging
+  checks can proceed against the Supabase native schema.

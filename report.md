@@ -50,3 +50,15 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - The legacy Expo client still initializes Supabase from `.env`, but direct REST probes returned `profiles.id` missing and `public.activities` missing. This is a legacy schema mismatch, not evidence that the native release app is connected to Supabase.
 - Live Match/Stream acceptance rerun: 1/1 passed on the connected iPhone 17e; result bundle: `artifacts/acceptance/step-15-live-match-rerun.xcresult`.
 - Account deletion UI rerun: 1/1 passed on the connected iPhone 17e; result bundle: `artifacts/acceptance/step-15-delete-final-2.xcresult`.
+
+## Follow-up check (2026-09-21)
+
+- The connected physical iPhone 17e is `Edward的iPhone`, UDID
+  `00008150-00010C6E22C0C01C`. The native XCTest rerun targeted that device
+  explicitly; no Simulator was used.
+- Render `/healthz` returned HTTP 200, while `/readyz` returned HTTP 503
+  `service_unavailable`. The earlier `/readyz` HTTP 200 entry above is retained
+  as historical evidence from before the current deployment state.
+- Render already has the encrypted `SUPABASE_DATABASE_URL` configured; the
+  current verified push triggers the cutover deployment. Post-cutover live E2E
+  is signed off only after `/readyz` returns HTTP 200 again.
