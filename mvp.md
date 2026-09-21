@@ -1488,11 +1488,11 @@ xcodebuild test \
 
 **通过标准：** 英文和简体中文覆盖全部 MVP 用户界面与主要状态；语言选择、fallback、持久化、Accessibility 和真机回归均通过；不支持语言不会出现空白 key 或混乱布局。
 
-### Step 15：Release Hardening、TestFlight 与最终交付
+### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
 **状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 真机签名测试、两账号 Match/Stream live E2E、账户删除 1/1、Render health/ready 检查、原生 XCTest 和 staging archive；仅 TestFlight/App Store Connect 尚未签收）。未发现 App 闪退。当前原生发布 App 连接 Render API，不连接 Supabase；旧 Expo Supabase 数据层探针返回 schema 不匹配，详见根目录 `README.md` 与 `report.md`。**
 
-**依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过。
+**依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 
 **实现任务：**
 
@@ -1500,7 +1500,7 @@ xcodebuild test \
 2. 运行 iOS XCTest/XCUITest，真实设备验证 Apple、Strava、HealthKit、最多 9 张照片、Profile Preview、Match 和 Stream；
 3. 复验 Step 14A 已完成的 UI 对齐，以及 Dynamic Type、VoiceOver、Dark Mode、无网络、慢网络和错误恢复；
 4. 完成 Privacy Policy、Terms、App Privacy、purpose strings 和 Review Notes；
-5. 从全新 Render project 按 README 部署 staging，验证所有 secret 和 migration；
+5. 完成下方“Supabase 全量迁移计划”，在 Supabase staging/project branch 上通过迁移、RLS、Edge Functions、Storage、Realtime 和真机验收；在迁移验收完成前不得关闭 Render staging；
 6. Archive App，扫描 IPA strings、entitlements、network endpoints 和 secrets；
 7. 建立 TestFlight build，执行两普通用户 + 一管理员端到端验收脚本；
 8. 对 App bundle、Swift Packages、npm dependencies、源码和用户文案执行最终范围审计。
@@ -1524,6 +1524,126 @@ xcodebuild test \
 7. 确认 App 不含 AI、Garmin、Premium、IAP、行为学习匹配、兼容度分数或自动推荐；Swipe/Like/Pass/Match 必须符合本文件的权限、隐私和无障碍规则。
 
 **通过标准：** Definition of Done 全部打勾，自动化测试、真实服务验收、从零部署和 TestFlight E2E 均有可审计证据。
+
+#### Step 15 Supabase 全量迁移计划
+
+目标架构必须从：
+
+```text
+SwiftUI iOS → Render Express API → Render PostgreSQL
+                         ├→ Stream Chat
+                         └→ 外部 S3-compatible Storage
+```
+
+切换为：
+
+```text
+SwiftUI iOS → Supabase Auth
+            → Supabase PostgREST + RLS
+            → Supabase Edge Functions
+            → Supabase Storage
+            → Supabase Realtime
+            → Supabase PostgreSQL
+```
+
+迁移原则：Supabase 是唯一生产后端；不把 service-role key、Strava secret、Apple private key、Stream secret 或数据库连接串放入 iOS；不通过“把 API_BASE_URL 改成 Supabase URL”的方式假装完成迁移；所有替换功能必须先有自动化测试和真实 iPhone 17e 验收，再移除旧 Render 依赖。
+
+##### 15-S1：冻结现状与建立迁移基线
+
+1. 固定当前原生 App、Express API、Prisma schema、Render staging 数据库和 Supabase project 的 revision/时间戳；导出当前 API contract、数据库表/索引/约束/RLS 状态和 Storage object 清单。
+2. 建立 `artifacts/acceptance/step-15-supabase-baseline.md`，记录两个测试用户、管理员账号、Match、聊天、活动、照片和第三方授权的脱敏 fixture；禁止直接复制真实用户密码、token 或 provider secret。
+3. 列出原生 App 当前所有 Render endpoint，并为每个 endpoint 标记迁移目标：直接 PostgREST、Postgres RPC、Authenticated Edge Function、Admin-only Edge Function 或删除。
+4. 在 Supabase 建立独立 staging project 或 database branch；Production 数据库不作为首次迁移和 destructive test 的目标。
+
+##### 15-S2：Postgres schema 与数据迁移
+
+1. 以当前 Prisma migration 的最终语义为准，生成 Supabase migration，不直接把旧 Expo migration 当作唯一 schema 来源；解决旧 Expo `profiles.id` / `activities` 与当前 native schema 不一致的问题。
+2. 迁移并验证 users/auth identity 映射、profiles、profile photos、swipes、matches、blocks、reports、events、attendees、HealthKit workouts、Strava connections、sync logs、audit logs 和 account-deletion jobs。
+3. 所有主键、外键、唯一约束、check constraint、软删除状态、时间字段和分页索引必须在空数据库上通过 `supabase db reset`/等价 migration-from-zero 验证。
+4. 把确定性业务逻辑迁移为 Postgres function/RPC：Match candidate filtering、距离计算、Like/Pass daily limit、mutual Match、Unmatch、事件容量并发和账户删除的事务性部分；函数必须显式设置 `search_path`，禁止动态 SQL 注入。
+5. 写入双向数据核对脚本：行数、主键集合、关系数量、published photo 数量、active Match 数量和 event membership 数量必须一致；迁移失败时不删除源数据。
+
+##### 15-S3：Supabase Auth 替换自建认证
+
+1. Email/password、password reset、session refresh、logout 和 Sign in with Apple 改为 Supabase Auth；Native 只保存 Supabase access/refresh session 到 Keychain。
+2. 为旧 Express 用户建立一次性 identity mapping；不能仅按 email 自动合并 Apple、Email 和 Firebase 身份，必须使用已验证 provider subject 或明确的账户关联流程。
+3. Apple Sign in 在 Supabase Dashboard 配置 Services ID、Team ID、Key ID 和 private key；secret 只存 Supabase project secrets。Apple nonce、issuer、audience、expiry 和 revoked 状态必须由 Supabase Auth/Edge Function 验证。
+4. 若继续支持 Google，使用 Supabase Auth Google provider；Firebase 仅作为迁移期间的身份映射来源，不再由 Render/Firebase Admin 签发 Lauver session。
+5. 删除旧 `/v1/auth/*` 依赖前，真机验证注册、登录、恢复 session、刷新 token、退出、密码重置、Apple 首次登录/再次登录和撤销授权。
+
+##### 15-S4：RLS、授权与管理员边界
+
+1. 默认拒绝所有 public table 写入；每张含用户数据的表都必须启用 RLS，并使用 `auth.uid()` 与 owner/member 字段做最小权限判断。
+2. Profile public projection 只能返回公开字段、已确认照片、城市名称和近似距离，不返回精确经纬度、内部状态、Match preference、provider token 或审核字段。
+3. Match、messages、event attendees、HealthKit workouts、Strava connection、photos 和 account-deletion records 只允许本人或明确成员访问；互相 Block 后的对象必须双向隔离。
+4. 管理员操作必须通过受保护的 Edge Function，并在 `admin_audit_logs` 中记录 actor、target、action、reason、request ID 和时间；不能让 iOS 直接持有 service-role key。
+5. 添加 IDOR、越权读取、伪造 user ID、非成员读写 Realtime channel、普通用户调用 admin function 和 RLS bypass 的自动化测试。
+
+##### 15-S5：照片与 Supabase Storage
+
+1. 建立 private `profile-photos` bucket；对象路径固定为 `profile-photos/{user_id}/{photo_id}`，禁止客户端自定义其他用户路径。
+2. iOS 使用 Supabase Storage upload 或受限 signed upload URL；服务端/Edge Function 校验 owner、MIME、文件大小、像素尺寸、checksum 和 EXIF/GPS 清理。
+3. 只有 confirm 成功的照片才写入 published projection；pending、失败、替换旧对象和账户删除对象进入幂等 cleanup job。
+4. 保留最多 9 张、主照片提升、排序、替换、删除、批量上传、单张 retry 和第 10 张拒绝等现有行为，并在 iPhone 17e 上重新验收。
+
+##### 15-S6：Edge Functions 替换 Express 业务接口
+
+按领域拆分并逐个切流，函数必须验证 Supabase JWT、输入 schema、权限和统一错误结构 `{ code, message, requestId, details? }`：
+
+1. `profile-api`：Profile、public profile、preview、Discover、Match preference、照片 confirm/order/delete；
+2. `match-api`：候选、Like/Pass、mutual Match、Matches、Unmatch、Match report；
+3. `events-api`：活动 CRUD、容量并发、加入/退出、活动举报和参与者权限；
+4. `safety-api`：Block、Report、举报快照、后台处理和 audit；
+5. `account-api`：重新认证、禁用账户、Apple/Strava/provider revoke、Storage/DB/Realtime 清理和幂等重试；
+6. `strava-auth` / `strava-sync`：OAuth state、scope 检查、token 加密、refresh、revoke、活动摘要导入和 deduplication；
+7. `admin-api`：管理员鉴权、举报列表、处理结果、用户暂停和活动下架；
+8. `healthkit-api`：Workout summary import、UUID 去重、删除用户导入数据；HealthKit 权限仍只由 iOS 在用户主动操作后请求。
+
+每个函数都必须包含 unit test、unauthorized/forbidden test、输入边界 test、真实 staging smoke test 和部署后的日志/错误检查；Edge Function 不得把完整 token、密码、私钥或用户健康数据写入日志。
+
+##### 15-S7：Realtime 替换 Stream Chat
+
+1. 建立 direct-chat 和 event-chat message schema、membership、read receipt、unread counter、report snapshot 和 retention policy；不保留第二套 Stream `messages` 作为生产真相源。
+2. 使用 Supabase Realtime Broadcast/Postgres Changes 或受保护 channel 实现实时消息；channel topic 必须绑定 active Match 或 event membership，Block/Unmatch 后立即撤销访问。
+3. iOS ChatService 改为 Supabase Realtime client；实现发送状态、断网重试、1,000 字符限制、已读清零、重复消息去重和 reconnect。
+4. 在两台真实 iPhone 或一个 iPhone 加 staging client 上验收 mutual Like → 私聊、活动群聊、实时收发、离线恢复、Unmatch/Block、举报消息和账户删除清理。
+5. Supabase Realtime 验收通过后，才删除 Stream token/channel endpoint、Stream secret 和 Stream SDK 依赖。
+
+##### 15-S8：Strava、外部回调与定时任务
+
+1. Strava OAuth callback 改为 Supabase Edge Function 的 HTTPS URL，并在 Strava application 中更新 callback domain；旧 Render callback 在切流期间保持只读兼容。
+2. Strava client secret、token encryption key、Resend key、Apple private key 和其他 provider secrets 只写入 Supabase project secrets。
+3. 用 Supabase scheduled Edge Function/pg_cron 执行过期 token refresh、同步重试、照片 cleanup、账户删除 cleanup 和 audit retention；每个 job 必须有幂等 key、最大重试次数和失败告警。
+4. 验证 OAuth state mismatch、scope 缺失、token refresh、revoke、重复活动、provider 5xx 和 callback 重放。
+
+##### 15-S9：iOS 客户端切换与双环境配置
+
+1. 为 SwiftUI 增加 Supabase Swift SDK 或等价的原生 Supabase client layer，封装 Auth、Database/PostgREST、Storage、Edge Functions 和 Realtime；View 层不得直接拼接 REST URL。
+2. `Staging.xcconfig` 和 `Production.xcconfig` 只包含对应 Supabase URL、publishable/anon key 和非敏感配置；service-role key 永远不进入 Xcode、IPA、日志或 git。
+3. 将现有 `AuthService`、`ProfileService`、Chat、Events、Safety、Strava、HealthKit 和 account deletion service 的实现替换为 Supabase adapter；保留现有 protocol 以减少 UI 变更。
+4. 增加启动时 backend identity/health probe，显示 Supabase project/environment，不显示 secret；API 错误统一映射为现有 loading/empty/error/retry 状态。
+5. Staging Supabase 真机验证通过后，再切换 Production config；Render API 依赖、`API_BASE_URL`、Prisma client、Stream SDK 和旧 auth session 清理代码只能在 production cutover 后删除。
+
+##### 15-S10：切换、回滚与最终下线
+
+1. 先完成 Supabase staging 双写或一次性导入，并冻结 schema 变更；记录 migration revision 和 data checksum。
+2. 通过 feature flag 将新注册、登录、Profile、Match、Chat、Events、Report、Photo 和 Delete Account 分领域切到 Supabase；失败时按领域回退到 Render，不允许两个系统同时作为同一数据的无序写入源。
+3. 生产切换窗口执行最终增量同步、短暂写保护、数据库备份、DNS/config 更新和真机 smoke test；确认 Supabase Auth、Storage、Realtime、Edge Functions 和 cron 全部 ready 后解除写保护。
+4. 保留 Render staging 和只读回滚窗口至少一个完整验收周期；监控错误率、Auth session refresh、Edge Function latency、Postgres connections、Storage failures、Realtime reconnect 和 job backlog。
+5. 满足以下条件后才下线 Render：连续观察周期无关键错误、两普通用户+一管理员 E2E 通过、所有 secrets 已从 Render 撤销、旧 API 无生产流量、数据 checksum 一致、回滚备份可恢复。
+
+##### 15-S11：Supabase 迁移完成验收清单
+
+- [ ] `supabase db reset`/空项目 migration 从零成功；生产 migration 不依赖手工 SQL 编辑器操作；
+- [ ] Auth 的 Email、Apple、Google（若保留）、reset、refresh、logout、revoke 和账户删除通过；
+- [ ] RLS/IDOR/管理员边界测试通过；publishable/anon key 可公开，service-role key 未进入 App；
+- [ ] Storage 私有 bucket、9 张照片、confirm、排序、替换、删除、cleanup 和账户删除通过；
+- [ ] Edge Functions 的 profile、discover、match、events、safety、admin、Strava、HealthKit、delete 全部部署并 smoke test；
+- [ ] Supabase Realtime 直聊/活动群聊、权限撤销、离线恢复、已读/未读和消息举报通过；
+- [ ] 两普通用户 + 一管理员在实体 iPhone 17e 完成完整 E2E；
+- [ ] Render API、Prisma、Stream、旧 Supabase Expo schema 不再是生产路径；
+- [ ] README、`.env.example`、`.xcconfig.example`、`render.yaml`、OpenAPI 和 `artifacts/acceptance/step-15-supabase.md` 已反映最终架构；
+- [ ] Supabase project backup、PITR/恢复、日志、告警、Edge Function secrets、cron 和成本上限已配置并记录。
 
 ## 11. 测试矩阵
 
