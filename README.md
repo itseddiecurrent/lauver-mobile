@@ -4,7 +4,7 @@ This repository contains the legacy React Native prototype plus the new native i
 
 ## Runtime backend and Supabase status
 
-The current SwiftUI MVP (`LauverNative`, `Lauver-Staging` and `Lauver-Production`) uses the Express API configured by `API_BASE_URL`; staging points to `https://lauver-api-staging.onrender.com`. It does not initialize Supabase. Render `/healthz` and `/readyz` are the release readiness checks.
+The current SwiftUI MVP (`LauverNative`, `Lauver-Staging` and `Lauver-Production`) uses the Express API configured by `API_BASE_URL`; staging points to `https://lauver-api-staging.onrender.com`. The API can now use the Supabase PostgreSQL native schema through Render's encrypted `SUPABASE_DATABASE_URL` setting; the cutover procedure is recorded in [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md). Render `/healthz` and `/readyz` are the release readiness checks.
 
 The `src/` Expo prototype is legacy/reference code and still contains a Supabase client configured by `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. That path is not the native release app. On 2026-09-21, direct REST probes of the linked Supabase project returned `profiles.id` missing and `public.activities` missing; do not treat the legacy Expo Supabase path as a working backend until its schema is migrated or the prototype is retired.
 
@@ -259,6 +259,16 @@ The root `render.yaml` defines a Singapore staging web service and PostgreSQL da
 3. On the free web-service plan, Render runs `npm run db:migrate:deploy && npm start` as the start command because pre-deploy commands are unavailable. Prisma safely skips migrations that are already applied; a migration failure prevents the API process from starting.
 4. After the first deploy, record the assigned `onrender.com` URL in `artifacts/acceptance/step-01.md` and verify both health endpoints.
 
+### Render → Supabase PostgreSQL cutover
+
+The native Prisma schema is isolated in Supabase's `native` schema so it cannot
+collide with the legacy Expo tables in `public`. Apply the Supabase migration,
+copy the Render data, and configure `SUPABASE_DATABASE_URL` in Render by
+following [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md).
+The URL must use TLS; `start-render.sh` adds
+`search_path=native,public` and runs Prisma migrations before starting the API.
+Pushing a verified commit to `origin/main` triggers the Render deployment.
+
 ### Native app language support (Step 14B)
 
 The SwiftUI app supports English and Simplified Chinese. `System Default` follows the iOS preferred language when it is English or Chinese and falls back to English for every other system language. A manual choice is stored in `UserDefaults` under `lauver.app-language` and overrides future system-language changes. User-generated names, event titles and chat messages are never passed through localization.
@@ -269,7 +279,7 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 
 ### Step 15 release acceptance (2026-09-21)
 
-The current release evidence is recorded in [`report.md`](report.md) and [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md). The connected physical iPhone 17e passed all 109 native XCTest cases; the full UI run had 18 passes, 5 explicit skips, and 3 assertion failures. No app crash was observed. The remaining UI failures are the live Match summary, Stream message screen, and Delete Account hittability checks. TestFlight/App Store Connect upload and final signed IPA review are still pending Apple Developer/App Store Connect access.
+The current release evidence is recorded in [`report.md`](report.md) and [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md). The connected physical iPhone 17e passed all 109 native XCTest cases; the latest full UI run had 19 passes, 5 explicit skips, and 2 assertion failures. No app crash was observed. The remaining UI failures are the live Match summary and Stream message screen. TestFlight/App Store Connect upload and final signed IPA review are still pending Apple Developer/App Store Connect access.
 
 The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment.
 

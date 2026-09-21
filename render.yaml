@@ -7,7 +7,7 @@ services:
     plan: free
     autoDeployTrigger: checksPass
     buildCommand: ./scripts/build-deploy.sh
-    startCommand: npm run db:migrate:deploy && npm start
+    startCommand: ./scripts/start-render.sh
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
@@ -85,6 +85,11 @@ services:
       # Configure the object-storage endpoint, region, bucket, access-key ID,
       # secret access key, and public CDN/base URL directly in Render before
       # enabling profile photo storage.
+      # Keep the generated Render database as a rollback fallback. After the
+      # Supabase native schema is applied and data is copied, set this secret
+      # in Render; start-render.sh promotes it to DATABASE_URL at runtime.
+      - key: SUPABASE_DATABASE_URL
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: lauver-postgres-staging

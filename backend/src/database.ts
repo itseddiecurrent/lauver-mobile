@@ -22,7 +22,10 @@ export class PrismaDatabase implements Database {
 
   constructor(databaseURL: string) {
     const databaseURLObject = new URL(databaseURL);
-    const useTLS = databaseURLObject.hostname.endsWith('.render.com') || databaseURLObject.searchParams.has('sslmode');
+    const useTLS = databaseURLObject.hostname.endsWith('.render.com')
+      || databaseURLObject.hostname.endsWith('.supabase.com')
+      || databaseURLObject.hostname.endsWith('.supabase.co')
+      || databaseURLObject.searchParams.has('sslmode');
     databaseURLObject.searchParams.delete('sslmode');
     databaseURLObject.searchParams.delete('uselibpqcompat');
     const adapter = new PrismaPg({
