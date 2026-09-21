@@ -42,7 +42,7 @@ enum StateComponentIdentifiers {
 }
 
 struct LoadingStateView: View {
-    let title: String
+    let title: LocalizedStringKey
 
     var body: some View {
         VStack(spacing: LauverDesign.Spacing.small) {
@@ -56,8 +56,8 @@ struct LoadingStateView: View {
 
 struct EmptyStateView: View {
     let systemImage: String
-    let title: String
-    let message: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
 
     var body: some View {
         ContentUnavailableView(title, systemImage: systemImage, description: Text(message))

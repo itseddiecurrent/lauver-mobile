@@ -1,5 +1,19 @@
 import SwiftUI
 
+extension WorkoutSport {
+    var localizedTitle: LocalizedStringKey {
+        switch self {
+        case .running: "Running"
+        case .trailRunning: "Trail Running"
+        case .cycling: "Cycling"
+        case .swimming: "Swimming"
+        case .walking: "Walking"
+        case .hiking: "Hiking"
+        case .rowing: "Rowing"
+        }
+    }
+}
+
 struct DiscoverFilters: Equatable {
     var sport: WorkoutSport?
     var radius: Int? = 25
@@ -152,9 +166,18 @@ struct DiscoverView: View {
             Section {
                 Text("Distances are approximate, based on city centres.")
                     .font(.footnote).foregroundStyle(.secondary)
-                Text("\(viewModel.filters.sport?.title ?? "All sports") · \(viewModel.filters.radiusTitle)\(viewModel.filters.paceTitle.map { " · \($0)" } ?? "")")
-                    .font(.subheadline)
-                    .accessibilityIdentifier("discover-filter-summary")
+                HStack(spacing: 0) {
+                    Text(viewModel.filters.sport?.localizedTitle ?? "All sports")
+                    Text(" · ")
+                    if let radius = viewModel.filters.radius {
+                        Text("Within \(radius) km")
+                    } else {
+                        Text("Unlimited distance")
+                    }
+                    if let paceTitle = viewModel.filters.paceTitle { Text(" · \(paceTitle)") }
+                }
+                .font(.subheadline)
+                .accessibilityIdentifier("discover-filter-summary")
             }
             if viewModel.needsProfileLocation {
                 ProfileLocationRequiredView()
@@ -272,7 +295,7 @@ private struct DiscoverFilterSheet: View {
             Form {
                 Picker("Sport", selection: $filters.sport) {
                     Text("All sports").tag(nil as WorkoutSport?)
-                    ForEach(WorkoutSport.allCases) { Text($0.title).tag(Optional($0)) }
+                    ForEach(WorkoutSport.allCases) { Text($0.localizedTitle).tag(Optional($0)) }
                 }
                 .accessibilityIdentifier("discover-sport")
                 .onChange(of: filters.sport) { _, _ in clearPace() }

@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 enum AppTab: String, CaseIterable, Identifiable {
     case discover
@@ -11,6 +12,16 @@ enum AppTab: String, CaseIterable, Identifiable {
 
     var title: String {
         rawValue.capitalized
+    }
+
+    var localizedTitle: LocalizedStringKey {
+        switch self {
+        case .discover: "Discover"
+        case .match: "Match"
+        case .events: "Events"
+        case .messages: "Messages"
+        case .profile: "Profile"
+        }
     }
 
     var systemImage: String {

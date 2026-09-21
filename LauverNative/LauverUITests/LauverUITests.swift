@@ -53,10 +53,25 @@ final class LauverUITests: XCTestCase {
         let prompt = app.staticTexts["请完善个人资料中的位置，以开始发现/匹配"]
         XCTAssertTrue(prompt.waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
+        XCTAssertTrue(app.navigationBars["发现"].exists)
+        XCTAssertTrue(app.staticTexts["距离为近似值，以城市中心为计算依据。"].exists)
 
-        // Tab accessibility labels are currently kept language-neutral even when
-        // the content strings switch to Simplified Chinese.
-        app.tabBars.firstMatch.buttons.element(boundBy: 1).tap()
+        let tabs = app.tabBars.firstMatch
+        XCTAssertTrue(tabs.buttons["发现"].exists)
+        XCTAssertTrue(tabs.buttons["匹配"].exists)
+        XCTAssertTrue(tabs.buttons["活动"].exists)
+        XCTAssertTrue(tabs.buttons["消息"].exists)
+        XCTAssertTrue(tabs.buttons["资料"].exists)
+
+        // Exercise both the localized tab labels and the localized Events empty state.
+        tabs.buttons.element(boundBy: 2).tap()
+        XCTAssertTrue(app.navigationBars["活动"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["暂无即将举行的活动"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["全部"].exists)
+        XCTAssertTrue(app.buttons["已创建"].exists)
+        XCTAssertTrue(app.buttons["已参加"].exists)
+
+        tabs.buttons.element(boundBy: 1).tap()
         XCTAssertTrue(prompt.waitForExistence(timeout: 5))
         XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }

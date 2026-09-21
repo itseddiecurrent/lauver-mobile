@@ -586,19 +586,19 @@ private struct AuthenticatedShellView: View {
                 DiscoverView(service: discoverService, profileService: profileService, safetyService: safetyService)
             }
             .tag(AppTab.discover)
-            .tabItem { Label(AppTab.discover.title, systemImage: AppTab.discover.systemImage) }
+            .tabItem { Label(AppTab.discover.localizedTitle, systemImage: AppTab.discover.systemImage) }
 
             NavigationStack {
                 MatchView(matchService: matchService, profileService: profileService, safetyService: safetyService, chatService: chatService, filterStore: filterStore)
             }
             .tag(AppTab.match)
-            .tabItem { Label(AppTab.match.title, systemImage: AppTab.match.systemImage) }
+            .tabItem { Label(AppTab.match.localizedTitle, systemImage: AppTab.match.systemImage) }
 
             NavigationStack {
                 EventsView(service: eventsService)
             }
             .tag(AppTab.events)
-            .tabItem { Label(AppTab.events.title, systemImage: AppTab.events.systemImage) }
+            .tabItem { Label(AppTab.events.localizedTitle, systemImage: AppTab.events.systemImage) }
 
             NavigationStack {
                 if let chatService {
@@ -608,7 +608,7 @@ private struct AuthenticatedShellView: View {
                 }
             }
             .tag(AppTab.messages)
-            .tabItem { Label(AppTab.messages.title, systemImage: AppTab.messages.systemImage) }
+            .tabItem { Label(AppTab.messages.localizedTitle, systemImage: AppTab.messages.systemImage) }
             .badge(chat.unreadMessages > 0 ? min(chat.unreadMessages, 99) : 0)
 
             NavigationStack {
@@ -618,7 +618,7 @@ private struct AuthenticatedShellView: View {
                 }
             }
             .tag(AppTab.profile)
-            .tabItem { Label(AppTab.profile.title, systemImage: AppTab.profile.systemImage) }
+            .tabItem { Label(AppTab.profile.localizedTitle, systemImage: AppTab.profile.systemImage) }
         }
         .tint(LauverDesign.ColorToken.accent)
         .toolbarBackground(LauverDesign.ColorToken.background, for: .tabBar)
@@ -665,13 +665,13 @@ private struct MatchGateView: View {
 
 private struct PlaceholderScreen: View {
     let tab: AppTab
-    let message: String
+    let message: LocalizedStringKey
     var serviceStatus: ServiceStatus?
     var retry: (() -> Void)?
 
     init(
         tab: AppTab,
-        message: String,
+        message: LocalizedStringKey,
         serviceStatus: ServiceStatus? = nil,
         retry: (() -> Void)? = nil
     ) {
@@ -687,10 +687,10 @@ private struct PlaceholderScreen: View {
                 ServiceStatusView(status: serviceStatus, retry: retry)
             }
 
-            EmptyStateView(systemImage: tab.systemImage, title: tab.title, message: message)
+            EmptyStateView(systemImage: tab.systemImage, title: tab.localizedTitle, message: message)
         }
         .padding()
-        .navigationTitle(tab.title)
+        .navigationTitle(tab.localizedTitle)
         .accessibilityIdentifier("screen-\(tab.rawValue)")
     }
 }
@@ -782,7 +782,7 @@ struct EventsView: View {
             if model.loading && model.events.isEmpty { LoadingStateView(title: "Loading events") }
             if let error = model.error { ErrorStateView(message: error, requestID: nil); RetryButton { Task { await model.load() } } }
             if !model.loading && model.events.isEmpty && model.error == nil { EmptyStateView(systemImage: "calendar", title: "No upcoming events", message: "Check back soon for public workouts.") }
-            Section { Picker("Event view", selection: $filter) { ForEach(EventFilter.allCases) { Text($0.title).tag($0) } }.pickerStyle(.segmented) }
+            Section { Picker("Event view", selection: $filter) { ForEach(EventFilter.allCases) { Text($0.localizedTitle).tag($0) } }.pickerStyle(.segmented) }
             ForEach(filteredEvents) { event in
                 NavigationLink { EventDetailView(event: event, model: model, service: service) } label: {
                     VStack(alignment: .leading, spacing: 6) {
@@ -825,7 +825,17 @@ struct EventsView: View {
     }
 }
 
-private enum EventFilter: String, CaseIterable, Identifiable { case all, created, joined; var id: String { rawValue }; var title: String { switch self { case .all: "All"; case .created: "Created"; case .joined: "Joined" } } }
+private enum EventFilter: String, CaseIterable, Identifiable {
+    case all, created, joined
+    var id: String { rawValue }
+    var localizedTitle: LocalizedStringKey {
+        switch self {
+        case .all: "All"
+        case .created: "Created"
+        case .joined: "Joined"
+        }
+    }
+}
 
 @MainActor
 private final class UserLocationModel: NSObject, ObservableObject, CLLocationManagerDelegate {

@@ -10,5 +10,5 @@
 
 - 登录页已移除登录前显示的 `Staging environment` / `Production environment` 环境标识。
 - Discover 与 Match 先读取当前 profile；缺少城市位置或城市中心坐标时显示本地化提示：英文 `Complete your profile location to start discovering/matching`，简体中文 `请完善个人资料中的位置，以开始发现/匹配`，不再显示 `Unable to connect` 错误态。
-- 实体 iPhone 17e 定向 UI XCTest：3/3 passed，覆盖上述登录页、英文和简体中文未完成 profile 的 Discover/Match 状态；未使用 Simulator。
+- 实体 iPhone 17e 定向 UI XCTest：3/3 passed，覆盖上述登录页、英文和简体中文未完成 profile 的 Discover/Match 状态，并验证简体中文 Discover/Events 标题、距离说明、底部 Tab 及 `全部`/`已创建`/`已参加` 筛选标签；未使用 Simulator。
 - Render staging 的加密 `SUPABASE_DATABASE_URL` 已配置；`render.yaml` 仅声明 `sync: false`，不会记录 secret。验证后的 `origin/main` push 会触发 Render 部署。
