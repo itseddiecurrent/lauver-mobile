@@ -1490,7 +1490,7 @@ xcodebuild test \
 
 ### Step 15：Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 未完成（Match、9 张照片和 Profile Preview 纳入后必须重新执行发布验收）。**
+**状态：🟡 发布验收进行中（2026-09-21 已完成实体 iPhone 17e 全量 XCTest、staging archive、Render health/ready 检查和大部分 XCUITest；3 个 UI 断言与 TestFlight/App Store Connect 仍未签收）。未发现 App 闪退。详细记录见 `report.md` 和 `artifacts/acceptance/step-15.md`。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过。
 

@@ -1,0 +1,164 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -project LauverNative/Lauver.xcodeproj -scheme Lauver-Staging -destination id=00008150-00010C6E22C0C01C CODE_SIGNING_ALLOWED=YES
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = YES
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  StreamCore: https://github.com/GetStream/stream-core-swift.git @ 0.10.1
+  StreamChatSwiftUI: https://github.com/GetStream/stream-chat-swiftui.git @ 5.11.0
+  StreamChat: https://github.com/GetStream/stream-chat-swift.git @ 5.11.0
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (12 targets)
+    Target 'Lauver' in project 'Lauver'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChatCommonUI' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat_StreamChatCommonUI' in project 'StreamChat' (no dependencies)
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamChat_StreamChat' in project 'StreamChat'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore'
+        ➜ Explicit dependency on target 'StreamCore' in project 'StreamCore'
+    Target 'StreamCore' in project 'StreamCore' (no dependencies)
+    Target 'StreamChat_StreamChat' in project 'StreamChat' (no dependencies)
+    Target 'StreamChatSwiftUI_StreamChatSwiftUI' in project 'StreamChatSwiftUI' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/momc --dry-run --action generate --swift-version 6 --sdkroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk --iphoneos-deployment-target 13.0 --module StreamChat /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift/Sources/StreamChat/Database/StreamChatModel.xcdatamodeld /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat.build/DerivedSources/CoreDataGenerated/StreamChatModel
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: ca4b041012c0ded0856d904f596a544f
+Build description path: /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/XCBuildData/ca4b041012c0ded0856d904f596a544f.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChat.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChat.build/empty-StreamChat_StreamChat.plist (in target 'StreamChat_StreamChat' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChat.build/empty-StreamChat_StreamChat.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChat.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChatCommonUI.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/empty-StreamChat_StreamChatCommonUI.plist (in target 'StreamChat_StreamChatCommonUI' from project 'StreamChat')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swift
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/empty-StreamChat_StreamChatCommonUI.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChat.build/Staging-iphoneos/StreamChat_StreamChatCommonUI.build/assetcatalog_generated_info.plist -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChat_StreamChatCommonUI.bundle/Info.plist
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/empty-StreamChatSwiftUI_StreamChatSwiftUI.plist (in target 'StreamChatSwiftUI_StreamChatSwiftUI' from project 'StreamChatSwiftUI')
+    cd /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/SourcePackages/checkouts/stream-chat-swiftui
+    builtin-infoPlistUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/empty-StreamChatSwiftUI_StreamChatSwiftUI.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/StreamChatSwiftUI.build/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.build/assetcatalog_generated_info.plist -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist
+
+ProcessProductPackaging /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Lauver.entitlements /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Entitlements:
+    
+    {
+    "application-identifier" = "94KFUD562T.ai.lauver.app.staging";
+    "com.apple.developer.applesignin" =     (
+        Default
+    );
+    "com.apple.developer.healthkit" = 1;
+    "com.apple.developer.team-identifier" = 94KFUD562T;
+    "get-task-allow" = 1;
+}
+    
+    builtin-productPackagingUtility /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Lauver.entitlements -entitlements -format xml -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent
+
+ProcessProductPackagingDER /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent.der (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    /usr/bin/derq query -f xml -i /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent.der --raw
+
+CopySwiftLibs /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-swiftStdLibTool --copy --verbose --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --scan-executable /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Frameworks --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/SystemExtensions --scan-folder /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessInfoPlistFile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Info.plist /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Info.plist (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-infoPlistUtility /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative/Lauver/Resources/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChat_StreamChat.bundle -scanforprivacyfile /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/StreamChat_StreamChatCommonUI.bundle -requiredArchitecture arm64 -o /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Info.plist
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib
+/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Lauver.debug.dylib: replacing existing signature
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib
+/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/__preview.dylib: replacing existing signature
+
+CodeSign /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    
+    Signing Identity:     "Apple Development: Qianfu Tang (PPCDMN2WTS)"
+    Provisioning Profile: "iOS Team Provisioning Profile: ai.lauver.app.staging"
+                          (ad357800-7793-411d-82c4-a17995f1fd87)
+    
+    /usr/bin/codesign --force --sign 5385BE6841EF3C31FBF8A22E7F9AA66A25CF5AFA --entitlements /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Intermediates.noindex/Lauver.build/Staging-iphoneos/Lauver.build/Lauver.app.xcent --timestamp\=none --generate-entitlement-der /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app
+/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app: replacing existing signature
+
+Validate /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app (in target 'Lauver' from project 'Lauver')
+    cd /Users/edwardtang/Desktop/Code/lauver-mobile/LauverNative
+    builtin-validationUtility /Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app -shallow-bundle -infoplist-subpath Info.plist
+
+note: Removed stale file '/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/Frameworks'
+
+note: Removed stale file '/Users/edwardtang/Library/Developer/Xcode/DerivedData/Lauver-ftoiobhfoetwriabqponzpqrztdt/Build/Products/Staging-iphoneos/Lauver.app/PlugIns'
+
+** BUILD SUCCEEDED **
+

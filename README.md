@@ -261,6 +261,12 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 
 ## Current external setup still needed
 
+### Step 15 release acceptance (2026-09-21)
+
+The current release evidence is recorded in [`report.md`](report.md) and [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md). The connected physical iPhone 17e passed all 109 native XCTest cases; the full UI run had 18 passes, 5 explicit skips, and 3 assertion failures. No app crash was observed. The remaining UI failures are the live Match summary, Stream message screen, and Delete Account hittability checks. TestFlight/App Store Connect upload and final signed IPA review are still pending Apple Developer/App Store Connect access.
+
+The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment.
+
 Step 01 Render staging acceptance is complete. Before later steps, the project owner will still need to provide or create:
 
 - Apple Developer Program access and the `ai.lauver.app` App ID;
