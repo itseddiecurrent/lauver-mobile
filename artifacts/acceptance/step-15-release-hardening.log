@@ -1,0 +1,24 @@
+Step 15 release hardening (2026-09-21)
+scope:
+MVP scope check passed.
+repo-secrets:
+Secret scan passed.
+archive-secrets:
+Secret scan passed.
+archive:
+** ARCHIVE SUCCEEDED **
+archive-info:
+ai.lauver.app.staging
+1.0.0
+1
+https://lauver-api-staging.onrender.com
+archive-endpoints:
+https://chat-proxy-dublin.stream-io-api.com/
+https://chat-proxy-singapore.stream-io-api.com/
+https://chat-proxy-sydney.stream-io-api.com/
+https://chat-proxy-us-east.stream-io-api.com/
+https://chat.stream-io-api.com/
+https://getstream.io/chat/docs/sdk/ios/uikit/getting-started/
+https://lauver-api-staging.onrender.comWstagingV25E253RenVLauver
+entitlements:
+unsigned archive; no embedded entitlements (CODE_SIGNING_ALLOWED=NO)

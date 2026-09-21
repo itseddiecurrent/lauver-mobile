@@ -54,3 +54,4 @@ yarn-error.*
 # Test output
 coverage/
 artifacts/acceptance/*.xcresult/
+artifacts/acceptance/*.xcarchive/

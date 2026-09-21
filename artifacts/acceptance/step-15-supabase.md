@@ -97,3 +97,14 @@ destination was used.
   probes now return `/healthz` HTTP 200 and `/readyz` HTTP 200 with
   `{"database":"ok"}`. The Supabase database readiness blocker is cleared;
   post-cutover live E2E remains a separate acceptance step.
+
+## Post-cutover API smoke (2026-09-21)
+
+- Against the deployed Render API and Supabase native schema, two disposable
+  users completed registration, Profile save, Match preferences, one-way Like,
+  mutual Match and Matches listing.
+- Both accounts then completed `DELETE /v1/account` with password
+  reauthentication; old sessions immediately returned 401. The fixture was
+  removed through the production deletion orchestration, with no direct write
+  to the old Render database. Evidence:
+  `artifacts/acceptance/step-15-post-cutover-smoke.log`.

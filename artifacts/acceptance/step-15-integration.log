@@ -1,0 +1,6 @@
+Step 15 migration-from-zero/integration (2026-09-21)
+
+Prisma migrations applied: 17/17
+Integration test files: 10/10 passed
+Integration tests: 71/71 passed
+Database: local Docker PostgreSQL `lauver_test` only

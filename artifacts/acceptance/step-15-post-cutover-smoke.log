@@ -1,0 +1,22 @@
+Step 15 post-cutover smoke (2026-09-21)
+Target: https://lauver-api-staging.onrender.com
+Database: Supabase native schema through Render SUPABASE_DATABASE_URL
+Device policy: no device UI runner used in this API smoke; physical iPhone XCTest is recorded separately.
+
+PASS supabase-ready
+PASS register-0
+PASS profile-0
+PASS match-preferences-0
+PASS register-1
+PASS profile-1
+PASS match-preferences-1
+PASS one-way-like
+PASS mutual-match
+PASS matches-0
+PASS matches-1
+PASS delete-account-0
+PASS revoked-session-0
+PASS delete-account-1
+PASS revoked-session-1
+
+Result: passed. Disposable fixture accounts were removed through the account-deletion API.

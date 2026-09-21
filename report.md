@@ -80,3 +80,16 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - Render manually deployed `b92f29b`; `/healthz` and `/readyz` now both return
   HTTP 200, with `/readyz` reporting `database: ok`. The certificate-chain
   readiness blocker is cleared.
+
+## Release hardening and post-cutover smoke (2026-09-21)
+
+- Local migration-from-zero/integration run applied all 17 Prisma migrations
+  and passed 71/71 integration tests.
+- Scope scan and corrected source/archive secret scans passed. The latest
+  unsigned Staging iPhoneOS archive completed with `ARCHIVE SUCCEEDED` and
+  contains the staging Render endpoint only; no embedded entitlements are
+  expected because the archive intentionally used `CODE_SIGNING_ALLOWED=NO`.
+- Deployed API smoke passed with two disposable users: registration, Profile,
+  Match preferences, mutual Match, Matches listing, account deletion and old
+  session rejection. Disposable accounts were deleted through the API.
+- Full final report: `artifacts/acceptance/final-test-report.md`.
