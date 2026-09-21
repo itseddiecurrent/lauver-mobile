@@ -262,8 +262,9 @@ The root `render.yaml` defines a Singapore staging web service and PostgreSQL da
 ### Render → Supabase PostgreSQL cutover
 
 The native Prisma schema is isolated in Supabase's `native` schema so it cannot
-collide with the legacy Expo tables in `public`. Apply the Supabase migration,
-copy the Render data, and configure `SUPABASE_DATABASE_URL` in Render by
+collide with the legacy Expo tables in `public`. This release uses a schema-only
+migration; disposable Render staging test data is intentionally not copied.
+Apply the Supabase migration and configure `SUPABASE_DATABASE_URL` in Render by
 following [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md).
 The URL must use TLS; `start-render.sh` adds
 `search_path=native,public` and runs Prisma migrations before starting the API.
