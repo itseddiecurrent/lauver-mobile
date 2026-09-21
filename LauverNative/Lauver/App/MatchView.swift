@@ -89,13 +89,16 @@ final class MatchViewModel: ObservableObject {
     @Published private(set) var requestID: String?
     @Published var toast: MatchSummary?
     @Published var needsOnboarding = false
+    @Published private(set) var needsProfileLocation = false
     private let service: any MatchServicing
+    private let profileService: (any ProfileServicing)?
     private let filterStore: any MatchFilterStoring
     private var nextCursor: String?
     private var generation = 0
 
-    init(service: any MatchServicing, filterStore: any MatchFilterStoring = UIStateStore()) {
+    init(service: any MatchServicing, profileService: (any ProfileServicing)? = nil, filterStore: any MatchFilterStoring = UIStateStore()) {
         self.service = service
+        self.profileService = profileService
         self.filterStore = filterStore
         if let data = filterStore.matchFiltersData, let saved = try? JSONDecoder().decode(MatchFilters.self, from: data) {
             filters = saved
@@ -105,8 +108,23 @@ final class MatchViewModel: ObservableObject {
     func load() async {
         generation += 1; let request = generation
         isLoading = true; errorMessage = nil; requestID = nil
+        needsProfileLocation = false
         defer { if request == generation { isLoading = false } }
         do {
+            if let profileService {
+                let profile = try await profileService.getOwnProfile()
+                try Task.checkCancellation()
+                guard request == generation else { return }
+                if profile.needsLocationForDiscovery {
+                    candidates = []
+                    matches = []
+                    nextCursor = nil
+                    hasLoaded = true
+                    needsOnboarding = false
+                    needsProfileLocation = true
+                    return
+                }
+            }
             let prefs = try await service.preferences()
             guard request == generation else { return }
             needsOnboarding = !prefs.visibleInMatch
@@ -179,12 +197,13 @@ struct MatchView: View {
     init(matchService: any MatchServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing, chatService: (any ChatServicing)?, filterStore: any MatchFilterStoring) {
         self.matchService = matchService; self.profileService = profileService; self.safetyService = safetyService; self.chatService = chatService
         self.filterStore = filterStore
-        _model = StateObject(wrappedValue: MatchViewModel(service: matchService, filterStore: filterStore))
+        _model = StateObject(wrappedValue: MatchViewModel(service: matchService, profileService: profileService, filterStore: filterStore))
     }
 
     var body: some View {
         Group {
-            if model.needsOnboarding { onboarding }
+            if model.needsProfileLocation { ProfileLocationRequiredView() }
+            else if model.needsOnboarding { onboarding }
             else { matchContent }
         }
         .navigationTitle("Match")
@@ -194,6 +213,9 @@ struct MatchView: View {
         .task { await model.load() }
         .task(id: model.matches) { await refreshConversationPreviews() }
         .onAppear { Task { await refreshConversationPreviews() } }
+        .onAppear {
+            if model.needsProfileLocation { Task { await model.load() } }
+        }
         .onChange(of: chat.locallyReadTargetUserIDs) { _, readTargets in
             for match in model.matches where readTargets.contains(match.user.id) {
                 guard let preview = conversationPreviews[match.id], preview.unreadCount > 0 else { continue }

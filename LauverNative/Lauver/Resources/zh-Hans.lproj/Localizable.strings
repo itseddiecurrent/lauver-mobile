@@ -29,6 +29,7 @@
 "Request ID: %@" = "请求 ID：%@";
 "Profile" = "资料";
 "Discover" = "发现";
+"Complete your profile location to start discovering/matching" = "请完善个人资料中的位置，以开始发现/匹配";
 "Match" = "匹配";
 "Events" = "活动";
 "Messages" = "消息";

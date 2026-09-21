@@ -11,10 +11,29 @@ final class LauverUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.descendants(matching: .any)["lauver-title"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.staticTexts["app-environment"].label, "Staging environment")
+        XCTAssertFalse(app.staticTexts["app-environment"].exists)
         XCTAssertTrue(app.buttons["auth-login"].exists)
         XCTAssertTrue(app.buttons["auth-show-register"].exists)
         XCTAssertTrue(app.buttons["auth-apple"].exists)
+    }
+
+    func testIncompleteProfileShowsLocationPromptInsteadOfConnectionError() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "-ui-testing-authenticated",
+            "-ui-testing-incomplete-profile",
+            "-ui-testing-reset-state",
+            "-ui-testing-reset-auth",
+        ]
+        app.launch()
+
+        let prompt = app.staticTexts["Complete your profile location to start discovering/matching"]
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
+
+        app.tabBars.firstMatch.buttons["Match"].tap()
+        XCTAssertTrue(prompt.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any)["state-error"].exists)
     }
 
     func testLiveStreamChatConnectsOnDevice() {

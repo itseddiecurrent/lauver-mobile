@@ -65,6 +65,23 @@ struct EmptyStateView: View {
     }
 }
 
+struct ProfileLocationRequiredView: View {
+    var body: some View {
+        VStack(spacing: LauverDesign.Spacing.small) {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.title)
+                .foregroundStyle(LauverDesign.ColorToken.accent)
+            Text("Complete your profile location to start discovering/matching")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(LauverDesign.ColorToken.text)
+        }
+        .frame(maxWidth: .infinity, minHeight: 180)
+        .padding(.horizontal, LauverDesign.Spacing.large)
+        .accessibilityIdentifier("profile-location-required")
+    }
+}
+
 struct ErrorStateView: View {
     let message: String
     let requestID: String?

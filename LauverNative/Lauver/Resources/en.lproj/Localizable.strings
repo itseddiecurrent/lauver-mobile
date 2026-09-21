@@ -30,6 +30,7 @@
 "Request ID: %@" = "Request ID: %@";
 "Profile" = "Profile";
 "Discover" = "Discover";
+"Complete your profile location to start discovering/matching" = "Complete your profile location to start discovering/matching";
 "Match" = "Match";
 "Events" = "Events";
 "Messages" = "Messages";

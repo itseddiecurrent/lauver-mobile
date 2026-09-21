@@ -1490,7 +1490,7 @@ xcodebuild test \
 
 ### Step 15：Supabase 迁移、Release Hardening、TestFlight 与最终交付
 
-**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Supabase TLS 修复已由 Render 手动部署，`/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；正式签名 IPA、TestFlight/App Store Connect 和最终 Product Owner 签收尚未完成）。未发现 App 闪退。**
+**状态：🟡 发布验收进行中（2026-09-21 按 schema-only 范围确认 Supabase native schema 已应用并通过 30 表/209 列/61 约束/17 条 Prisma ledger 校验，Render staging 测试数据不迁移；Supabase TLS 修复已由 Render 手动部署，`SUPABASE_DATABASE_URL` 已配置，`/healthz` 与 `/readyz` 均为 200、数据库为 `ok`；migration-from-zero/integration 71/71、后端回归 190/190、两账号 post-cutover API smoke 通过；实体 iPhone 17e 原生 XCTest 109/109 使用真机 destination 通过，未使用模拟器；Step 15 follow-up 已移除登录前环境标识，并为缺少 profile location 的 Discover/Match 增加中英文提示，定向 UI XCTest 2/2 在同一真机通过；正式签名 IPA、TestFlight/App Store Connect 和最终 Product Owner 签收尚未完成）。未发现 App 闪退。**
 
 **依赖：** Step 00–14、Step 14A 和 Step 14B 全部通过；Supabase Production 项目、Custom Domain（如使用）、Database、Auth、Storage 和 Realtime 权限已由项目负责人准备。
 

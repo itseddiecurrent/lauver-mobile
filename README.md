@@ -268,7 +268,10 @@ Apply the Supabase migration and configure `SUPABASE_DATABASE_URL` in Render by
 following [`artifacts/acceptance/step-15-supabase.md`](artifacts/acceptance/step-15-supabase.md).
 The URL must use TLS; `start-render.sh` adds
 `search_path=native,public` and runs Prisma migrations before starting the API.
-Pushing a verified commit to `origin/main` triggers the Render deployment.
+Render staging now has the encrypted `SUPABASE_DATABASE_URL` secret configured;
+`render.yaml` keeps the key declared as `sync: false` so the value never enters
+the repository. Pushing a verified commit to `origin/main` triggers the Render
+deployment.
 
 ### Native app language support (Step 14B)
 
@@ -281,6 +284,8 @@ Add new UI copy as a SwiftUI `LocalizedStringKey` literal, then add the same key
 ### Step 15 release acceptance (2026-09-21)
 
 The current release evidence is recorded in [`report.md`](report.md) and [`artifacts/acceptance/step-15.md`](artifacts/acceptance/step-15.md). The connected physical iPhone 17e passed all 109 native XCTest cases; the latest full UI run had 19 passes, 5 explicit skips, and 2 assertion failures. No app crash was observed. The remaining UI failures are the live Match summary and Stream message screen. TestFlight/App Store Connect upload and final signed IPA review are still pending Apple Developer/App Store Connect access.
+
+The Step 15 follow-up UI fixes are covered by two additional physical-device UI tests: the pre-login staging label is absent, and an incomplete profile shows the localized location prompt in both Discover and Match without the connection-error state. The Render staging service has `SUPABASE_DATABASE_URL` configured and remains the deployment target for verified pushes.
 
 The Render staging source remains `main`/`render.yaml`; pushing a verified commit to `origin/main` triggers the configured Render deployment. Verify `https://lauver-api-staging.onrender.com/healthz` and `/readyz` after deployment. `/readyz` must return HTTP 200 before post-cutover app acceptance; HTTP 503 means the encrypted `SUPABASE_DATABASE_URL` Render secret is missing or the Supabase database is unreachable.
 

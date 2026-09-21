@@ -92,8 +92,9 @@ struct AppContainer {
             )
         // All authenticated features must share refresh-token rotation state.
         let liveProfileService = ProfileService(client: client, authService: authService, sessionStore: authSessionStore)
-        let profileService: any ProfileServicing = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
-            ? UITestProfileService()
+        let usingUITestServices = arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+        let profileService: any ProfileServicing = usingUITestServices
+            ? UITestProfileService(incomplete: arguments.contains("-ui-testing-incomplete-profile"))
             : liveProfileService
         let testSafetyService = UITestSafetyService()
         let testEventsService = UITestEventsService()
@@ -103,23 +104,23 @@ struct AppContainer {
             configuration: configuration,
             healthService: healthService,
             authService: authService,
-            discoverService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            discoverService: usingUITestServices
                 ? UITestDiscoverService(safetyService: testSafetyService)
                 : liveProfileService,
-            matchService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            matchService: usingUITestServices
                 ? testMatchService
                 : liveProfileService,
             profileService: profileService,
-            accountDeletionService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            accountDeletionService: usingUITestServices
                 ? UITestAccountDeletionService()
                 : liveProfileService,
-            safetyService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            safetyService: usingUITestServices
                 ? testSafetyService
                 : liveProfileService,
-            eventsService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            eventsService: usingUITestServices
                 ? testEventsService
                 : liveProfileService,
-            stravaService: arguments.contains("-ui-testing-authenticated") || arguments.contains("-ui-testing-auth-flow")
+            stravaService: usingUITestServices
                 ? UITestStravaService()
                 : liveProfileService,
             authSessionStore: authSessionStore,
@@ -188,26 +189,42 @@ private final class UITestSafetyService: SafetyServicing {
 }
 
 private final class UITestProfileService: ProfileServicing {
-    private var profile = WorkoutProfile(
-        id: "ui-test-user",
-        displayName: "UI Test Runner",
-        bio: "Morning miles before coffee.",
-        photoURL: nil,
-        city: ProfileCity(
-            name: "Shanghai",
-            regionCode: "SH",
-            countryCode: "CN",
-            latitude: 31.2304,
-            longitude: 121.4737
-        ),
-        sports: [ProfileSport(
-            sport: .running,
-            paceValue: 5.5,
-            paceUnit: "min/km"
-        )],
-        trainingTimes: [TrainingTime(weekday: 1, timeBucket: .morning)],
-        isComplete: true
-    )
+    private var profile: WorkoutProfile
+
+    init(incomplete: Bool = false) {
+        profile = WorkoutProfile(
+            id: "ui-test-user",
+            displayName: "UI Test Runner",
+            bio: "Morning miles before coffee.",
+            photoURL: nil,
+            city: ProfileCity(
+                name: "Shanghai",
+                regionCode: "SH",
+                countryCode: "CN",
+                latitude: 31.2304,
+                longitude: 121.4737
+            ),
+            sports: [ProfileSport(
+                sport: .running,
+                paceValue: 5.5,
+                paceUnit: "min/km"
+            )],
+            trainingTimes: [TrainingTime(weekday: 1, timeBucket: .morning)],
+            isComplete: true
+        )
+        if incomplete {
+            profile = WorkoutProfile(
+                id: profile.id,
+                displayName: nil,
+                bio: nil,
+                photoURL: nil,
+                city: nil,
+                sports: [],
+                trainingTimes: [],
+                isComplete: false
+            )
+        }
+    }
 
     func getOwnProfile() async throws -> WorkoutProfile { profile }
     func previewOwnProfile() async throws -> WorkoutProfile { profile }

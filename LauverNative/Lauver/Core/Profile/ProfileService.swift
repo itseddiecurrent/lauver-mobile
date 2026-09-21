@@ -151,6 +151,16 @@ struct WorkoutProfile: Codable, Equatable, Identifiable {
     }
 }
 
+extension WorkoutProfile {
+    /// Discover and Match need a saved city center before they can calculate
+    /// approximate distances. Keep this gate shared so an incomplete profile
+    /// is not reported as a network error.
+    var needsLocationForDiscovery: Bool {
+        guard let city else { return true }
+        return city.latitude == nil || city.longitude == nil
+    }
+}
+
 struct ProfilePhotoReference: Codable, Equatable, Identifiable {
     let id: String
     let url: URL

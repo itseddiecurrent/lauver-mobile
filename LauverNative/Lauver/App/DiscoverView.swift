@@ -59,10 +59,15 @@ final class DiscoverViewModel: ObservableObject {
     @Published private(set) var requestID: String?
     @Published private(set) var nextCursor: String?
     @Published private(set) var filters = DiscoverFilters()
+    @Published private(set) var needsProfileLocation = false
     private let service: any DiscoverServicing
+    private let profileService: (any ProfileServicing)?
     private var generation = 0
 
-    init(service: any DiscoverServicing) { self.service = service }
+    init(service: any DiscoverServicing, profileService: (any ProfileServicing)? = nil) {
+        self.service = service
+        self.profileService = profileService
+    }
 
     func hideBlockedUser(_ userID: String) {
         generation += 1
@@ -88,9 +93,22 @@ final class DiscoverViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         requestID = nil
+        needsProfileLocation = false
         if refresh { nextCursor = nil }
         defer { if requestGeneration == generation { isLoading = false } }
         do {
+            if let profileService {
+                let profile = try await profileService.getOwnProfile()
+                try Task.checkCancellation()
+                guard requestGeneration == generation else { return }
+                if profile.needsLocationForDiscovery {
+                    users = []
+                    nextCursor = nil
+                    hasLoaded = true
+                    needsProfileLocation = true
+                    return
+                }
+            }
             let page = try await service.discover(filters: requestedFilters, cursor: cursor)
             try Task.checkCancellation()
             guard requestGeneration == generation else { return }
@@ -124,7 +142,7 @@ struct DiscoverView: View {
     let safetyService: any SafetyServicing
 
     init(service: any DiscoverServicing, profileService: any ProfileServicing, safetyService: any SafetyServicing) {
-        _viewModel = StateObject(wrappedValue: DiscoverViewModel(service: service))
+        _viewModel = StateObject(wrappedValue: DiscoverViewModel(service: service, profileService: profileService))
         self.profileService = profileService
         self.safetyService = safetyService
     }
@@ -138,14 +156,16 @@ struct DiscoverView: View {
                     .font(.subheadline)
                     .accessibilityIdentifier("discover-filter-summary")
             }
-            if viewModel.isLoading && !viewModel.hasLoaded {
+            if viewModel.needsProfileLocation {
+                ProfileLocationRequiredView()
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            } else if viewModel.isLoading && !viewModel.hasLoaded {
                 LoadingStateView(title: "Finding workout partners")
-            }
-            if let error = viewModel.errorMessage {
+            } else if let error = viewModel.errorMessage {
                 ErrorStateView(message: error, requestID: viewModel.requestID)
                 RetryButton { Task { await viewModel.load(refresh: viewModel.nextCursor == nil) } }
-            }
-            if viewModel.hasLoaded && viewModel.users.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
+            } else if viewModel.hasLoaded && viewModel.users.isEmpty && !viewModel.isLoading && viewModel.errorMessage == nil {
                 EmptyStateView(systemImage: "person.2", title: "No workout partners found", message: "Try a wider radius or adjust your sport and pace filters.")
             }
             ForEach(viewModel.users) { user in
@@ -192,6 +212,9 @@ struct DiscoverView: View {
                 .accessibilityIdentifier("discover-filters")
         }
         .task { if !viewModel.hasLoaded { await viewModel.load() } }
+        .onAppear {
+            if viewModel.needsProfileLocation { Task { await viewModel.load() } }
+        }
         .refreshable { await viewModel.load() }
         .onReceive(NotificationCenter.default.publisher(for: .safetyPolicyChanged)) { notification in
             if let userID = notification.userInfo?["blockedUserID"] as? String { viewModel.hideBlockedUser(userID) }
