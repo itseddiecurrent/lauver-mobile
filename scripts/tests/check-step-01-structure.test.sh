@@ -39,7 +39,15 @@ for executable_script in \
 done
 
 rg --quiet 'provider = "postgresql"' "$repo_root/backend/prisma/schema.prisma"
-rg --quiet 'startCommand: npm run db:migrate:deploy && npm start' "$repo_root/render.yaml"
+if rg --quiet 'startCommand: npm run db:migrate:deploy && npm start' "$repo_root/render.yaml"; then
+  :
+elif rg --quiet 'startCommand: ./scripts/start-render.sh' "$repo_root/render.yaml" \
+  && rg --quiet 'npm run db:migrate:deploy' "$repo_root/backend/scripts/start-render.sh"; then
+  :
+else
+  echo "Step 01 structure check failed: Render start command must run Prisma migrations before starting the API" >&2
+  exit 1
+fi
 if rg --quiet 'preDeployCommand|maxShutdownDelaySeconds' "$repo_root/render.yaml"; then
   echo "Step 01 structure check failed: render.yaml uses fields unsupported by free web services" >&2
   exit 1
