@@ -9,7 +9,7 @@
 - Render staging：`/healthz` 和 `/readyz` 均为 HTTP 200，`/readyz` 报告 `database: ok`。
 - Backend：190/190 Vitest 通过；migration-from-zero/integration：17 个 migration、71/71 通过。
 - 真机：连接的 iPhone 17e（UDID `00008150-00010C6E22C0C01C`）原生 XCTest 109/109 通过。Step 15 的测试只允许使用这个 physical-device destination，不使用 Simulator。
-- `Lauver-Production` archive 已成功，bundle ID 为 `ai.lauver.app.release`，Team ID 为 `94KFUD562T`，HealthKit 和 Sign in with Apple entitlements 已包含。随后 `exportArchive` 已成功生成可上传 TestFlight 的 Distribution IPA：[`Lauver.ipa`](../artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa)，签名为 Apple Distribution，`beta-reports-active=true` 且 `get-task-allow=false`。
+- `Lauver-Production` archive 已成功，bundle ID 为 `ai.lauver.app.release`，Team ID 为 `94KFUD562T`，HealthKit 和 Sign in with Apple entitlements 已包含。首次上传被 Apple `90683` 拒绝后，已加入必需的 `NSHealthUpdateUsageDescription`，并将 build 递增为 `1.0.0 (2)`。新的 `exportArchive` 已成功生成可上传 TestFlight 的 Distribution IPA：[`Lauver.ipa`](../artifacts/acceptance/testflight-build2-20260921/Lauver.ipa)，签名为 Apple Distribution，`beta-reports-active=true` 且 `get-task-allow=false`。
 - scope check 和 secret scan 已通过。
 
 证据见 [`report.md`](../report.md)、[`artifacts/acceptance/final-test-report.md`](../artifacts/acceptance/final-test-report.md)、真机日志 [`step-15-iphone17e-unit-current.log`](../artifacts/acceptance/step-15-iphone17e-unit-current.log)、archive 日志 [`step-15-production-distribution-archive-20260921.log`](../artifacts/acceptance/step-15-production-distribution-archive-20260921.log) 和 export 日志 [`step-15-production-distribution-export-20260921.log`](../artifacts/acceptance/step-15-production-distribution-export-20260921.log)。
@@ -84,7 +84,7 @@ xcodebuild -exportArchive \
   -allowProvisioningUpdates
 ```
 
-本轮已验证的 IPA 在 [`artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa`](../artifacts/acceptance/step-15-production-distribution-20260921/Lauver.ipa)。可在 Xcode Organizer 选择 archive Validate App，也可直接在 Transporter/Xcode Organizer 中上传 IPA。上传完成后，在 App Store Connect 的 TestFlight 页面等待 processing，再先给内部测试组发放 build。
+请上传 build `1.0.0 (2)` 的 IPA：[`artifacts/acceptance/testflight-build2-20260921/Lauver.ipa`](../artifacts/acceptance/testflight-build2-20260921/Lauver.ipa)。其 SHA-256 是 `35c6e92f64c090237c4337eb9182b74193bec2b8f15c4876c0dc1a6240557a1a`，最终 bundle 同时包含 `NSHealthShareUsageDescription` 和 `NSHealthUpdateUsageDescription`。可在 Xcode Organizer 选择 archive Validate App，也可直接在 Transporter/Xcode Organizer 中上传 IPA。上传完成后，在 App Store Connect 的 TestFlight 页面等待 processing，再先给内部测试组发放 build。
 
 导出或上传前检查：bundle ID、版本号/build 号、API endpoint、签名 entitlements、HealthKit purpose string、无数据库/Stream/Apple/Strava secret，并重新运行 scope 和 secret scan。
 

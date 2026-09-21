@@ -115,3 +115,9 @@ Xcode result summary 明确记录 `failedTests=3`、`passedTests=127`、`skipped
 - IPA metadata is `ai.lauver.app.release`, version `1.0.0 (1)`, API endpoint `https://lauver-api-staging.onrender.com`.
 - Codesign is `Apple Distribution: Qianfu Tang (94KFUD562T)`; embedded profile is `iOS Team Store Provisioning Profile: ai.lauver.app.release`; `beta-reports-active=true`, `get-task-allow=false`, HealthKit and Sign in with Apple are present.
 - Render probes immediately before handoff: `/healthz` and `/readyz` HTTP 200; `/readyz` reports `database: ok`.
+
+## Transporter validation follow-up (2026-09-21)
+
+- Apple Transporter rejected build `1.0.0 (1)` with error `90683` because the HealthKit entitlement requires `NSHealthUpdateUsageDescription` in addition to the existing read-purpose string.
+- Added a truthful update-purpose string explaining that Lauver does not write to Apple Health, increased `CURRENT_PROJECT_VERSION` to `2`, and reran native XCTest on the physical iPhone 17e: 109/109 passed.
+- Archive and Apple Distribution export for `ai.lauver.app.release` build `1.0.0 (2)` succeeded. The new IPA is `artifacts/acceptance/testflight-build2-20260921/Lauver.ipa` (SHA-256 `35c6e92f64c090237c4337eb9182b74193bec2b8f15c4876c0dc1a6240557a1a`); its final `Info.plist` contains both Health purpose strings, and its signature/entitlements remain valid for internal TestFlight.

@@ -24,3 +24,9 @@
 
 - 当前 commit 的 `Lauver-Production` archive 已成功，目标为 `generic/platform=iOS`，没有启动 Simulator；bundle ID 为 `ai.lauver.app.release`，HealthKit 和 Sign in with Apple entitlements 已包含。输出见 [`step-15-production-distribution-archive-20260921.log`](step-15-production-distribution-archive-20260921.log)。
 - `exportArchive` 已成功生成 [`Lauver.ipa`](step-15-production-distribution-20260921/Lauver.ipa)，并验证 Apple Distribution、Store provisioning profile、`beta-reports-active=true`、`get-task-allow=false`；输出见 [`step-15-production-distribution-export-20260921.log`](step-15-production-distribution-export-20260921.log)。TestFlight 提交前只剩 App Store Connect 上传/processing、商店资料和内测验收。操作顺序见 [`docs/testflight-release.md`](../../docs/testflight-release.md)。
+
+## Upload validation follow-up (2026-09-21)
+
+- Transporter 对 build `1.0.0 (1)` 返回 Apple error `90683`：HealthKit entitlement 还要求 `NSHealthUpdateUsageDescription`。原生 `Info.plist` 已补充明确的用户说明，即使 Lauver 只读 Apple Health Workout 摘要、不会写入健康数据。
+- build 已递增为 `1.0.0 (2)`，实体 iPhone 17e 原生 XCTest 109/109 通过，未使用 Simulator。新的 archive 和 Distribution export 均成功。
+- 新 IPA：`artifacts/acceptance/testflight-build2-20260921/Lauver.ipa`；签名为 Apple Distribution，包含 HealthKit 两个 purpose strings、Sign in with Apple、`beta-reports-active=true` 与 `get-task-allow=false`。等待重新上传到 App Store Connect。

@@ -1,0 +1,4 @@
+2026-09-21 18:07:51.607 xcodebuild[99975:8021430] [MT] IDEDistribution: -[IDEDistributionLogging _createLoggingBundleAtPath:]: Created bundle at path "/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/Lauver-Production_2026-09-21_18-07-51.605.xcdistributionlogs".
+Exported Lauver-Production to: /Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/testflight-build2-20260921
+** EXPORT SUCCEEDED **
+
