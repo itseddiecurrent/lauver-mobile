@@ -2,6 +2,42 @@ import AuthenticationServices
 import SwiftUI
 import MapKit
 import CoreLocation
+import os
+
+private enum AuthDiagnostics {
+    static let logger = Logger(subsystem: "ai.lauver.app", category: "Authentication")
+
+    /// Produces the complete useful NSError chain for Console/device-log
+    /// collection. Do not log arbitrary `userInfo`: it can contain provider
+    /// credentials. The selected fields carry Apple's actual error message and
+    /// its nested cause without exposing the authorization response.
+    static func describe(_ error: Error) -> String {
+        var descriptions: [String] = []
+        var current: NSError? = error as NSError
+        var depth = 0
+
+        while let nsError = current, depth < 4 {
+            let userInfo = nsError.userInfo
+            let failureReason = userInfo[NSLocalizedFailureReasonErrorKey] as? String ?? "none"
+            let recoverySuggestion = userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String ?? "none"
+            let debugDescription = userInfo[NSDebugDescriptionErrorKey] as? String ?? "none"
+            descriptions.append(
+                "depth=\(depth) domain=\(nsError.domain) code=\(nsError.code) "
+                + "description=\(nsError.localizedDescription) "
+                + "failureReason=\(failureReason) recoverySuggestion=\(recoverySuggestion) "
+                + "debugDescription=\(debugDescription)"
+            )
+            current = userInfo[NSUnderlyingErrorKey] as? NSError
+            depth += 1
+        }
+
+        return descriptions.joined(separator: " | underlying: ")
+    }
+
+    static func logAppleAuthorizationFailure(_ error: Error) {
+        logger.error("Apple authorization failed \(describe(error), privacy: .public)")
+    }
+}
 
 enum AuthenticationState: Equatable {
     case signedOut
@@ -130,13 +166,38 @@ final class AppViewModel: ObservableObject {
     }
 
     func appleSignInDidFail(_ error: Error) {
+        let nsError = error as NSError
+        AuthDiagnostics.logAppleAuthorizationFailure(error)
         if let authorizationError = error as? ASAuthorizationError,
            authorizationError.code == .canceled {
+            return
+        }
+        if let authorizationError = error as? ASAuthorizationError {
+            // This callback runs before /v1/auth/apple is called. Keep the
+            // provider error visible so a native Apple timeout is not
+            // mistaken for a Render/API timeout.
+            let message: String
+            switch authorizationError.code {
+            case .failed:
+                message = "Apple sign-in timed out before Lauver received a token. domain=\(nsError.domain) code=\(nsError.code). Check your Apple ID/network and try again."
+            case .notHandled:
+                message = "Apple sign-in is not available for this app or device. domain=\(nsError.domain) code=\(nsError.code). Check the app's Apple Sign In capability and try again."
+            case .invalidResponse:
+                message = "Apple returned an invalid sign-in response. domain=\(nsError.domain) code=\(nsError.code). Please try again."
+            case .unknown:
+                message = "Apple sign-in could not be completed (Apple error \(authorizationError.code.rawValue)). Please try again."
+            case .canceled:
+                return
+            @unknown default:
+                message = "Apple sign-in could not be completed (Apple error \(authorizationError.code.rawValue)). Please try again."
+            }
+            authMessage = message
             return
         }
         authMessage = (error as? LocalizedError)?.errorDescription
             ?? "Sign in with Apple could not be completed."
     }
+
 
     func handleAppleCredentialRevoked() async {
         await signOut()
@@ -232,8 +293,10 @@ final class AppViewModel: ObservableObject {
         do {
             try await action()
         } catch let error as APIError {
+            AuthDiagnostics.logger.error("Authentication API failure \(error.diagnosticDescription, privacy: .public)")
             authMessage = error.userMessage
         } catch {
+            AuthDiagnostics.logger.error("Authentication unexpected failure \(AuthDiagnostics.describe(error), privacy: .public)")
             authMessage = "The authentication request failed."
         }
     }
@@ -449,6 +512,7 @@ private struct LoginPlaceholderView: View {
                 // still being exchanged by the API.
                 guard !appleAuthorizationInFlight, !viewModel.isAuthSubmitting else { return }
                 appleAuthorizationInFlight = true
+                AuthDiagnostics.logger.info("Apple authorization request started")
                 do {
                     let nonce = try AppleSignInNonce.generate()
                     appleNonce = nonce
@@ -469,6 +533,7 @@ private struct LoginPlaceholderView: View {
                         authorization: authorization,
                         nonce: nonce
                     )
+                    AuthDiagnostics.logger.info("Apple credential received; starting server exchange hasIdentityToken=true hasAuthorizationCode=true")
                     // Extract the credential synchronously, then hand the
                     // network exchange to the main-actor view model without
                     // blocking AuthenticationServices' callback.

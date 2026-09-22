@@ -59,6 +59,24 @@ enum APIError: Error, Equatable {
     case transport(URLError.Code)
     case decoding
 
+    /// Safe diagnostic text for auth/network troubleshooting. It deliberately
+    /// excludes response messages and request bodies, which may contain
+    /// credentials or provider data.
+    var diagnosticDescription: String {
+        switch self {
+        case .invalidRequest: "invalidRequest"
+        case .invalidResponse: "invalidResponse"
+        case let .unauthorized(code, _, requestID): "unauthorized code=\(code) requestID=\(requestID ?? "none")"
+        case let .validation(code, _, requestID): "validation code=\(code) requestID=\(requestID ?? "none")"
+        case let .notFound(code, _, requestID): "notFound code=\(code) requestID=\(requestID ?? "none")"
+        case let .conflict(code, _, requestID): "conflict code=\(code) requestID=\(requestID ?? "none")"
+        case let .rateLimited(_, retryAfter, requestID): "rateLimited retryAfter=\(retryAfter.map(String.init) ?? "none") requestID=\(requestID ?? "none")"
+        case let .server(statusCode, requestID): "server status=\(statusCode) requestID=\(requestID ?? "none")"
+        case let .transport(code): "transport code=\(code.rawValue) (\(code))"
+        case .decoding: "decoding"
+        }
+    }
+
     var requestID: String? {
         switch self {
         case let .unauthorized(_, _, requestID),
@@ -166,6 +184,9 @@ final class APIClient {
 
         let operation: String
         switch request.path {
+        case "/v1/auth/apple": operation = "auth-apple"
+        case "/v1/auth/login": operation = "auth-login"
+        case "/v1/auth/register": operation = "auth-register"
         case "/v1/me/photo/upload-url": operation = "photo-upload-url"
         case "/v1/me/photo/complete": operation = "photo-complete"
         case "/v1/me": operation = "profile"
@@ -180,13 +201,15 @@ final class APIClient {
                 let decoded: Response = try decode(data: data, response: response)
                 return decoded
             } catch let error as APIError {
+                if operation.hasPrefix("auth-") {
+                    Self.logTransport("failure operation=\(operation) apiError=\(error.diagnosticDescription)")
+                }
                 guard !Task.isCancelled,
                       retryPolicy.permitsRetry(method: request.method, error: error, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
                     throw error
                 }
             } catch let error as URLError {
-                let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
-                Self.logTransport("failure operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) code=\(error.code.rawValue) swiftCancelled=\(Task.isCancelled) underlyingDomain=\(underlying?.domain ?? "none") underlyingCode=\(underlying?.code ?? 0)")
+                Self.logTransport("failure operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) swiftCancelled=\(Task.isCancelled) \(Self.describeNetworkError(error))")
                 let apiError = APIError.transport(error.code)
                 guard !Task.isCancelled,
                       retryPolicy.permitsRetry(method: request.method, error: apiError, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
@@ -210,7 +233,39 @@ final class APIClient {
         if ProcessInfo.processInfo.arguments.contains("-diagnose-network") {
             transportLogger.debug("LauverTransport \(message, privacy: .public)")
         }
+        #else
+        // Keep auth diagnostics available in TestFlight without logging
+        // request bodies, Apple tokens, or bearer tokens.
+        if message.contains("operation=auth-") {
+            transportLogger.error("LauverTransport \(message, privacy: .public)")
+        }
         #endif
+    }
+
+    /// Preserve the full URLSession/NSError failure chain in TestFlight device
+    /// logs. It contains no request body, headers, tokens, or authorization
+    /// code, so it is safe to emit for authentication diagnostics.
+    private static func describeNetworkError(_ error: URLError) -> String {
+        var descriptions: [String] = []
+        var current: NSError? = error as NSError
+        var depth = 0
+
+        while let nsError = current, depth < 4 {
+            let userInfo = nsError.userInfo
+            let failureReason = userInfo[NSLocalizedFailureReasonErrorKey] as? String ?? "none"
+            let recoverySuggestion = userInfo[NSLocalizedRecoverySuggestionErrorKey] as? String ?? "none"
+            let debugDescription = userInfo[NSDebugDescriptionErrorKey] as? String ?? "none"
+            descriptions.append(
+                "depth=\(depth) domain=\(nsError.domain) code=\(nsError.code) "
+                + "description=\(nsError.localizedDescription) "
+                + "failureReason=\(failureReason) recoverySuggestion=\(recoverySuggestion) "
+                + "debugDescription=\(debugDescription)"
+            )
+            current = userInfo[NSUnderlyingErrorKey] as? NSError
+            depth += 1
+        }
+
+        return descriptions.joined(separator: " | underlying: ")
     }
 
     func upload(data: Data, to url: URL, contentType: String, requiredHeaders: [String: String] = [:]) async throws {
@@ -239,8 +294,7 @@ final class APIClient {
             } catch let error as APIError {
                 throw error
             } catch let error as URLError {
-                let underlying = (error as NSError).userInfo[NSUnderlyingErrorKey] as? NSError
-                Self.logTransport("failure method=PUT attempt=\(attempt) code=\(error.code.rawValue) swiftCancelled=\(Task.isCancelled) underlyingDomain=\(underlying?.domain ?? "none") underlyingCode=\(underlying?.code ?? 0)")
+                Self.logTransport("failure method=PUT attempt=\(attempt) swiftCancelled=\(Task.isCancelled) \(Self.describeNetworkError(error))")
                 guard !Task.isCancelled,
                       retryPolicy.permitsIdempotentConnectionRetry(code: error.code, attempt: attempt) else {
                     throw APIError.transport(error.code)
