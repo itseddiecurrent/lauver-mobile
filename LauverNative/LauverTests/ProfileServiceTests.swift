@@ -66,6 +66,62 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(disconnected.status, .connected)
     }
 
+    @MainActor
+    func testStravaStatus401DoesNotExpireTheLauverSession() async throws {
+        let expired = expectation(forNotification: .authenticationSessionExpired, object: nil)
+        expired.isInverted = true
+        var requests = 0
+        ProfileURLProtocolStub.requestHandler = { request in
+            requests += 1
+            if requests == 1 {
+                return Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+            }
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer rotated-access-token")
+            return Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Still expired"}"#)
+        }
+        authService.refreshHandler = { _ in ProfileTestAuthService.rotatedSession }
+
+        do {
+            _ = try await service.stravaStatus()
+            XCTFail("Expected the optional Strava status request to fail")
+        } catch let error as APIError {
+            guard case .unauthorized = error else { return XCTFail("Expected unauthorized") }
+        }
+        await fulfillment(of: [expired], timeout: 0.2)
+        XCTAssertEqual(authService.refreshCalls, 1)
+        XCTAssertEqual(tokenStore.tokens?.accessToken, "rotated-access-token")
+    }
+
+    @MainActor
+    func testConcurrentPrimaryRequestExpiresSessionWhenOptionalStatusRefreshIsRejected() async throws {
+        let expiredAccessRequests = expectation(description: "Both requests receive 401 with the old access token")
+        expiredAccessRequests.expectedFulfillmentCount = 2
+        let refreshStarted = expectation(description: "Optional status request starts the shared refresh")
+        let sessionExpired = expectation(forNotification: .authenticationSessionExpired, object: nil)
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            expiredAccessRequests.fulfill()
+            return Self.response(request, status: 401, body: #"{"code":"invalid_session","message":"Expired"}"#)
+        }
+        authService.refreshHandler = { _ in
+            refreshStarted.fulfill()
+            await self.fulfillment(of: [expiredAccessRequests], timeout: 5)
+            throw APIError.unauthorized(code: "invalid_session", message: "Refresh revoked", requestID: nil)
+        }
+
+        async let optionalStatus: StravaStatus = service.stravaStatus()
+        // Let the optional request own the shared refresh task, then race a
+        // normal application request against the same rejected refresh.
+        await fulfillment(of: [refreshStarted], timeout: 5)
+        async let primaryProfile: WorkoutProfile = service.getOwnProfile()
+        _ = try? await optionalStatus
+        _ = try? await primaryProfile
+
+        await fulfillment(of: [sessionExpired], timeout: 5)
+        XCTAssertEqual(authService.refreshCalls, 1)
+        XCTAssertNil(tokenStore.tokens)
+    }
+
     func testDeleteAccountUsesBearerTokenAndDecodesDeletionJob() async throws {
         ProfileURLProtocolStub.requestHandler = { request in
             XCTAssertEqual(request.url?.path, "/v1/account")

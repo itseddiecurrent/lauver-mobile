@@ -1,0 +1,153 @@
+2026-09-21 09:19:14 +0000 [MT] Initial pipeline context: <IDEDistributionProcessingPipelineContext: 0x7186e2100; archive(resolved)="<IDEArchive: 0x7161e8070>", distributionTask(resolved)="2", distributionDestination(resolved)="1", distributionMethod(resolved)="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team(resolved)="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	Chain (15, self inclusive):
+	<IDEDistributionProcessingPipelineContext: 0x7186e2100; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionProcessingPipelineContext: 0x7186e2700; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716289900; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x71628a580; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716289400; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716289180; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x71628a300; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x71628a080; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716289e00; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716288f00; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716288c80; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716288a00; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="<IDEProvisioningBasicTeam: 0x7187fad60; teamID='94KFUD562T', teamName='(null)'>">
+	<IDEDistributionContext: 0x716288780; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="(null)">
+	<IDEDistributionContext: 0x716288000; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="<IDEDistributionMethodiOSAppStoreDistribution: 0x717e3f610>", team="(null)">
+	<IDEDistributionContext: 0x102efa080; archive = "<IDEArchive: 0x7161e8070>", distributionMethod="(null)", team="(null)">
+</IDEDistributionProcessingPipelineContext: 0x7186e2100>
+2026-09-21 09:19:14 +0000 [MT] Processing step: IDEDistributionCreateDestRootStep
+2026-09-21 09:19:14 +0000 [MT] Processing step: IDEDistributionCopyItemStep
+2026-09-21 09:19:14 +0000 [MT] Running /usr/bin/ditto '-V' '/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root/Payload/Lauver.app'
+2026-09-21 09:19:15 +0000  >>> Copying /Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app 
+2026-09-21 09:19:15 +0000  copying file ./zh-Hans.lproj/Localizable.strings ... 
+2026-09-21 09:19:15 +0000  3619 bytes for ./zh-Hans.lproj/Localizable.strings
+2026-09-21 09:19:15 +0000  copying file ./en.lproj/Localizable.strings ... 
+2026-09-21 09:19:15 +0000  2422 bytes for ./en.lproj/Localizable.strings
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.strings ... 
+2026-09-21 09:19:15 +0000  19814 bytes for ./StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.strings
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.stringsdict ... 
+2026-09-21 09:19:15 +0000  3985 bytes for ./StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.stringsdict
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChatCommonUI.bundle/Assets.car ... 
+2026-09-21 09:19:15 +0000  526424 bytes for ./StreamChat_StreamChatCommonUI.bundle/Assets.car
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChatCommonUI.bundle/Info.plist ... 
+2026-09-21 09:19:15 +0000  711 bytes for ./StreamChat_StreamChatCommonUI.bundle/Info.plist
+2026-09-21 09:19:15 +0000  copying file ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.strings ... 
+2026-09-21 09:19:15 +0000  20541 bytes for ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.strings
+2026-09-21 09:19:15 +0000  copying file ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.stringsdict ... 
+2026-09-21 09:19:15 +0000  5216 bytes for ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.stringsdict
+2026-09-21 09:19:15 +0000  copying file ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist ... 
+2026-09-21 09:19:15 +0000  718 bytes for ./StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist
+2026-09-21 09:19:15 +0000  copying file ./Assets.car ... 
+2026-09-21 09:19:15 +0000  2509896 bytes for ./Assets.car
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChat.bundle/StreamChatModel.momd/VersionInfo.plist ... 
+2026-09-21 09:19:15 +0000  2212 bytes for ./StreamChat_StreamChat.bundle/StreamChatModel.momd/VersionInfo.plist
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChat.bundle/StreamChatModel.momd/StreamChatModel.mom ... 
+2026-09-21 09:19:15 +0000  59700 bytes for ./StreamChat_StreamChat.bundle/StreamChatModel.momd/StreamChatModel.mom
+2026-09-21 09:19:15 +0000  copying file ./StreamChat_StreamChat.bundle/Info.plist ... 
+2026-09-21 09:19:15 +0000  695 bytes for ./StreamChat_StreamChat.bundle/Info.plist
+2026-09-21 09:19:15 +0000  copying file ./Lauver ... 
+2026-09-21 09:19:15 +0000  15669920 bytes for ./Lauver
+2026-09-21 09:19:15 +0000  copying file ./Info.plist ... 
+2026-09-21 09:19:15 +0000  1754 bytes for ./Info.plist
+2026-09-21 09:19:15 +0000  copying file ./PkgInfo ... 
+2026-09-21 09:19:15 +0000  8 bytes for ./PkgInfo
+2026-09-21 09:19:15 +0000 [MT] /usr/bin/ditto exited with 0
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionEmbedProfileStep
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionInfoPlistStep
+2026-09-21 09:19:15 +0000 [MT] Skipping setting DTXcodeBuildDistribution because toolsBuildVersionName was nil.
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionItemRemovalStep
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionAppThinningPlistStep
+2026-09-21 09:19:15 +0000 [MT] Skipping step: IDEDistributionAppThinningPlistStep because it said so
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionSymbolsStep
+2026-09-21 09:19:15 +0000 [MT] Writing /var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Symbols/CF860C83-D7EA-3C17-827C-F2C11BAC8807.symbols
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionCopyAppleProvidedContentStep
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionAppThinningStep
+2026-09-21 09:19:15 +0000 [MT] Skipping step: IDEDistributionAppThinningStep because it said so
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionArchThinningStep
+2026-09-21 09:19:15 +0000 [MT] Archs to thin for item /Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app are []
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionODRStep
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionStripXattrsStep
+2026-09-21 09:19:15 +0000 [MT] Skipping stripping extended attributes because the codesign step will strip them.
+2026-09-21 09:19:15 +0000 [MT] Processing step: IDEDistributionCodesignStep
+2026-09-21 09:19:15 +0000 [MT] Entitlements for <IDEDistributionItem: 0x717c30300; bundleID='ai.lauver.app.release', path='<DVTFilePath:0x7187717a0:'/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x718860360; isSigned='0', isAdHocSigned='0', signingCertificate='(null)', entitlements='(null)', teamID='(null)', identifier='(null)', executablePath='(null)', hardenedRuntime='0'>'>: {
+    "application-identifier" = "94KFUD562T.ai.lauver.app.release";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = 94KFUD562T;
+    "get-task-allow" = 0;
+}
+2026-09-21 09:19:15 +0000 [MT] Associated App Clip Identifiers Filter: Skipping because "com.apple.developer.associated-appclip-app-identifiers" is not present
+2026-09-21 09:19:15 +0000 [MT] Entitlements for <IDEDistributionItem: 0x717c30300; bundleID='ai.lauver.app.release', path='<DVTFilePath:0x7187717a0:'/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x718860360; isSigned='0', isAdHocSigned='0', signingCertificate='(null)', entitlements='(null)', teamID='(null)', identifier='(null)', executablePath='(null)', hardenedRuntime='0'>'> are: {
+    "application-identifier" = "94KFUD562T.ai.lauver.app.release";
+    "beta-reports-active" = 1;
+    "com.apple.developer.team-identifier" = 94KFUD562T;
+    "get-task-allow" = 0;
+}
+2026-09-21 09:19:15 +0000 [MT] Writing entitlements for <IDEDistributionItem: 0x717c30300; bundleID='ai.lauver.app.release', path='<DVTFilePath:0x7187717a0:'/Users/edwardtang/Desktop/Code/lauver-mobile/artifacts/acceptance/step-15-production-distribution-20260921.xcarchive/Products/Applications/Lauver.app'>', codeSigningInfo='<_DVTCodeSigningInformation_Path: 0x718860360; isSigned='0', isAdHocSigned='0', signingCertificate='(null)', entitlements='(null)', teamID='(null)', identifier='(null)', executablePath='(null)', hardenedRuntime='0'>'> to: /var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/entitlements~~~RnBC2S
+2026-09-21 09:19:15 +0000 [MT] invoking codesign: <NSConcreteTask: 0x718b9f840; launchPath='/usr/bin/codesign', arguments='(
+    "-f",
+    "-s",
+    04EE2C7394F5F8FF0C0877D837FEE3B2ACD96E9C,
+    "--entitlements",
+    "/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/entitlements~~~RnBC2S",
+    "--preserve-metadata=identifier,flags,runtime,launch-constraints,library-constraints",
+    "--generate-entitlement-der",
+    "--strip-disallowed-xattrs",
+    "-vvv",
+    "/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root/Payload/Lauver.app"
+)'>
+2026-09-21 09:19:36 +0000 [MT] codesign output: /var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root/Payload/Lauver.app: signed app bundle with Mach-O thin (arm64) [ai.lauver.app.release]
+2026-09-21 09:19:36 +0000 [MT] Processing step: IDEDistributionZipODRItemStep
+2026-09-21 09:19:36 +0000 [MT] Skipping step: IDEDistributionZipODRItemStep because it said so
+2026-09-21 09:19:36 +0000 [MT] Processing step: IDEDistributionCreateIPAStep
+2026-09-21 09:19:36 +0000 [MT] Running /usr/bin/rsync '-8aPhhE' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Symbols' '--link-dest' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root'
+2026-09-21 09:19:36 +0000  Symbols/
+Symbols/CF860C83-D7EA-3C17-827C-F2C11BAC8807.symbols
+2026-09-21 09:19:36 +0000 [MT] /usr/bin/rsync exited with 0
+2026-09-21 09:19:36 +0000 [MT] Running /usr/bin/ditto '-V' '-c' '-k' '--norsrc' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root' '/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Packages/Lauver.ipa'
+2026-09-21 09:19:36 +0000  >>> Copying /var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root 
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/_CodeSignature/CodeResources ... 
+2026-09-21 09:19:36 +0000  6529 bytes for ./Payload/Lauver.app/_CodeSignature/CodeResources
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/zh-Hans.lproj/Localizable.strings ... 
+2026-09-21 09:19:36 +0000  3619 bytes for ./Payload/Lauver.app/zh-Hans.lproj/Localizable.strings
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/en.lproj/Localizable.strings ... 
+2026-09-21 09:19:36 +0000  2422 bytes for ./Payload/Lauver.app/en.lproj/Localizable.strings
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.strings ... 
+2026-09-21 09:19:36 +0000  19814 bytes for ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.strings
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.stringsdict ... 
+2026-09-21 09:19:36 +0000  3985 bytes for ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/en.lproj/Localizable.stringsdict
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/Assets.car ... 
+2026-09-21 09:19:36 +0000  526424 bytes for ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/Assets.car
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/Info.plist ... 
+2026-09-21 09:19:36 +0000  711 bytes for ./Payload/Lauver.app/StreamChat_StreamChatCommonUI.bundle/Info.plist
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.strings ... 
+2026-09-21 09:19:36 +0000  20541 bytes for ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.strings
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.stringsdict ... 
+2026-09-21 09:19:36 +0000  5216 bytes for ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/en.lproj/Localizable.stringsdict
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist ... 
+2026-09-21 09:19:36 +0000  718 bytes for ./Payload/Lauver.app/StreamChatSwiftUI_StreamChatSwiftUI.bundle/Info.plist
+2026-09-21 09:19:36 +0000  copying file ./Payload/Lauver.app/Assets.car ... 
+2026-09-21 09:19:37 +0000  2509896 bytes for ./Payload/Lauver.app/Assets.car
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChat.bundle/StreamChatModel.momd/VersionInfo.plist ... 
+2026-09-21 09:19:37 +0000  2212 bytes for ./Payload/Lauver.app/StreamChat_StreamChat.bundle/StreamChatModel.momd/VersionInfo.plist
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChat.bundle/StreamChatModel.momd/StreamChatModel.mom ... 
+2026-09-21 09:19:37 +0000  59700 bytes for ./Payload/Lauver.app/StreamChat_StreamChat.bundle/StreamChatModel.momd/StreamChatModel.mom
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/StreamChat_StreamChat.bundle/Info.plist ... 
+2026-09-21 09:19:37 +0000  695 bytes for ./Payload/Lauver.app/StreamChat_StreamChat.bundle/Info.plist
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/embedded.mobileprovision ... 
+2026-09-21 09:19:37 +0000  14909 bytes for ./Payload/Lauver.app/embedded.mobileprovision
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/Lauver ... 
+2026-09-21 09:19:37 +0000  15719760 bytes for ./Payload/Lauver.app/Lauver
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/Info.plist ... 
+2026-09-21 09:19:37 +0000  1754 bytes for ./Payload/Lauver.app/Info.plist
+2026-09-21 09:19:37 +0000  copying file ./Payload/Lauver.app/PkgInfo ... 
+2026-09-21 09:19:37 +0000  8 bytes for ./Payload/Lauver.app/PkgInfo
+2026-09-21 09:19:37 +0000  copying file ./Symbols/CF860C83-D7EA-3C17-827C-F2C11BAC8807.symbols ... 
+2026-09-21 09:19:38 +0000  37926284 bytes for ./Symbols/CF860C83-D7EA-3C17-827C-F2C11BAC8807.symbols
+2026-09-21 09:19:38 +0000 [MT] /usr/bin/ditto exited with 0
+2026-09-21 09:19:38 +0000 [MT] Processing step: IDEDistributionAppStoreInformationStep
+2026-09-21 09:19:38 +0000 [MT] Skipping step: IDEDistributionAppStoreInformationStep because it said so
+2026-09-21 09:19:38 +0000 [MT] Processing step: IDEDistributionGenerateProcessedDistributionItems
+2026-09-21 09:19:38 +0000 [MT] IDEDistributionItem init <DVTFilePath:0x718863060:'/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/XcodeDistPipeline.~~~ilmh55/Root/Payload/Lauver.app'>
+2026-09-21 09:19:38 +0000 [MT] Processing step: IDEDistributionCreateManifestStep
+2026-09-21 09:19:38 +0000 [MT] Skipping step: IDEDistributionCreateManifestStep because it said so

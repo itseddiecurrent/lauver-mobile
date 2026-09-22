@@ -139,7 +139,10 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
   }
 
   async authorize(input: AppleAuthorizationInput): Promise<AppleAuthorization> {
-    const suppliedIdentity = await this.#verifier.verify(input.identityToken, input.nonce);
+    // The identity-token JWKS lookup and Apple's one-time-code exchange are
+    // independent network operations. Start both immediately so a cold JWKS
+    // cache does not unnecessarily extend the sign-in critical path.
+    const suppliedIdentityPromise = this.#verifier.verify(input.identityToken, input.nonce);
     let response: Response;
     try {
       response = await this.#fetch(appleTokenURL, {
@@ -154,8 +157,13 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
         signal: AbortSignal.timeout(5_000),
       });
     } catch {
+      // Consume a parallel verifier rejection before returning so a transient
+      // Apple network failure never becomes an unhandled promise rejection.
+      await suppliedIdentityPromise.catch(() => undefined);
       throw new AppleAuthorizationError('unavailable');
     }
+
+    const suppliedIdentity = await suppliedIdentityPromise;
 
     let payload: AppleTokenResponse;
     try {

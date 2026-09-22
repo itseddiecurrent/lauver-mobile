@@ -309,6 +309,7 @@ private struct LoginPlaceholderView: View {
     @State private var password = ""
     @State private var resetToken = ""
     @State private var appleNonce: String?
+    @State private var appleAuthorizationInFlight = false
 
     var body: some View {
         ZStack {
@@ -443,6 +444,11 @@ private struct LoginPlaceholderView: View {
             }
 
             SignInWithAppleButton(.continue) { request in
+                // Sign in with Apple returns a single-use authorization code.
+                // Do not allow a second sheet/request while the first code is
+                // still being exchanged by the API.
+                guard !appleAuthorizationInFlight, !viewModel.isAuthSubmitting else { return }
+                appleAuthorizationInFlight = true
                 do {
                     let nonce = try AppleSignInNonce.generate()
                     appleNonce = nonce
@@ -450,10 +456,10 @@ private struct LoginPlaceholderView: View {
                     request.nonce = AppleSignInNonce.hash(nonce)
                 } catch {
                     appleNonce = nil
+                    appleAuthorizationInFlight = false
                     viewModel.appleSignInDidFail(error)
                 }
             } onCompletion: { result in
-                defer { appleNonce = nil }
                 do {
                     guard let nonce = appleNonce else {
                         throw AppleSignInError.nonceGenerationFailed
@@ -463,14 +469,23 @@ private struct LoginPlaceholderView: View {
                         authorization: authorization,
                         nonce: nonce
                     )
-                    Task { await viewModel.signInWithApple(credential: credential) }
+                    // Extract the credential synchronously, then hand the
+                    // network exchange to the main-actor view model without
+                    // blocking AuthenticationServices' callback.
+                    appleNonce = nil
+                    Task { @MainActor in
+                        await viewModel.signInWithApple(credential: credential)
+                        appleAuthorizationInFlight = false
+                    }
                 } catch {
+                    appleNonce = nil
+                    appleAuthorizationInFlight = false
                     viewModel.appleSignInDidFail(error)
                 }
             }
             .signInWithAppleButtonStyle(.black)
             .frame(height: 48)
-            .disabled(viewModel.isAuthSubmitting)
+            .disabled(viewModel.isAuthSubmitting || appleAuthorizationInFlight)
             .accessibilityIdentifier("auth-apple")
 
             Button {

@@ -785,7 +785,11 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
     }
 
     func stravaStatus() async throws -> StravaStatus {
-        try await authenticatedRequest { token in APIRequest(path: "/v1/integrations/strava/status", headers: Self.authorization(token)) }
+        // Strava is an optional integration. A stale status request must not
+        // sign the user out of Lauver while the main session is recovering.
+        try await authenticatedRequest(invalidateSessionOnUnauthorized: false) { token in
+            APIRequest(path: "/v1/integrations/strava/status", headers: Self.authorization(token))
+        }
     }
 
     func startStrava() async throws -> StravaStart {
@@ -920,6 +924,7 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
 
     @MainActor
     private func authenticatedRequest<Response: Decodable>(
+        invalidateSessionOnUnauthorized: Bool = true,
         _ request: (String) -> APIRequest<Response>
     ) async throws -> Response {
         guard let tokens = try sessionStore.read() else {
@@ -928,11 +933,23 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
         do {
             return try await client.send(request(tokens.accessToken))
         } catch APIError.unauthorized {
-            let accessToken = try await refreshedAccessToken(for: tokens)
+            let accessToken: String
+            do {
+                accessToken = try await refreshedAccessToken(for: tokens)
+            } catch let error as APIError {
+                // A refresh task is shared by every authenticated request. The
+                // request that observes its failure decides whether that
+                // failure ends the Lauver session; an optional Strava status
+                // probe must never weaken a concurrent primary request.
+                if invalidateSessionOnUnauthorized, case .unauthorized = error {
+                    invalidateSession(accessToken: tokens.accessToken)
+                }
+                throw error
+            }
             do {
                 return try await client.send(request(accessToken))
             } catch let error as APIError {
-                if case .unauthorized = error {
+                if invalidateSessionOnUnauthorized, case .unauthorized = error {
                     invalidateSession(accessToken: accessToken)
                 }
                 throw error
@@ -962,14 +979,13 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
                 try self.sessionStore.save(session)
                 self.completedRefresh = (tokens, SessionTokens(accessToken: session.accessToken, refreshToken: session.refreshToken))
                 return session.accessToken
-            } catch let error as APIError {
-                if case .unauthorized = error {
-                    self.invalidateSession(accessToken: tokens.accessToken)
-                }
-                throw error
-            }
+            } catch { throw error }
         }
         refreshTask = (id, tokens, task)
+        // Keep completedRefresh available for late requests that received a
+        // 401 with the previous access token while the rotation was finishing.
+        // It is replaced by the next rotation and cannot cross a sign-in,
+        // because the previous token must match exactly.
         defer { if refreshTask?.id == id { refreshTask = nil } }
         return try await task.value
     }
