@@ -46,7 +46,11 @@ assert_app_configuration() {
 
 assert_app_configuration \
   Lauver-Staging Staging staging https://lauver-api-staging.onrender.com ai.lauver.app.staging
+# The Production scheme currently produces the internal TestFlight build.
+# It intentionally uses the staging API until the paid production service
+# and api.lauver.ai cutover are complete. Update this assertion together
+# with Production.xcconfig when the public production cutover happens.
 assert_app_configuration \
-  Lauver-Production Production production https://api.lauver.ai ai.lauver.app
+  Lauver-Production Production production https://lauver-api-staging.onrender.com ai.lauver.app.release
 
 echo "iOS built configuration tests passed."
