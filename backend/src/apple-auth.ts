@@ -113,6 +113,11 @@ type AppleTokenResponse = {
 };
 
 type Fetching = typeof fetch;
+export type AppleAuthDiagnostic = (event: string, fields: Record<string, number | string | boolean>) => void;
+
+function elapsedMilliseconds(startedAt: number): number {
+  return Math.round(performance.now() - startedAt);
+}
 
 export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoking {
   readonly #clientID: string;
@@ -121,6 +126,7 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
   readonly #privateKey: string;
   readonly #verifier: AppleIdentityTokenVerifying;
   readonly #fetch: Fetching;
+  readonly #diagnostic: AppleAuthDiagnostic;
 
   constructor(options: {
     clientID: string;
@@ -129,6 +135,7 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
     privateKey: string;
     verifier?: AppleIdentityTokenVerifying;
     fetch?: Fetching;
+    diagnostic?: AppleAuthDiagnostic;
   }) {
     this.#clientID = options.clientID;
     this.#teamID = options.teamID;
@@ -136,14 +143,23 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
     this.#privateKey = options.privateKey.replaceAll('\\n', '\n');
     this.#verifier = options.verifier ?? new AppleIdentityTokenVerifier(options.clientID);
     this.#fetch = options.fetch ?? fetch;
+    this.#diagnostic = options.diagnostic ?? (() => {});
   }
 
   async authorize(input: AppleAuthorizationInput): Promise<AppleAuthorization> {
     // The identity-token JWKS lookup and Apple's one-time-code exchange are
     // independent network operations. Start both immediately so a cold JWKS
     // cache does not unnecessarily extend the sign-in critical path.
-    const suppliedIdentityPromise = this.#verifier.verify(input.identityToken, input.nonce);
+    const verificationStartedAt = performance.now();
+    this.#diagnostic('APPLE_TOKEN_VERIFY_START', { token: 'supplied' });
+    const suppliedIdentityPromise = this.#verifier.verify(input.identityToken, input.nonce)
+      .then((identity) => {
+        this.#diagnostic('APPLE_TOKEN_VERIFY_COMPLETE', { token: 'supplied', apple_token_validation_ms: elapsedMilliseconds(verificationStartedAt) });
+        return identity;
+      });
     let response: Response;
+    const exchangeStartedAt = performance.now();
+    this.#diagnostic('APPLE_TOKEN_EXCHANGE_START', {});
     try {
       response = await this.#fetch(appleTokenURL, {
         method: 'POST',
@@ -156,10 +172,18 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
         }),
         signal: AbortSignal.timeout(5_000),
       });
-    } catch {
+      this.#diagnostic('APPLE_TOKEN_EXCHANGE_COMPLETE', {
+        apple_http_ms: elapsedMilliseconds(exchangeStartedAt),
+        apple_http_status: response.status,
+      });
+    } catch (error) {
       // Consume a parallel verifier rejection before returning so a transient
       // Apple network failure never becomes an unhandled promise rejection.
       await suppliedIdentityPromise.catch(() => undefined);
+      this.#diagnostic('APPLE_TOKEN_EXCHANGE_ERROR', {
+        apple_http_ms: elapsedMilliseconds(exchangeStartedAt),
+        error_name: error instanceof Error ? error.name : 'unknown',
+      });
       throw new AppleAuthorizationError('unavailable');
     }
 
@@ -172,6 +196,10 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
       throw new AppleAuthorizationError(response.ok ? 'unavailable' : 'invalid_credential');
     }
     if (!response.ok) {
+      this.#diagnostic('APPLE_TOKEN_EXCHANGE_APPLE_ERROR', {
+        apple_http_status: response.status,
+        apple_error: typeof payload.error === 'string' ? payload.error : 'unknown',
+      });
       const reason = payload.error === 'invalid_grant' ? 'invalid_credential' : 'unavailable';
       throw new AppleAuthorizationError(reason);
     }
@@ -179,7 +207,10 @@ export class AppleAuthorizationProvider implements AppleAuthorizing, AppleRevoki
       throw new AppleAuthorizationError('invalid_credential');
     }
 
+    const exchangedVerificationStartedAt = performance.now();
+    this.#diagnostic('APPLE_TOKEN_VERIFY_START', { token: 'exchanged' });
     const exchangedIdentity = await this.#verifier.verify(payload.id_token, input.nonce);
+    this.#diagnostic('APPLE_TOKEN_VERIFY_COMPLETE', { token: 'exchanged', apple_token_validation_ms: elapsedMilliseconds(exchangedVerificationStartedAt) });
     if (exchangedIdentity.subject !== suppliedIdentity.subject) {
       throw new AppleAuthorizationError('invalid_credential');
     }

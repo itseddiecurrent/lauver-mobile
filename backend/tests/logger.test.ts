@@ -62,7 +62,10 @@ describe('structured request logging', () => {
 
     await request(app).get(`/v1/integrations/strava/callback?state=${'s'.repeat(43)}&code=private-oauth-code&scope=read,activity:read`).expect(303);
 
-    expect(output).toContain('[Redacted]');
+    // Successful Render liveness probes are intentionally omitted from the
+    // access log; verify suppression while still proving sensitive values are
+    // absent from the remaining request records.
+    expect(output).not.toContain('GET /healthz');
     expect(output).not.toContain('should-never-appear');
     expect(output).not.toContain('RawPassword9');
     expect(output).not.toContain('raw-refresh-token-value');

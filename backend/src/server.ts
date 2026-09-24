@@ -24,6 +24,7 @@ import { AccountDeletionService } from './account-deletion.js';
 import { FirebaseAdminTokenVerifier } from './firebase-auth.js';
 import { MatchService } from './match.js';
 import type { AccountDeletionCleanup } from './account-deletion.js';
+import { currentRequestId } from './request-context.js';
 
 const config = loadConfig();
 const logger = createLogger(config.logLevel, config.nodeEnvironment);
@@ -37,11 +38,21 @@ const appleProvider = config.appleAuthEnabled
       teamID: config.appleTeamID!,
       keyID: config.appleKeyID!,
       privateKey: config.applePrivateKey!,
+      diagnostic: (event, fields) => logger.info({ appleAuth: true, event, requestId: currentRequestId(), ...fields }, '[AppleAuth] stage'),
     })
   : undefined;
 const appleTokenCipher = config.appleAuthEnabled
   ? new AppleTokenCipher(config.appleTokenEncryptionKey!)
   : undefined;
+if (config.appleAuthEnabled) {
+  logger.info({
+    appleAuth: true,
+    event: 'APPLE_CONFIGURATION_LOADED',
+    appleClientID: config.appleClientID,
+    appleTeamID: config.appleTeamID,
+    appleKeyID: config.appleKeyID,
+  }, '[AppleAuth] configuration loaded');
+}
 const stravaProvider = config.strava ? new StravaProvider(config.strava) : undefined;
 const stravaTokenCipher = config.strava ? new StravaTokenCipher(config.strava.tokenEncryptionKey) : undefined;
 const firebaseVerifier = config.firebase ? new FirebaseAdminTokenVerifier(config.firebase) : undefined;
@@ -58,6 +69,7 @@ const authService = new AuthService({
   accessTokenTTLSeconds: config.authAccessTokenTTLSeconds,
   refreshTokenTTLSeconds: config.authRefreshTokenTTLSeconds,
   passwordResetTTLSeconds: config.authPasswordResetTTLSeconds,
+  onAppleAuthStage: (event, fields) => logger.info({ appleAuth: true, event, requestId: currentRequestId(), ...fields }, '[AppleAuth] stage'),
 });
 const photoStorage = config.profilePhotoStorageEnabled
   ? new S3ProfilePhotoStorage({

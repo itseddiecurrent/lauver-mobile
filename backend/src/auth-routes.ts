@@ -60,6 +60,7 @@ export function installAuthRoutes(app: Express, dependencies: AuthRouteDependenc
   });
 
   app.post('/v1/auth/apple', async (request, response, next) => {
+    request.log.info({ appleAuth: true, event: 'APPLE_AUTH_REQUEST_RECEIVED', requestId: response.getHeader('x-request-id') }, '[AppleAuth] request received');
     const body = parseBody(appleSignInSchema, request, response);
     if (body === null) return;
     if (!consumeRateLimit('apple', request, body.nonce, response, dependencies.rateLimiter)) return;

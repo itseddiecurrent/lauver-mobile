@@ -22,6 +22,11 @@ struct AppContainer {
         processInfo: ProcessInfo = .processInfo
     ) throws -> AppContainer {
         var configuration = try AppConfiguration.from(bundle: bundle)
+        #if DEBUG
+        print("[AppleAuth] api_host=\(configuration.apiBaseURL.host ?? "unknown") environment=\(configuration.environment.rawValue)")
+        #else
+        NSLog("[AppleAuth] api_host=%@ environment=%@", configuration.apiBaseURL.host ?? "unknown", configuration.environment.rawValue)
+        #endif
         let arguments = processInfo.arguments
         let uiStateStore = UIStateStore()
         let tokenStore = KeychainStore()

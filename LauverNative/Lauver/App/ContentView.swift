@@ -179,11 +179,11 @@ final class AppViewModel: ObservableObject {
             let message: String
             switch authorizationError.code {
             case .failed:
-                message = "Apple sign-in timed out before Lauver received a token. domain=\(nsError.domain) code=\(nsError.code). Check your Apple ID/network and try again."
+                message = "Apple sign-in could not be completed. Please try again."
             case .notHandled:
-                message = "Apple sign-in is not available for this app or device. domain=\(nsError.domain) code=\(nsError.code). Check the app's Apple Sign In capability and try again."
+                message = "Apple sign-in is not available for this app or device. Please try again."
             case .invalidResponse:
-                message = "Apple returned an invalid sign-in response. domain=\(nsError.domain) code=\(nsError.code). Please try again."
+                message = "Apple returned an invalid sign-in response. Please try again."
             case .unknown:
                 message = "Apple sign-in could not be completed (Apple error \(authorizationError.code.rawValue)). Please try again."
             case .canceled:
@@ -373,6 +373,7 @@ private struct LoginPlaceholderView: View {
     @State private var resetToken = ""
     @State private var appleNonce: String?
     @State private var appleAuthorizationInFlight = false
+    @State private var appleAuthorizationStartedAt: Date?
 
     var body: some View {
         ZStack {
@@ -512,7 +513,8 @@ private struct LoginPlaceholderView: View {
                 // still being exchanged by the API.
                 guard !appleAuthorizationInFlight, !viewModel.isAuthSubmitting else { return }
                 appleAuthorizationInFlight = true
-                AuthDiagnostics.logger.info("Apple authorization request started")
+                appleAuthorizationStartedAt = Date()
+                AuthDiagnostics.logger.info("[AppleAuth] APPLE_AUTH_START")
                 do {
                     let nonce = try AppleSignInNonce.generate()
                     appleNonce = nonce
@@ -529,21 +531,31 @@ private struct LoginPlaceholderView: View {
                         throw AppleSignInError.nonceGenerationFailed
                     }
                     let authorization = try result.get()
+                    if let startedAt = appleAuthorizationStartedAt {
+                        let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
+                        AuthDiagnostics.logger.info("[AppleAuth] APPLE_NATIVE_UI_COMPLETE native_auth_ms=\(elapsed)")
+                    }
                     let credential = try AppleSignInCredential(
                         authorization: authorization,
                         nonce: nonce
                     )
-                    AuthDiagnostics.logger.info("Apple credential received; starting server exchange hasIdentityToken=true hasAuthorizationCode=true")
+                    AuthDiagnostics.logger.info("[AppleAuth] APPLE_CREDENTIAL_RECEIVED")
                     // Extract the credential synchronously, then hand the
                     // network exchange to the main-actor view model without
                     // blocking AuthenticationServices' callback.
                     appleNonce = nil
                     Task { @MainActor in
                         await viewModel.signInWithApple(credential: credential)
+                        if viewModel.authenticationState == .authenticated, let startedAt = appleAuthorizationStartedAt {
+                            let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
+                            AuthDiagnostics.logger.info("[AppleAuth] LOGIN_COMPLETE total_login_ms=\(elapsed)")
+                        }
+                        appleAuthorizationStartedAt = nil
                         appleAuthorizationInFlight = false
                     }
                 } catch {
                     appleNonce = nil
+                    appleAuthorizationStartedAt = nil
                     appleAuthorizationInFlight = false
                     viewModel.appleSignInDidFail(error)
                 }

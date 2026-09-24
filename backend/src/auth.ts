@@ -141,6 +141,7 @@ export type AuthServiceOptions = {
   refreshTokenTTLSeconds: number;
   passwordResetTTLSeconds: number;
   now?: () => Date;
+  onAppleAuthStage?: (event: string, fields: Record<string, number | string>) => void;
 };
 
 export interface AuthServicing {
@@ -182,6 +183,7 @@ export class AuthService implements AuthServicing {
   readonly #refreshTokenTTLSeconds: number;
   readonly #passwordResetTTLSeconds: number;
   readonly #now: () => Date;
+  readonly #onAppleAuthStage: (event: string, fields: Record<string, number | string>) => void;
 
   constructor(options: AuthServiceOptions) {
     this.#repository = options.repository;
@@ -199,6 +201,7 @@ export class AuthService implements AuthServicing {
     this.#refreshTokenTTLSeconds = options.refreshTokenTTLSeconds;
     this.#passwordResetTTLSeconds = options.passwordResetTTLSeconds;
     this.#now = options.now ?? (() => new Date());
+    this.#onAppleAuthStage = options.onAppleAuthStage ?? (() => {});
   }
 
   async register(email: string, password: string): Promise<AuthSession> {
@@ -298,6 +301,8 @@ export class AuthService implements AuthServicing {
       if (input.email !== null && normalizeEmail(input.email) !== authorization.email) {
         throw invalidAppleCredentialError();
       }
+      const lookupStartedAt = performance.now();
+      this.#onAppleAuthStage('DB_USER_LOOKUP_START', {});
       const account = await this.#repository.linkOrCreateAppleAccount({
         subject: authorization.subject,
         email: authorization.email,
@@ -305,10 +310,14 @@ export class AuthService implements AuthServicing {
         familyName: input.familyName,
         refreshTokenEncrypted: this.#appleTokenCipher.encrypt(authorization.refreshToken),
       });
+      this.#onAppleAuthStage('DB_USER_LOOKUP_COMPLETE', { db_lookup_ms: Math.round(performance.now() - lookupStartedAt) });
       if (account === null || account.status !== 'ACTIVE') {
         throw invalidAppleCredentialError();
       }
-      return await this.#createSession(account.userId, account.email);
+      const sessionStartedAt = performance.now();
+      const session = await this.#createSession(account.userId, account.email);
+      this.#onAppleAuthStage('SESSION_CREATION_COMPLETE', { session_creation_ms: Math.round(performance.now() - sessionStartedAt) });
+      return session;
     } catch (error) {
       if (error instanceof AuthError) throw error;
       if (error instanceof AppleAuthorizationError) {

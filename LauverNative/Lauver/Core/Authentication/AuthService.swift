@@ -2,6 +2,9 @@ import Foundation
 import AuthenticationServices
 import CryptoKit
 import UIKit
+import os
+
+private let appleAuthLogger = Logger(subsystem: "ai.lauver.app", category: "Authentication")
 
 struct AuthUser: Codable, Equatable {
     let id: String
@@ -88,21 +91,27 @@ struct AuthService: AuthServicing {
     }
 
     func register(email: String, password: String) async throws -> AuthSession {
-        try await sendSession(
+        return try await sendSession(
             path: "/v1/auth/register",
             payload: EmailPasswordPayload(email: email, password: password)
         )
     }
 
     func login(email: String, password: String) async throws -> AuthSession {
-        try await sendSession(
+        return try await sendSession(
             path: "/v1/auth/login",
             payload: EmailPasswordPayload(email: email, password: password)
         )
     }
 
     func signInWithApple(credential: AppleSignInCredential) async throws -> AuthSession {
-        try await sendSession(
+        let startedAt = Date()
+        appleAuthLogger.info("[AppleAuth] BACKEND_AUTH_REQUEST_START")
+        defer {
+            let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
+            appleAuthLogger.info("[AppleAuth] BACKEND_AUTH_REQUEST_COMPLETE backend_request_ms=\(elapsed)")
+        }
+        return try await sendSession(
             path: "/v1/auth/apple",
             payload: AppleSignInPayload(
                 identityToken: credential.identityToken,
@@ -111,7 +120,8 @@ struct AuthService: AuthServicing {
                 email: credential.email,
                 givenName: credential.givenName,
                 familyName: credential.familyName
-            )
+            ),
+            timeoutInterval: 8
         )
     }
 
@@ -167,20 +177,23 @@ struct AuthService: AuthServicing {
 
     private func sendSession<Payload: Encodable>(
         path: String,
-        payload: Payload
+        payload: Payload,
+        timeoutInterval: TimeInterval? = nil
     ) async throws -> AuthSession {
-        try await client.send(makeRequest(path: path, payload: payload))
+        try await client.send(makeRequest(path: path, payload: payload, timeoutInterval: timeoutInterval))
     }
 
     private func makeRequest<Response: Decodable, Payload: Encodable>(
         path: String,
-        payload: Payload
+        payload: Payload,
+        timeoutInterval: TimeInterval? = nil
     ) throws -> APIRequest<Response> {
         APIRequest(
             method: .post,
             path: path,
             body: try encoder.encode(payload),
-            headers: ["Content-Type": "application/json"]
+            headers: ["Content-Type": "application/json"],
+            timeoutInterval: timeoutInterval
         )
     }
 }

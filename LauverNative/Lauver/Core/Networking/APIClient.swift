@@ -13,6 +13,9 @@ struct APIRequest<Response: Decodable> {
     let path: String
     let body: Data?
     let headers: [String: String]
+    /// A per-operation total request budget. Apple authorization codes are
+    /// single-use, so callers must not turn a timeout into a retried POST.
+    let timeoutInterval: TimeInterval?
     // Opt in only when repeating the same body after a lost response is safe.
     let allowsConnectionRetry: Bool
 
@@ -21,13 +24,15 @@ struct APIRequest<Response: Decodable> {
         path: String,
         body: Data? = nil,
         headers: [String: String] = [:],
-        allowsConnectionRetry: Bool = false
+        allowsConnectionRetry: Bool = false,
+        timeoutInterval: TimeInterval? = nil
     ) {
         self.method = method
         self.path = path
         self.body = body
         self.headers = headers
         self.allowsConnectionRetry = allowsConnectionRetry
+        self.timeoutInterval = timeoutInterval
     }
 }
 
@@ -108,7 +113,7 @@ enum APIError: Error, Equatable {
         case .transport(.notConnectedToInternet):
             "You appear to be offline."
         case .transport(.timedOut):
-            "The request timed out. Check your connection and try again."
+            "Unable to contact the authentication server. Please try again."
         case .transport(.networkConnectionLost):
             "The connection was interrupted (error -1005). Please try again."
         case let .transport(code):
@@ -177,6 +182,7 @@ final class APIClient {
         }
 
         var urlRequest = URLRequest(url: url)
+        if let timeoutInterval = request.timeoutInterval { urlRequest.timeoutInterval = timeoutInterval }
         urlRequest.httpMethod = request.method.rawValue
         urlRequest.httpBody = request.body
         urlRequest.setValue("application/json", forHTTPHeaderField: "Accept")
@@ -195,21 +201,27 @@ final class APIClient {
         var attempt = 1
         while true {
             do {
-                Self.logTransport("start operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) swiftCancelled=\(Task.isCancelled)")
+                let startedAt = Date()
+                Self.logTransport("[AppleAuth] BACKEND_AUTH_REQUEST_START operation=\(operation) api_host=\(url.host ?? "unknown") attempt=\(attempt) method=\(request.method.rawValue)")
                 let (data, response) = try await session.data(for: urlRequest)
-                Self.logTransport("response operation=\(operation) method=\(request.method.rawValue) status=\((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                Self.logTransport("[AppleAuth] http_status=\(status) operation=\(operation) backend_request_ms=\(Self.elapsedMilliseconds(since: startedAt)) request_id=\((response as? HTTPURLResponse)?.value(forHTTPHeaderField: "x-request-id") ?? "none")")
+                if operation == "auth-apple", status >= 400,
+                   let payload = try? JSONDecoder().decode(APIErrorPayload.self, from: data) {
+                    Self.logTransport("[AppleAuth] backend_error_code=\(payload.code) http_status=\(status) request_id=\(payload.requestId ?? "none")")
+                }
                 let decoded: Response = try decode(data: data, response: response)
                 return decoded
             } catch let error as APIError {
                 if operation.hasPrefix("auth-") {
-                    Self.logTransport("failure operation=\(operation) apiError=\(error.diagnosticDescription)")
+                    Self.logTransport("[AppleAuth] api_error operation=\(operation) category=\(error.diagnosticDescription)")
                 }
                 guard !Task.isCancelled,
                       retryPolicy.permitsRetry(method: request.method, error: error, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
                     throw error
                 }
             } catch let error as URLError {
-                Self.logTransport("failure operation=\(operation) attempt=\(attempt) method=\(request.method.rawValue) swiftCancelled=\(Task.isCancelled) \(Self.describeNetworkError(error))")
+                Self.logTransport("[AppleAuth] transport_error type=\(Self.transportCategory(error)) operation=\(operation) url_error=\(error.code.rawValue) domain=\((error as NSError).domain) code=\((error as NSError).code) \(Self.describeNetworkError(error))")
                 let apiError = APIError.transport(error.code)
                 guard !Task.isCancelled,
                       retryPolicy.permitsRetry(method: request.method, error: apiError, attempt: attempt, allowsConnectionRetry: request.allowsConnectionRetry) else {
@@ -240,6 +252,22 @@ final class APIClient {
             transportLogger.error("LauverTransport \(message, privacy: .public)")
         }
         #endif
+    }
+
+    private static func elapsedMilliseconds(since date: Date) -> Int {
+        Int(Date().timeIntervalSince(date) * 1_000)
+    }
+
+    private static func transportCategory(_ error: URLError) -> String {
+        switch error.code {
+        case .timedOut: return "backend_timeout"
+        case .notConnectedToInternet: return "network_unreachable"
+        case .cannotFindHost, .dnsLookupFailed: return "dns_failure"
+        case .cannotConnectToHost, .networkConnectionLost: return "connection_failure"
+        case .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateHasUnknownRoot, .serverCertificateNotYetValid: return "tls_failure"
+        case .cancelled: return "cancelled"
+        default: return "transport_failure"
+        }
     }
 
     /// Preserve the full URLSession/NSError failure chain in TestFlight device

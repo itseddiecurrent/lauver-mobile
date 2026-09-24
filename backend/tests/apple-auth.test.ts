@@ -58,6 +58,20 @@ describe('AppleIdentityTokenVerifier', () => {
 });
 
 describe('AppleAuthorizationProvider', () => {
+  it('fails a stalled Apple code exchange without retrying the single-use code', async () => {
+    const signingPair = await generateKeyPair('ES256', { extractable: true });
+    const pkcs8 = await crypto.subtle.exportKey('pkcs8', signingPair.privateKey);
+    const fetchStub = vi.fn<typeof fetch>().mockRejectedValue(new DOMException('aborted', 'AbortError'));
+    const provider = new AppleAuthorizationProvider({
+      clientID, teamID: 'TEAM123456', keyID: 'KEY1234567', privateKey: pem('PRIVATE KEY', pkcs8),
+      verifier: new StubIdentityTokenVerifier(), fetch: fetchStub,
+    });
+
+    await expect(provider.authorize({ identityToken: 'identity', authorizationCode: 'single-use-code', nonce: rawNonce }))
+      .rejects.toMatchObject({ reason: 'unavailable' });
+    expect(fetchStub).toHaveBeenCalledOnce();
+  });
+
   it('validates both identity tokens and exchanges the one-time code without a redirect URI', async () => {
     const tokenVerifier = new StubIdentityTokenVerifier();
     const fetchStub = vi.fn<typeof fetch>().mockImplementation((_url, init) => {

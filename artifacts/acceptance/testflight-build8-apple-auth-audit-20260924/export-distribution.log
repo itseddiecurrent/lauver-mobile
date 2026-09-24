@@ -1,0 +1,5 @@
+2026-09-24 06:34:46.893 xcodebuild[13600:16426997] [MT] IDEDistribution: -[IDEDistributionLogging _createLoggingBundleAtPath:]: Created bundle at path "/var/folders/wl/6jksmff92qv0z1xnvz_2l5300000gn/T/Lauver-Production_2026-09-24_06-34-46.889.xcdistributionlogs".
+error: exportArchive Provisioning profile "iOS Team Store Provisioning Profile: ai.lauver.app.release" is Xcode managed, but signing settings require a manually managed profile.
+
+** EXPORT FAILED **
+

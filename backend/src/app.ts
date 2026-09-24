@@ -26,6 +26,7 @@ import type { EventService } from './events.js';
 import { installAdminRoutes, type AdminService } from './admin.js';
 import { installAccountDeletionRoutes, type AccountDeletionServicing } from './account-deletion.js';
 import { installMatchRoutes, type MatchService } from './match.js';
+import { runRequestContext } from './request-context.js';
 
 export type HealthResponse = {
   status: 'ok';
@@ -94,6 +95,16 @@ export function createApp(dependencies: AppDependencies): Express {
   app.use(
     pinoHttp({
       logger: dependencies.logger,
+      // Render probes can hit liveness frequently. Keep the endpoint fast and
+      // observable through its response, but do not flood application logs
+      // with successful probe access records. Probe failures remain visible.
+      customLogLevel: (request, response, error) => {
+        const path = request.url?.split('?')[0];
+        if (path === '/healthz' && error === undefined && response.statusCode < 500) {
+          return 'silent';
+        }
+        return error !== undefined || response.statusCode >= 500 ? 'error' : 'info';
+      },
       genReqId: (_request, response) => {
         const id = randomUUID();
         response.setHeader('x-request-id', id);
@@ -107,6 +118,10 @@ export function createApp(dependencies: AppDependencies): Express {
       },
     }),
   );
+  app.use((request, response, next) => {
+    const id = requestId(response);
+    runRequestContext(id, next);
+  });
   app.use(helmet());
   app.use(
     cors({
