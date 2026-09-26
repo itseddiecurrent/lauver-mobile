@@ -77,7 +77,8 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     await parseMultipartPhoto(request, response);
     if (response.headersSent) return;
     const file = request.file;
-    const photoOrder = Number(request.body.photoOrder);
+    const fields = request.body as Record<string, unknown>;
+    const photoOrder = typeof fields.photoOrder === 'string' ? Number(fields.photoOrder) : Number.NaN;
     if (file === undefined || !Number.isInteger(photoOrder) || photoOrder < 1 || photoOrder > 9) {
       validationResponse(response);
       return;

@@ -86,7 +86,8 @@ describe('profile routes', () => {
       .attach('photo', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'avatar.jpg', contentType: 'image/jpeg' });
 
     expect(response.status).toBe(201);
-    expect(response.body.photo.photoId).toBe('photo-id');
+    const payload = response.body as unknown as { photo: { photoId: string } };
+    expect(payload.photo.photoId).toBe('photo-id');
     expect(uploadPhotoStream).toHaveBeenCalledWith('trusted-user-id', expect.any(Uint8Array), 'image/jpeg', 1);
   });
 

@@ -26,7 +26,11 @@ done
 rg --quiet "'/v1/me'" "$repo_root/backend/src/profile-routes.ts"
 rg --quiet "'/v1/me/preview'" "$repo_root/backend/src/profile-routes.ts"
 rg --quiet "'/v1/users/:userId'" "$repo_root/backend/src/profile-routes.ts"
-rg --quiet "'/v1/me/photo/upload-url'" "$repo_root/backend/src/profile-routes.ts"
+rg --quiet "'/v1/me/photos'" "$repo_root/backend/src/profile-routes.ts"
+if rg --quiet "'/v1/me/photo/upload-url'|'/v1/me/photos/upload-urls'|'/v1/me/photo/complete'" "$repo_root/backend/src/profile-routes.ts"; then
+  echo 'Step 05 structure check failed: legacy signed-upload endpoints must not be exposed.' >&2
+  exit 1
+fi
 rg --quiet 'cityLatitude' "$repo_root/backend/prisma/schema.prisma"
 rg --quiet 'PhotosPicker' "$repo_root/LauverNative/Lauver/App/ProfileView.swift"
 rg --quiet 'MKLocalSearchCompleter' "$repo_root/LauverNative/Lauver/Core/Profile/ProfileService.swift"
