@@ -200,7 +200,7 @@ The native SwiftUI auth screen now has the same entry. It uses `ASWebAuthenticat
 
 Step 05 adds authenticated `GET/PATCH /v1/me`, public-profile reads, deterministic pace units/brackets, preferred training times, and profile completeness. The iOS app uses MapKit only after the user opens the city picker. The API stores the selected city center for approximate-distance filtering, while `GET /v1/users/:userId` deliberately omits latitude and longitude.
 
-Profile photos use a short-lived signed PUT followed by `POST /v1/me/photo/complete`. Completion fully decodes the object, checks its declared content type, byte count, and pixel dimensions, then re-encodes it as a bounded JPEG without EXIF/GPS metadata before exposing it. Pending, replaced, and deleted keys enter a durable cleanup queue so transient storage failures do not create permanent orphan objects. Configure a private upload-capable S3-compatible bucket and a public read/CDN base URL per environment, then set:
+Profile photos use `POST /v1/me/photos` as `multipart/form-data`: one `photo` file part plus a one-based `photoOrder` (1–9). The backend receives the bytes, validates and re-encodes them as a bounded JPEG without EXIF/GPS metadata, writes the object, persists the photo record, and returns `{ profile, photo }` with the new photo ID. `GET /v1/me` includes each photo's `photoId`, `photoOrder`, and `photoFormat` alongside its URL. Replaced and deleted keys enter the durable cleanup queue so transient storage failures do not create permanent orphan objects. Configure a private S3-compatible bucket and public read/CDN base URL per environment, then set:
 
 ```text
 PROFILE_PHOTO_STORAGE_ENABLED=true
@@ -213,7 +213,7 @@ OBJECT_STORAGE_PUBLIC_BASE_URL=...
 OBJECT_STORAGE_FORCE_PATH_STYLE=false
 ```
 
-Only the backend receives storage credentials. Use a bucket policy or CDN configuration that permits public reads solely for the `profile-photos/` prefix; keep listing and writes private. CORS must permit PUT from the native upload client as required by the chosen provider. JPEG/PNG/HEIC/HEIF files are accepted up to 5 MB, with dimensions from 128 through 4096 pixels. The native picker center-crops and compresses selections to JPEG before upload.
+Only the backend receives storage credentials. Use a bucket policy or CDN configuration that permits public reads solely for the `profile-photos/` prefix; keep listing and writes private. No storage CORS write permission is needed. JPEG/PNG/HEIC/HEIF files are accepted up to 5 MB, with dimensions from 128 through 4096 pixels. The native picker center-crops and compresses selections to JPEG before upload.
 
 ## Container and Render deployment
 

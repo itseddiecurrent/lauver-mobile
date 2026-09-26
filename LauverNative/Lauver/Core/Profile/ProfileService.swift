@@ -240,13 +240,12 @@ struct PhotoUploadResult {
 struct PhotoUploadRequest {
     let clientID: String
     let photo: ProfilePhoto
+    let photoOrder: Int
 }
 
 struct PhotoUploadTicket {
     let clientID: String
-    let objectKey: String
-    let uploadURL: URL
-    let requiredHeaders: [String: String]
+    let photoOrder: Int
 }
 
 private extension Int {
@@ -268,6 +267,10 @@ enum ProfilePhotoError: LocalizedError {
 private struct ProfileEnvelope: Decodable {
     let profile: WorkoutProfile
     let photoId: String?
+}
+private struct DirectPhotoUploadEnvelope: Decodable {
+    let profile: WorkoutProfile
+    let photo: ProfilePhotoReference
 }
 struct MatchPreferences: Codable, Equatable {
     let visibleInMatch: Bool
@@ -337,26 +340,6 @@ private struct ProfileUpdatePayload: Encodable {
         try container.encode(trainingTimes, forKey: .trainingTimes)
     }
 }
-private struct PhotoUploadPayload: Encodable {
-    let fileName: String
-    let contentType: String
-    let byteSize: Int
-}
-private struct PhotoCompletePayload: Encodable { let objectKey: String }
-private struct PhotoUploadResponse: Decodable {
-    let objectKey: String
-    let uploadURL: URL
-    let expiresIn: Int
-    let requiredHeaders: [String: String]
-}
-private struct PhotoUploadBatchResponse: Decodable { let uploads: [PhotoUploadResponseWithClientID] }
-private struct PhotoUploadResponseWithClientID: Decodable {
-    let clientID: String
-    let objectKey: String
-    let uploadURL: URL
-    let expiresIn: Int
-    let requiredHeaders: [String: String]
-}
 
 protocol ProfileServicing {
     func getOwnProfile() async throws -> WorkoutProfile
@@ -392,7 +375,7 @@ extension ProfileServicing {
 
     func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
         requests.map {
-            PhotoUploadTicket(clientID: $0.clientID, objectKey: "", uploadURL: URL(string: "https://invalid.example")!, requiredHeaders: [:])
+            PhotoUploadTicket(clientID: $0.clientID, photoOrder: $0.photoOrder)
         }
     }
 
@@ -628,80 +611,43 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
     }
 
     func uploadPhotoWithReference(_ photo: ProfilePhoto) async throws -> PhotoUploadResult {
-        let body = try encoder.encode(PhotoUploadPayload(
-            fileName: photo.fileName,
-            contentType: photo.contentType,
-            byteSize: photo.data.count
-        ))
-        let upload: PhotoUploadResponse = try await authenticatedRequest { token in
-            APIRequest(
-                method: .post,
-                path: "/v1/me/photo/upload-url",
-                body: body,
-                headers: Self.jsonAuthorization(token),
-                // A lost response only leaves an unused pending upload that expires.
-                allowsConnectionRetry: true
-            )
-        }
-        try await client.upload(
-            data: photo.data, to: upload.uploadURL, contentType: photo.contentType,
-            requiredHeaders: upload.requiredHeaders
-        )
-        let completeBody = try encoder.encode(PhotoCompletePayload(objectKey: upload.objectKey))
-        let envelope: ProfileEnvelope = try await authenticatedRequest { token in
-            APIRequest(
-                method: .post,
-                path: "/v1/me/photo/complete",
-                body: completeBody,
-                headers: Self.jsonAuthorization(token),
-                // The backend recognizes an already committed upload by its object key.
-                allowsConnectionRetry: true
-            )
-        }
-        let uploadStem = URL(fileURLWithPath: upload.objectKey).deletingPathExtension().lastPathComponent
-        let photoID = envelope.photoId ?? envelope.profile.photos.first {
-            $0.url.deletingPathExtension().lastPathComponent == uploadStem
-        }?.id
-        return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
+        try await uploadPhoto(photo, using: PhotoUploadTicket(clientID: UUID().uuidString, photoOrder: 1))
     }
 
     func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
-        struct Payload: Encodable {
-            let photos: [Item]
-            struct Item: Encodable {
-                let clientID: String
-                let fileName: String
-                let contentType: String
-                let byteSize: Int
-            }
-        }
-        let body = try encoder.encode(Payload(photos: requests.map {
-            Payload.Item(clientID: $0.clientID, fileName: $0.photo.fileName, contentType: $0.photo.contentType, byteSize: $0.photo.data.count)
-        }))
-        let response: PhotoUploadBatchResponse = try await authenticatedRequest { token in
-            APIRequest(method: .post, path: "/v1/me/photos/upload-urls", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
-        }
-        return response.uploads.map {
-            PhotoUploadTicket(clientID: $0.clientID, objectKey: $0.objectKey, uploadURL: $0.uploadURL, requiredHeaders: $0.requiredHeaders)
-        }
+        // No server round-trip occurs here: multipart requests contain both
+        // file bytes and their one-based position.
+        requests.map { PhotoUploadTicket(clientID: $0.clientID, photoOrder: $0.photoOrder) }
     }
 
     func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
-        try await client.upload(data: photo.data, to: ticket.uploadURL, contentType: photo.contentType, requiredHeaders: ticket.requiredHeaders)
-        let completeBody = try encoder.encode(PhotoCompletePayload(objectKey: ticket.objectKey))
-        let envelope: ProfileEnvelope = try await authenticatedRequest { token in
-            APIRequest(method: .post, path: "/v1/me/photo/complete", body: completeBody, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        let boundary = "LauverPhoto-\(UUID().uuidString)"
+        var body = Data()
+        func append(_ value: String) { body.append(Data(value.utf8)) }
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"photoOrder\"\r\n\r\n\(ticket.photoOrder)\r\n")
+        append("--\(boundary)\r\n")
+        append("Content-Disposition: form-data; name=\"photo\"; filename=\"\(photo.fileName)\"\r\n")
+        append("Content-Type: \(photo.contentType)\r\n\r\n")
+        body.append(photo.data)
+        append("\r\n--\(boundary)--\r\n")
+        let envelope: DirectPhotoUploadEnvelope = try await authenticatedRequest { token in
+            APIRequest(
+                method: .post,
+                path: "/v1/me/photos",
+                body: body,
+                headers: ["Authorization": "Bearer \(token)", "Content-Type": "multipart/form-data; boundary=\(boundary)"],
+                // A lost response can have committed a new photo, so do not
+                // retry blindly and risk a duplicate.
+                allowsConnectionRetry: false
+            )
         }
-        let uploadStem = URL(fileURLWithPath: ticket.objectKey).deletingPathExtension().lastPathComponent
-        let photoID = envelope.photoId ?? envelope.profile.photos.first { $0.url.deletingPathExtension().lastPathComponent == uploadStem }?.id
-        return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
+        return PhotoUploadResult(profile: envelope.profile, photoID: envelope.photo.id)
     }
 
     func cancelPhotoUpload(objectKey: String) async throws {
-        let body = try encoder.encode(PhotoCompletePayload(objectKey: objectKey))
-        let _: EmptyResponse = try await authenticatedRequest { token in
-            APIRequest(method: .post, path: "/v1/me/photo/cancel", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
-        }
+        // Multipart uploads are atomic; there is no pending object to cancel.
+        _ = objectKey
     }
 
     func deletePhoto() async throws {

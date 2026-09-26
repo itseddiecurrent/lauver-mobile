@@ -653,9 +653,7 @@ PATCH  /v1/me
 GET    /v1/users/:userId
 GET    /v1/me/preview
 GET    /v1/users/:userId/activities?limit=10
-POST   /v1/me/photo/upload-url
-POST   /v1/me/photos/upload-urls
-POST   /v1/me/photos/:photoId/confirm
+POST   /v1/me/photos
 PATCH  /v1/me/photos/order
 DELETE /v1/me/photos/:photoId
 GET    /v1/discover?sport=&radius=&paceMin=&paceMax=&cursor=
@@ -667,7 +665,7 @@ POST   /v1/matches/:matchId/unmatch
 PATCH  /v1/me/match-preferences
 ```
 
-照片上传契约：`POST /v1/me/photo/upload-url` 只创建带过期时间的 pending photo 和一次性上传凭证，并返回预签名 URL、允许的 MIME、最大字节数和 `expiresIn`；批量接口 `POST /v1/me/photos/upload-urls` 一次最多申请 9 个 URL，响应以 `clientID` 对应每张照片。客户端直接上传 object storage 后调用 confirm。confirm 必须幂等，且只有 confirm 成功后照片才进入公开 Profile projection。上传客户端保留并发上传，但并发上限为 4；服务端限流按“照片批次”计数，单张兼容接口与批量接口共用同一批次额度。429 必须返回 `Retry-After`（秒）和 `retryAfter`，客户端保留已成功照片、逐张显示失败并支持单张 Retry，不将整批标为不可恢复失败。`PATCH /v1/me/photos/order` 接收完整的已发布 `photoId` 顺序，服务端校验不重复、属于当前用户、数量不超过 9，并在事务中重排和保证唯一主照片。
+照片上传契约：`POST /v1/me/photos` 使用 `multipart/form-data`，每次发送一个 `photo` 文件流和 `photoOrder`（1–9）。后端验证、移除元数据并重编码为 JPEG，写入对象存储后在同一请求中创建照片记录，返回 `{ profile, photo }`；`photo` 含 `photoId`、`photoOrder` 和 `photoFormat`。客户端不接收对象存储凭证，也不调用 confirm。`GET /v1/me` 返回完整 `profile.photos`。429 必须返回 `Retry-After`（秒）和 `retryAfter`；客户端保留已成功照片、逐张显示失败并支持单张 Retry。`PATCH /v1/me/photos/order` 接收完整的已发布 `photoId` 顺序，服务端校验不重复、属于当前用户、数量不超过 9，并在事务中重排和保证唯一主照片。
 
 ### Strava / HealthKit
 

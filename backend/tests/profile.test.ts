@@ -81,6 +81,19 @@ class MemoryProfileRepository implements ProfileRepository {
     return Promise.resolve(null);
   }
 
+  createDirectPhoto(userId: string, objectKey: string) {
+    const profile = this.profile ?? emptyStoredProfile(userId);
+    const photos = profile.photos ?? [];
+    if (photos.length >= 9) return Promise.reject(new Error('photo_limit_reached'));
+    const photo = { id: `photo-${photos.length + 1}`, objectKey, sortOrder: photos.length, isPrimary: photos.length === 0 };
+    this.profile = {
+      ...profile,
+      photoKey: photo.isPrimary ? objectKey : profile.photoKey,
+      photos: [...photos, photo],
+    };
+    return Promise.resolve(photo);
+  }
+
   discardPhotoUpload(objectKey: string, userId: string): Promise<void> {
     if (this.uploads.get(objectKey)?.userId === userId) this.uploads.delete(objectKey);
     return Promise.resolve();
@@ -145,6 +158,22 @@ class MemoryPhotoStorage implements ProfilePhotoStorage {
 }
 
 describe('ProfileService', () => {
+  it('writes an uploaded stream, returns its id, and exposes one-based order and format in the profile', async () => {
+    const repository = new MemoryProfileRepository();
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const image = await sharp({ create: { width: 128, height: 128, channels: 3, background: 'orange' } }).png().toBuffer();
+
+    const result = await service.uploadPhotoStream('user-1', image, 'image/png', 1);
+
+    expect(result.photo.id).toBe('photo-1');
+    expect(result.photo.photoId).toBe('photo-1');
+    expect(result.photo.photoOrder).toBe(1);
+    expect(result.photo.photoFormat).toBe('jpg');
+    expect(result.profile.photos).toHaveLength(1);
+    expect([...storage.objects.values()][0]?.contentType).toBe('image/jpeg');
+  });
+
   it('immediately removes a failed pending upload and is safe to repeat', async () => {
     const repository = new MemoryProfileRepository();
     const storage = new MemoryPhotoStorage();

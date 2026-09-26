@@ -1,4 +1,5 @@
 import type { Express, NextFunction, Request, Response } from 'express';
+import multer from 'multer';
 import { z } from 'zod';
 
 import type { AuthServicing, AuthUser } from './auth.js';
@@ -37,17 +38,12 @@ const profilePatchSchema = z.object({
     { message: 'Training times must be unique' },
   ).optional(),
 }).strict();
-const photoUploadSchema = z.object({
-  fileName: z.string().trim().min(1).max(255),
-  contentType: z.string().trim().min(1).max(32),
-  byteSize: z.number().int().positive().max(5 * 1_024 * 1_024),
-}).strict();
-const photoBatchUploadSchema = z.object({
-  photos: z.array(photoUploadSchema.extend({ clientID: z.string().trim().min(1).max(80) }).strict()).min(1).max(9),
-}).strict();
-const photoCompleteSchema = z.object({ objectKey: z.string().min(1).max(512) }).strict();
 const photoReorderSchema = z.object({ photoIds: z.array(z.uuid()).min(1).max(9) }).strict();
 const userIDSchema = z.uuid();
+const multipartPhoto = multer({
+  storage: multer.memoryStorage(),
+  limits: { files: 1, fileSize: 5 * 1_024 * 1_024, fields: 4 },
+});
 
 export type ProfileRouteDependencies = {
   authService: AuthServicing;
@@ -73,6 +69,25 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     });
   }));
 
+  // The API owns the complete upload lifecycle.  Native clients send one
+  // multipart part named `photo` and the requested one-based `photoOrder`;
+  // they never receive object-storage credentials or a signed URL.
+  app.post('/v1/me/photos', authenticated(dependencies.authService, async (user, request, response) => {
+    if (!consumePhotoBatchRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
+    await parseMultipartPhoto(request, response);
+    if (response.headersSent) return;
+    const file = request.file;
+    const photoOrder = Number(request.body.photoOrder);
+    if (file === undefined || !Number.isInteger(photoOrder) || photoOrder < 1 || photoOrder > 9) {
+      validationResponse(response);
+      return;
+    }
+    const uploaded = await dependencies.profileService.uploadPhotoStream(
+      user.id, file.buffer, file.mimetype, photoOrder,
+    );
+    response.status(201).json(uploaded);
+  }));
+
   app.get('/v1/users/:userId', authenticated(dependencies.authService, async (user, request, response) => {
     const userID = userIDSchema.safeParse(request.params.userId);
     if (!userID.success) {
@@ -81,37 +96,6 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     }
     response.setHeader('Cache-Control', 'no-store');
     response.status(200).json({ profile: await dependencies.profileService.getPublicProfile(userID.data, user.id) });
-  }));
-
-  app.post('/v1/me/photo/upload-url', authenticated(dependencies.authService, async (user, request, response) => {
-    const body = parseBody(photoUploadSchema, request, response);
-    if (body === null) return;
-    // The legacy single-photo endpoint consumes the same bucket as the batch
-    // endpoint: one request is one photo batch, regardless of its size.
-    if (!consumePhotoBatchRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
-    response.status(201).json(await dependencies.profileService.createPhotoUpload({ userId: user.id, ...body }));
-  }));
-
-  app.post('/v1/me/photos/upload-urls', authenticated(dependencies.authService, async (user, request, response) => {
-    const body = parseBody(photoBatchUploadSchema, request, response);
-    if (body === null || dependencies.profileService.createPhotoUploads === undefined) return;
-    if (!consumePhotoBatchRateLimit(user.id, request, response, dependencies.rateLimiter)) return;
-    response.status(201).json({ uploads: await dependencies.profileService.createPhotoUploads(body.photos.map((photo) => ({ ...photo, userId: user.id }))) });
-  }));
-
-  app.post('/v1/me/photo/complete', authenticated(dependencies.authService, async (user, request, response) => {
-    const body = parseBody(photoCompleteSchema, request, response);
-    if (body === null) return;
-    const completed = await dependencies.profileService.completePhotoUpload(user.id, body.objectKey);
-    const { photoId, ...profile } = completed;
-    response.status(200).json({ profile, photoId });
-  }));
-
-  app.post('/v1/me/photo/cancel', authenticated(dependencies.authService, async (user, request, response) => {
-    const body = parseBody(photoCompleteSchema, request, response);
-    if (body === null || dependencies.profileService.cancelPhotoUpload === undefined) return;
-    await dependencies.profileService.cancelPhotoUpload(user.id, body.objectKey);
-    response.status(204).send();
   }));
 
   app.delete('/v1/me/photo', authenticated(dependencies.authService, async (user, _request, response) => {
@@ -134,6 +118,17 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     if (body === null || dependencies.profileService.reorderPhotos === undefined) return;
     response.status(200).json({ profile: await dependencies.profileService.reorderPhotos(user.id, body.photoIds) });
   }));
+}
+
+function parseMultipartPhoto(request: Request, response: Response): Promise<void> {
+  return new Promise((resolve) => {
+    multipartPhoto.single('photo')(request, response, (error: unknown) => {
+      if (error !== undefined && error !== null) {
+        validationResponse(response);
+      }
+      resolve();
+    });
+  });
 }
 
 type AuthenticatedHandler = (

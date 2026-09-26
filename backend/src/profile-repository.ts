@@ -51,6 +51,7 @@ export interface ProfileRepository {
     expiresAt: Date;
   } | null>;
   commitPhotoUpload(objectKey: string, userId: string, finalObjectKey: string): Promise<string | null>;
+  createDirectPhoto(userId: string, objectKey: string): Promise<StoredPhoto>;
   discardPhotoUpload(objectKey: string, userId: string): Promise<void>;
   schedulePhotoCleanup(objectKey: string): Promise<void>;
   listExpiredPhotoUploads(limit: number, now: Date): Promise<Array<{ objectKey: string; userId: string }>>;
@@ -261,6 +262,24 @@ export class PrismaProfileRepository implements ProfileRepository {
         });
       }
       return count === 0 ? existing?.photoKey ?? null : null;
+    });
+  }
+
+  async createDirectPhoto(userId: string, objectKey: string): Promise<StoredPhoto> {
+    return this.#client.$transaction(async (transaction) => {
+      const count = await transaction.profilePhoto.count({ where: { userId } });
+      if (count >= 9) throw new Error('photo_limit_reached');
+      const photo = await transaction.profilePhoto.create({
+        data: { userId, objectKey, sortOrder: count, isPrimary: count === 0 },
+      });
+      if (count === 0) {
+        await transaction.profile.upsert({
+          where: { userId },
+          create: { userId, photoKey: objectKey },
+          update: { photoKey: objectKey },
+        });
+      }
+      return { id: photo.id, objectKey: photo.objectKey, sortOrder: photo.sortOrder, isPrimary: photo.isPrimary };
     });
   }
 

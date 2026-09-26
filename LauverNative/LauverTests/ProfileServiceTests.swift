@@ -495,60 +495,31 @@ final class ProfileServiceTests: XCTestCase {
         XCTAssertEqual(result.height, 1600)
     }
 
-    func testPhotoUploadRecoversFromConnectionLossAtEveryStage() async throws {
-        let uploadPath = "/v1/me/photo/upload-url"
-        let putPath = "/signed-avatar"
-        let completePath = "/v1/me/photo/complete"
+    func testPhotoUploadPostsMultipartFileAndOrder() async throws {
+        let uploadPath = "/v1/me/photos"
         let photo = ProfilePhoto(data: Data([1, 2, 3]), fileName: "profile.jpg", contentType: "image/jpeg")
-        let recoveringService = ProfileService(
-            client: APIClient(baseURL: URL(string: "https://api.example.test")!, session: session,
-                              retryPolicy: RetryPolicy(maxAttempts: 2)),
-            authService: authService, sessionStore: tokenStore
-        )
-        for failedPath in [uploadPath, putPath, completePath] {
-            var attempts: [String: Int] = [:]
-            ProfileURLProtocolStub.requestHandler = { request in
-                let path = try XCTUnwrap(request.url?.path)
-                attempts[path, default: 0] += 1
-                if path == putPath {
-                    XCTAssertEqual(request.httpMethod, "PUT")
-                    XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
-                    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), photo.contentType)
-                    XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Length"), "3")
-                    XCTAssertEqual(request.value(forHTTPHeaderField: "x-amz-meta-upload"), "avatar")
-                } else {
-                    XCTAssertEqual(request.httpMethod, "POST")
-                    XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
-                    let body = try XCTUnwrap(Self.bodyData(request))
-                    let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
-                    if path == uploadPath {
-                        XCTAssertEqual(json["byteSize"] as? Int, 3)
-                    } else {
-                        XCTAssertEqual(json["objectKey"] as? String, "pending-avatar")
-                    }
-                }
-                if path == failedPath, attempts[path] == 1 { throw URLError(.networkConnectionLost) }
-                if path == uploadPath {
-                    return Self.response(request, status: 201, body: #"{"objectKey":"pending-avatar","uploadURL":"https://storage.example.test/signed-avatar","expiresIn":600,"requiredHeaders":{"Content-Type":"image/jpeg","x-amz-meta-upload":"avatar"}}"#)
-                }
-                if path == putPath { return Self.response(request, status: 200, body: "") }
-                XCTAssertEqual(path, completePath)
-                return Self.response(request, status: 200, body: Self.profileJSON)
-            }
-            _ = try await recoveringService.uploadPhoto(photo)
-            for path in [uploadPath, putPath, completePath] {
-                XCTAssertEqual(attempts[path], path == failedPath ? 2 : 1, failedPath)
-            }
+        ProfileURLProtocolStub.requestHandler = { request in
+            XCTAssertEqual(request.url?.path, uploadPath)
+            XCTAssertEqual(request.httpMethod, "POST")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer profile-access-token")
+            XCTAssertTrue(request.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("multipart/form-data; boundary=LauverPhoto-") == true)
+            let body = try XCTUnwrap(Self.bodyData(request))
+            let text = String(decoding: body, as: UTF8.self)
+            XCTAssertTrue(text.contains("name=\"photoOrder\"\r\n\r\n1"))
+            XCTAssertTrue(text.contains("name=\"photo\"; filename=\"profile.jpg\""))
+            XCTAssertTrue(text.contains("Content-Type: image/jpeg"))
+            return Self.response(request, status: 201, body: Self.profileJSON.replacingOccurrences(of: "}}", with: "},\"photo\":{\"id\":\"photo-1\",\"url\":\"https://photos.example.test/photo.jpg\",\"sortOrder\":0,\"isPrimary\":true}}"))
         }
+        let result = try await service.uploadPhotoWithReference(photo)
+        XCTAssertEqual(result.photoID, "photo-1")
     }
 
-    func testFailedPhotoPutDoesNotCompleteUpload() async throws {
-        var paths: [String] = []
+    func testPhotoUploadDoesNotRetryLostMultipartResponse() async throws {
+        var requests = 0
         ProfileURLProtocolStub.requestHandler = { request in
-            let path = try XCTUnwrap(request.url?.path)
-            paths.append(path)
-            if request.httpMethod == "PUT" { throw URLError(.networkConnectionLost) }
-            return Self.response(request, status: 201, body: #"{"objectKey":"pending-avatar","uploadURL":"https://storage.example.test/signed-avatar","expiresIn":600,"requiredHeaders":{"Content-Type":"image/jpeg"}}"#)
+            XCTAssertEqual(request.url?.path, "/v1/me/photos")
+            requests += 1
+            throw URLError(.networkConnectionLost)
         }
         do {
             _ = try await service.uploadPhoto(ProfilePhoto(data: Data([1]), fileName: "profile.jpg", contentType: "image/jpeg"))
@@ -556,7 +527,7 @@ final class ProfileServiceTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? APIError, .transport(.networkConnectionLost))
         }
-        XCTAssertEqual(paths, ["/v1/me/photo/upload-url", "/signed-avatar"])
+        XCTAssertEqual(requests, 1)
     }
 
     func testPublicProfileContractDecodesWithoutCoordinates() throws {
@@ -871,7 +842,7 @@ private final class ProfileViewModelTestService: ProfileServicing {
     func updateProfile(_ draft: ProfileDraft) async throws -> WorkoutProfile { currentProfile }
     func uploadPhoto(_ photo: ProfilePhoto) async throws -> WorkoutProfile { uploadedProfile }
     func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket] {
-        requests.map { PhotoUploadTicket(clientID: $0.clientID, objectKey: "object-\($0.clientID)", uploadURL: URL(string: "https://photos.example.test/upload")!, requiredHeaders: [:]) }
+        requests.map { PhotoUploadTicket(clientID: $0.clientID, photoOrder: $0.photoOrder) }
     }
     func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
         uploadCount += 1

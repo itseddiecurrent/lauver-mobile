@@ -71,110 +71,60 @@ describe('profile routes', () => {
     expect(getPublicProfile).not.toHaveBeenCalled();
   });
 
-  it('uses an authenticated user-scoped upload contract', async () => {
-    const createPhotoUpload = vi.fn().mockResolvedValue({
-      objectKey: 'profile-photos/trusted-user-id/photo.png',
-      uploadURL: 'https://upload.example/signed',
-      expiresIn: 600,
-      requiredHeaders: { 'Content-Type': 'image/png' },
+  it('accepts an authenticated multipart photo stream and returns its published id', async () => {
+    const uploadPhotoStream = vi.fn().mockResolvedValue({
+      profile: { id: 'trusted-user-id', photos: [] },
+      photo: { id: 'photo-id', photoId: 'photo-id', photoOrder: 1, photoFormat: 'jpg' },
     });
     const response = await request(createTestApp({
       authService: authenticated,
-      profileService: createProfileServiceStub({ createPhotoUpload }),
+      profileService: createProfileServiceStub({ uploadPhotoStream }),
     }))
-      .post('/v1/me/photo/upload-url')
+      .post('/v1/me/photos')
       .set('Authorization', 'Bearer verified-access-token')
-      .send({ fileName: 'avatar.png', contentType: 'image/png', byteSize: 1000 });
+      .field('photoOrder', '1')
+      .attach('photo', Buffer.from([0xff, 0xd8, 0xff]), { filename: 'avatar.jpg', contentType: 'image/jpeg' });
 
     expect(response.status).toBe(201);
-    expect(createPhotoUpload).toHaveBeenCalledWith({
-      userId: 'trusted-user-id',
-      fileName: 'avatar.png',
-      contentType: 'image/png',
-      byteSize: 1000,
-    });
+    expect(response.body.photo.photoId).toBe('photo-id');
+    expect(uploadPhotoStream).toHaveBeenCalledWith('trusted-user-id', expect.any(Uint8Array), 'image/jpeg', 1);
   });
 
-  it('requests up to nine upload URLs in one photo-batch rate-limit unit', async () => {
-    const createPhotoUploads = vi.fn().mockResolvedValue([
-      {
-        clientID: 'photo-1',
-        objectKey: 'profile-photo-uploads/trusted-user-id/one.jpg',
-        uploadURL: 'https://upload.example/one',
-        expiresIn: 600,
-        requiredHeaders: { 'Content-Type': 'image/jpeg' },
-      },
-    ]);
+  it('rejects malformed multipart photo input before the service is called', async () => {
+    const uploadPhotoStream = vi.fn();
     const response = await request(createTestApp({
       authService: authenticated,
-      profileService: createProfileServiceStub({ createPhotoUploads }),
+      profileService: createProfileServiceStub({ uploadPhotoStream }),
     }))
-      .post('/v1/me/photos/upload-urls')
+      .post('/v1/me/photos')
       .set('Authorization', 'Bearer verified-access-token')
-      .send({ photos: [{ clientID: 'photo-1', fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000 }] });
-
-    expect(response.status).toBe(201);
-    expect(createPhotoUploads).toHaveBeenCalledWith([{
-      clientID: 'photo-1', userId: 'trusted-user-id', fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000,
-    }]);
-  });
-
-  it('cancels only the authenticated user\'s pending upload', async () => {
-    const cancelPhotoUpload = vi.fn().mockResolvedValue(undefined);
-    const response = await request(createTestApp({
-      authService: authenticated,
-      profileService: createProfileServiceStub({ cancelPhotoUpload }),
-    }))
-      .post('/v1/me/photo/cancel')
-      .set('Authorization', 'Bearer verified-access-token')
-      .send({ objectKey: 'profile-photo-uploads/trusted-user-id/pending.jpg' });
-
-    expect(response.status).toBe(204);
-    expect(cancelPhotoUpload).toHaveBeenCalledWith(
-      'trusted-user-id',
-      'profile-photo-uploads/trusted-user-id/pending.jpg',
-    );
-  });
-
-  it('rejects a tenth photo before creating upload URLs', async () => {
-    const createPhotoUploads = vi.fn();
-    const photos = Array.from({ length: 10 }, (_, index) => ({
-      clientID: `photo-${index + 1}`,
-      fileName: `${index + 1}.jpg`,
-      contentType: 'image/jpeg',
-      byteSize: 1000,
-    }));
-    const response = await request(createTestApp({
-      authService: authenticated,
-      profileService: createProfileServiceStub({ createPhotoUploads }),
-    }))
-      .post('/v1/me/photos/upload-urls')
-      .set('Authorization', 'Bearer verified-access-token')
-      .send({ photos });
+      .field('photoOrder', '10')
+      .attach('photo', Buffer.from([1]), { filename: 'avatar.jpg', contentType: 'image/jpeg' });
 
     expect(response.status).toBe(422);
-    expect(createPhotoUploads).not.toHaveBeenCalled();
+    expect(uploadPhotoStream).not.toHaveBeenCalled();
   });
 
-  it('shares the batch rate limit between legacy single and batch requests and returns Retry-After', async () => {
+  it('rate limits multipart uploads and returns Retry-After', async () => {
     const rateLimiter = new InMemoryRateLimiter(60_000, 1);
     const app = createTestApp({
       authService: authenticated,
       profileRateLimiter: rateLimiter,
       profileService: createProfileServiceStub({
-        createPhotoUpload: vi.fn().mockResolvedValue({ objectKey: 'x', uploadURL: 'https://upload.example/x', expiresIn: 600, requiredHeaders: {} }),
-        createPhotoUploads: vi.fn(),
+        uploadPhotoStream: vi.fn().mockResolvedValue({ profile: {}, photo: {} }),
       }),
     });
     await request(app)
-      .post('/v1/me/photo/upload-url')
+      .post('/v1/me/photos')
       .set('Authorization', 'Bearer verified-access-token')
-      .send({ fileName: 'one.jpg', contentType: 'image/jpeg', byteSize: 1000 })
+      .field('photoOrder', '1')
+      .attach('photo', Buffer.from([1]), { filename: 'one.jpg', contentType: 'image/jpeg' })
       .expect(201);
     const response = await request(app)
-      .post('/v1/me/photos/upload-urls')
+      .post('/v1/me/photos')
       .set('Authorization', 'Bearer verified-access-token')
-      .send({ photos: [{ clientID: 'photo-2', fileName: 'two.jpg', contentType: 'image/jpeg', byteSize: 1000 }] });
+      .field('photoOrder', '2')
+      .attach('photo', Buffer.from([1]), { filename: 'two.jpg', contentType: 'image/jpeg' });
 
     expect(response.status).toBe(429);
     expect(response.headers['retry-after']).toMatch(/^\d+$/);

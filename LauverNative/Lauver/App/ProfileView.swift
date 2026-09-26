@@ -84,7 +84,9 @@ final class ProfileViewModel: ObservableObject {
             let pending = edits.filter { edit in
                 edit.upload != nil && edit.uploadedPhotoID == nil && (retryOnlyID == nil || edit.id == retryOnlyID)
             }
-            let requests = pending.map { PhotoUploadRequest(clientID: $0.id, photo: $0.upload!) }
+            let requests = pending.map { edit in
+                PhotoUploadRequest(clientID: edit.id, photo: edit.upload!, photoOrder: (edits.firstIndex(where: { $0.id == edit.id }) ?? 0) + 1)
+            }
             let tickets = requests.isEmpty ? [] : try await service.createPhotoUploadTickets(requests)
             let ticketByID = Dictionary(uniqueKeysWithValues: tickets.map { ($0.clientID, $0) })
 
@@ -133,11 +135,6 @@ final class ProfileViewModel: ObservableObject {
                             edits[index].uploadError = nil
                             edits[index].isUploading = false
                         } else {
-                            // A failed PUT or confirmation leaves a pending object.
-                            // Reclaim it now instead of waiting for its expiry.
-                            if let ticket = ticketByID[attempt.id] {
-                                try? await service.cancelPhotoUpload(objectKey: ticket.objectKey)
-                            }
                             edits.remove(at: index)
                             failedCount += 1
                         }

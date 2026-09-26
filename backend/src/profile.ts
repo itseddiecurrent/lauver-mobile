@@ -46,7 +46,7 @@ export type ProfileResponse = {
   displayName: string | null;
   bio: string | null;
   photoURL: string | null;
-  photos: Array<{ id: string; url: string; sortOrder: number; isPrimary: boolean }>;
+  photos: Array<{ id: string; photoId: string; url: string; sortOrder: number; photoOrder: number; photoFormat: 'jpg'; isPrimary: boolean }>;
   city: {
     name: string;
     regionCode: string | null;
@@ -59,6 +59,7 @@ export type ProfileResponse = {
   isComplete: boolean;
 };
 export type ProfilePhotoCompletion = ProfileResponse & { photoId: string | null };
+export type DirectPhotoUpload = { profile: ProfileResponse; photo: ProfileResponse['photos'][number] };
 
 export class ProfileError extends Error {
   readonly statusCode: number;
@@ -104,6 +105,7 @@ export interface ProfileServicing {
     requiredHeaders: { 'Content-Type': string };
   }>>;
   completePhotoUpload(userId: string, objectKey: string): Promise<ProfilePhotoCompletion>;
+  uploadPhotoStream(userId: string, bytes: Uint8Array, contentType: string, photoOrder: number): Promise<DirectPhotoUpload>;
   cancelPhotoUpload?(userId: string, objectKey: string): Promise<void>;
   deletePhoto(userId: string): Promise<void>;
   deletePhotoById?(userId: string, photoId: string): Promise<void>;
@@ -314,6 +316,39 @@ export class ProfileService implements ProfileServicing {
     return this.#photoCompletion(userId, finalObjectKey);
   }
 
+  async uploadPhotoStream(userId: string, bytes: Uint8Array, contentType: string, photoOrder: number): Promise<DirectPhotoUpload> {
+    if (!Number.isInteger(photoOrder) || photoOrder < 1 || photoOrder > 9) {
+      throw new ProfileError(422, 'invalid_photo_order', 'Photo order must be between 1 and 9');
+    }
+    if (bytes.length === 0 || bytes.length > maximumPhotoBytes) {
+      throw new ProfileError(422, 'invalid_photo_size', 'Photo must be no larger than 5 MB');
+    }
+    const normalizedType = contentType.split(';')[0]?.trim().toLowerCase();
+    if (normalizedType === undefined) throw new ProfileError(422, 'invalid_photo_type', 'Photo must be a JPEG, PNG, HEIC, or HEIF image');
+    if (!['image/jpeg', 'image/png', 'image/heic', 'image/heif'].includes(normalizedType)) {
+      throw new ProfileError(422, 'invalid_photo_type', 'Photo must be a JPEG, PNG, HEIC, or HEIF image');
+    }
+    // The membership check above narrows at runtime; keep the explicit guard
+    // for TypeScript and malformed empty Content-Type headers.
+    const sanitized = await sanitizeImage(bytes, normalizedType);
+    const objectKey = `profile-photos/${userId}/${randomUUID()}.jpg`;
+    await this.#storage.writeObject(objectKey, sanitized, 'image/jpeg');
+    let photo;
+    try {
+      photo = await this.#repository.createDirectPhoto(userId, objectKey);
+    } catch (error) {
+      await Promise.allSettled([this.#storage.deleteObject(objectKey)]);
+      if (error instanceof Error && error.message === 'photo_limit_reached') {
+        throw new ProfileError(422, 'photo_limit_reached', 'You can publish up to 9 profile photos');
+      }
+      throw error;
+    }
+    const profile = await this.getOwnProfile(userId);
+    const reference = profile.photos.find((item) => item.id === photo.id);
+    if (reference === undefined) throw new ProfileError(500, 'photo_publish_failed', 'Photo could not be published');
+    return { profile, photo: reference };
+  }
+
   async cancelPhotoUpload(userId: string, objectKey: string): Promise<void> {
     const upload = await this.#repository.findPhotoUpload(objectKey, userId);
     // Idempotent by design: it is safe to retry after a lost response or race
@@ -393,8 +428,13 @@ export class ProfileService implements ProfileServicing {
       photoURL: profile.photoKey === null ? null : this.#storage.publicURL(profile.photoKey),
       photos: (profile.photos ?? []).map((photo) => ({
         id: photo.id,
+        photoId: photo.id,
         url: this.#storage.publicURL(photo.objectKey),
         sortOrder: photo.sortOrder,
+        // Database sort_order is zero based for legacy compatibility; the
+        // public profile contract is the requested 1...9 photo order.
+        photoOrder: photo.sortOrder + 1,
+        photoFormat: 'jpg' as const,
         isPrimary: photo.isPrimary,
       })),
       city: profile.cityName === null || profile.countryCode === null
