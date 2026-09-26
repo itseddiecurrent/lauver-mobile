@@ -396,11 +396,19 @@ paths:
                   maxLength: 512
       responses:
         '200':
-          description: Updated own profile.
+          description: Updated own profile and the authoritative ID of the committed photo.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/OwnProfileEnvelope'
+                type: object
+                additionalProperties: false
+                required: [profile, photoId]
+                properties:
+                  profile:
+                    $ref: '#/components/schemas/OwnProfile'
+                  photoId:
+                    type: string
+                    format: uuid
         '401':
           $ref: '#/components/responses/AuthError'
         '422':

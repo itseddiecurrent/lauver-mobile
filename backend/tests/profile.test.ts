@@ -86,6 +86,11 @@ class MemoryProfileRepository implements ProfileRepository {
     return Promise.resolve();
   }
 
+  schedulePhotoCleanup(objectKey: string): Promise<void> {
+    this.cleanup.add(objectKey);
+    return Promise.resolve();
+  }
+
   listExpiredPhotoUploads(limit: number, now: Date): Promise<Array<{ objectKey: string; userId: string }>> {
     return Promise.resolve([...this.uploads.entries()]
       .filter(([, upload]) => upload.expiresAt <= now)
@@ -112,6 +117,7 @@ class MemoryProfileRepository implements ProfileRepository {
 class MemoryPhotoStorage implements ProfilePhotoStorage {
   objects = new Map<string, StoredObject>();
   deleted: string[] = [];
+  deleteError: Error | null = null;
 
   createUploadURL(input: { objectKey: string }): Promise<string> {
     return Promise.resolve(`https://uploads.example/${input.objectKey}`);
@@ -122,6 +128,7 @@ class MemoryPhotoStorage implements ProfilePhotoStorage {
   }
 
   deleteObject(objectKey: string): Promise<void> {
+    if (this.deleteError !== null) return Promise.reject(this.deleteError);
     this.deleted.push(objectKey);
     this.objects.delete(objectKey);
     return Promise.resolve();
@@ -153,6 +160,20 @@ describe('ProfileService', () => {
     expect(repository.uploads.has(upload.objectKey)).toBe(false);
     expect(storage.objects.has(upload.objectKey)).toBe(false);
     expect(storage.deleted).toEqual([upload.objectKey]);
+  });
+
+  it('queues cleanup when object storage is temporarily unavailable during cancellation', async () => {
+    const repository = new MemoryProfileRepository();
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const upload = await service.createPhotoUpload({
+      userId: 'user-1', fileName: 'photo.jpg', contentType: 'image/jpeg', byteSize: 100,
+    });
+    storage.deleteError = new Error('TLS handshake failed');
+
+    await expect(service.cancelPhotoUpload('user-1', upload.objectKey)).resolves.toBeUndefined();
+    expect(repository.uploads.has(upload.objectKey)).toBe(false);
+    expect(repository.cleanup.has(upload.objectKey)).toBe(true);
   });
 
   it('stores duration paces as displayed whole seconds and preserves decimal cycling speed', async () => {
@@ -268,6 +289,7 @@ describe('ProfileService', () => {
 
     const profile = await service.completePhotoUpload('user-1', upload.objectKey);
 
+    expect(profile.photoId).toBe('photo-1');
     expect(profile.photoURL).toMatch(/^https:\/\/photos\.example\/profile-photos\/user-1\/.+\.jpg$/);
     const finalKey = profile.photoURL?.replace('https://photos.example/', '');
     if (finalKey === undefined) throw new Error('Expected a final photo URL');

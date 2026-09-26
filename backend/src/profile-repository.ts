@@ -52,6 +52,7 @@ export interface ProfileRepository {
   } | null>;
   commitPhotoUpload(objectKey: string, userId: string, finalObjectKey: string): Promise<string | null>;
   discardPhotoUpload(objectKey: string, userId: string): Promise<void>;
+  schedulePhotoCleanup(objectKey: string): Promise<void>;
   listExpiredPhotoUploads(limit: number, now: Date): Promise<Array<{ objectKey: string; userId: string }>>;
   listPhotoCleanupJobs(limit: number): Promise<string[]>;
   completePhotoCleanup(objectKey: string): Promise<void>;
@@ -265,6 +266,14 @@ export class PrismaProfileRepository implements ProfileRepository {
 
   async discardPhotoUpload(objectKey: string, userId: string): Promise<void> {
     await this.#client.profilePhotoUpload.deleteMany({ where: { objectKey, userId } });
+  }
+
+  async schedulePhotoCleanup(objectKey: string): Promise<void> {
+    await this.#client.photoCleanupJob.upsert({
+      where: { objectKey },
+      create: { objectKey },
+      update: { nextAttempt: new Date() },
+    });
   }
 
   async listExpiredPhotoUploads(

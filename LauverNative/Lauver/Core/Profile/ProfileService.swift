@@ -265,7 +265,10 @@ enum ProfilePhotoError: LocalizedError {
     }
 }
 
-private struct ProfileEnvelope: Decodable { let profile: WorkoutProfile }
+private struct ProfileEnvelope: Decodable {
+    let profile: WorkoutProfile
+    let photoId: String?
+}
 struct MatchPreferences: Codable, Equatable {
     let visibleInMatch: Bool
     let gender: String?
@@ -656,7 +659,7 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
             )
         }
         let uploadStem = URL(fileURLWithPath: upload.objectKey).deletingPathExtension().lastPathComponent
-        let photoID = envelope.profile.photos.first {
+        let photoID = envelope.photoId ?? envelope.profile.photos.first {
             $0.url.deletingPathExtension().lastPathComponent == uploadStem
         }?.id
         return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
@@ -690,7 +693,7 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
             APIRequest(method: .post, path: "/v1/me/photo/complete", body: completeBody, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
         }
         let uploadStem = URL(fileURLWithPath: ticket.objectKey).deletingPathExtension().lastPathComponent
-        let photoID = envelope.profile.photos.first { $0.url.deletingPathExtension().lastPathComponent == uploadStem }?.id
+        let photoID = envelope.photoId ?? envelope.profile.photos.first { $0.url.deletingPathExtension().lastPathComponent == uploadStem }?.id
         return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
     }
 

@@ -58,6 +58,7 @@ export type ProfileResponse = {
   trainingTimes: StoredTrainingTime[];
   isComplete: boolean;
 };
+export type ProfilePhotoCompletion = ProfileResponse & { photoId: string | null };
 
 export class ProfileError extends Error {
   readonly statusCode: number;
@@ -102,7 +103,7 @@ export interface ProfileServicing {
     expiresIn: number;
     requiredHeaders: { 'Content-Type': string };
   }>>;
-  completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse>;
+  completePhotoUpload(userId: string, objectKey: string): Promise<ProfilePhotoCompletion>;
   cancelPhotoUpload?(userId: string, objectKey: string): Promise<void>;
   deletePhoto(userId: string): Promise<void>;
   deletePhotoById?(userId: string, photoId: string): Promise<void>;
@@ -242,7 +243,7 @@ export class ProfileService implements ProfileServicing {
     })));
   }
 
-  async completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse> {
+  async completePhotoUpload(userId: string, objectKey: string): Promise<ProfilePhotoCompletion> {
     // Preserve the upload UUID so a repeated completion can recognize its result,
     // even after the pending upload and temporary object have been cleaned up.
     const prefix = `profile-photo-uploads/${userId}/`;
@@ -255,7 +256,7 @@ export class ProfileService implements ProfileServicing {
     const upload = await this.#repository.findPhotoUpload(objectKey, userId);
     if (upload === null) {
       const current = await this.#repository.findProfile(userId);
-      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.#photoCompletion(userId, finalObjectKey);
       throw new ProfileError(422, 'invalid_photo_upload', 'The photo upload is invalid or expired');
     }
     if (upload.expiresAt <= this.#now()) {
@@ -268,7 +269,7 @@ export class ProfileService implements ProfileServicing {
     const object = await this.#storage.readObject(objectKey);
     if (object === null) {
       const current = await this.#repository.findProfile(userId);
-      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.#photoCompletion(userId, finalObjectKey);
       throw new ProfileError(422, 'photo_upload_missing', 'The uploaded photo could not be found');
     }
     let sanitized: Uint8Array;
@@ -293,7 +294,7 @@ export class ProfileService implements ProfileServicing {
       }
       // Another completion may have committed this same upload concurrently.
       const current = await this.#repository.findProfile(userId);
-      if (current?.photoKey === finalObjectKey) return this.getOwnProfile(userId);
+      if (current?.photoKey === finalObjectKey) return this.#photoCompletion(userId, finalObjectKey);
       await Promise.allSettled([this.#storage.deleteObject(finalObjectKey)]);
       throw error;
     }
@@ -310,7 +311,7 @@ export class ProfileService implements ProfileServicing {
       }
     }
     await this.processPhotoCleanup();
-    return this.getOwnProfile(userId);
+    return this.#photoCompletion(userId, finalObjectKey);
   }
 
   async cancelPhotoUpload(userId: string, objectKey: string): Promise<void> {
@@ -318,8 +319,14 @@ export class ProfileService implements ProfileServicing {
     // Idempotent by design: it is safe to retry after a lost response or race
     // a successful confirmation.
     if (upload === null) return;
-    await this.#storage.deleteObject(objectKey);
     await this.#repository.discardPhotoUpload(objectKey, userId);
+    try {
+      await this.#storage.deleteObject(objectKey);
+    } catch {
+      // A storage transport failure must not turn a failed client upload into
+      // an HTTP 500. The durable cleanup queue retries the exact object.
+      await this.#repository.schedulePhotoCleanup(objectKey);
+    }
   }
 
   async deletePhoto(userId: string): Promise<void> {
@@ -365,6 +372,17 @@ export class ProfileService implements ProfileServicing {
         );
       }
     }));
+  }
+
+  async #photoCompletion(userId: string, objectKey: string): Promise<ProfilePhotoCompletion> {
+    const [profile, stored] = await Promise.all([
+      this.getOwnProfile(userId),
+      this.#repository.findProfile(userId),
+    ]);
+    return {
+      ...profile,
+      photoId: stored?.photos?.find((photo) => photo.objectKey === objectKey)?.id ?? null,
+    };
   }
 
   #response(profile: StoredProfile, includeCoordinates: boolean): ProfileResponse {

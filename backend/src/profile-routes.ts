@@ -102,9 +102,9 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
   app.post('/v1/me/photo/complete', authenticated(dependencies.authService, async (user, request, response) => {
     const body = parseBody(photoCompleteSchema, request, response);
     if (body === null) return;
-    response.status(200).json({
-      profile: await dependencies.profileService.completePhotoUpload(user.id, body.objectKey),
-    });
+    const completed = await dependencies.profileService.completePhotoUpload(user.id, body.objectKey);
+    const { photoId, ...profile } = completed;
+    response.status(200).json({ profile, photoId });
   }));
 
   app.post('/v1/me/photo/cancel', authenticated(dependencies.authService, async (user, request, response) => {
