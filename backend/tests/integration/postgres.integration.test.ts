@@ -382,7 +382,7 @@ describe('PostgreSQL integration', () => {
     expect(JSON.stringify(publicResponse.body)).not.toContain('photoKey');
   });
 
-  it('persists concurrent photo completion and safely replays a lost success response', async () => {
+  it('persists a multipart photo stream and returns it in the profile projection', async () => {
     const objects = new Map<string, StoredObject>();
     const storage: ProfilePhotoStorage = {
       createUploadURL: ({ objectKey }) => Promise.resolve(`https://uploads.example.test/${objectKey}`),
@@ -409,31 +409,30 @@ describe('PostgreSQL integration', () => {
     const image = await sharp({ create: {
       width: 256, height: 256, channels: 3, background: { r: 30, g: 120, b: 60 },
     } }).png().toBuffer();
-    const upload = await request(app).post('/v1/me/photo/upload-url')
+    const upload = await request(app).post('/v1/me/photos')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ fileName: 'avatar.png', contentType: 'image/png', byteSize: image.length });
+      .field('photoOrder', '1')
+      .attach('photo', image, { filename: 'avatar.png', contentType: 'image/png' });
     expect(upload.status).toBe(201);
-    const objectKey = (upload.body as { objectKey: string }).objectKey;
-    objects.set(objectKey, { bytes: image, contentType: 'image/png' });
-    const complete = () => request(app).post('/v1/me/photo/complete')
-      .set('Authorization', `Bearer ${accessToken}`).send({ objectKey });
-
-    const [first, overlapping] = await Promise.all([complete(), complete()]);
-    expect(first.status).toBe(200);
-    expect(overlapping.status).toBe(200);
-    const photoURL = (first.body as { profile: { photoURL: string } }).profile.photoURL;
-    expect((overlapping.body as { profile: { photoURL: string } }).profile.photoURL).toBe(photoURL);
-    const replay = await complete();
-    expect(replay.status).toBe(200);
-    expect((replay.body as { profile: { photoURL: string } }).profile.photoURL).toBe(photoURL);
+    const response = upload.body as {
+      profile: { photoURL: string; photos: Array<{ photoId: string; photoOrder: number; photoFormat: string }> };
+      photo: { photoId: string; photoOrder: number; photoFormat: string };
+    };
+    expect(response.photo.photoId).toBeTruthy();
+    expect(response.photo.photoOrder).toBe(1);
+    expect(response.photo.photoFormat).toBe('jpg');
+    expect(response.profile.photos).toEqual([expect.objectContaining({
+      photoId: response.photo.photoId, photoOrder: 1, photoFormat: 'jpg',
+    })]);
     expect(objects.size).toBe(1);
-    const pending = await sqlClient.query('SELECT object_key FROM profile_photo_uploads WHERE object_key = $1', [objectKey]);
+    const pending = await sqlClient.query('SELECT object_key FROM profile_photo_uploads WHERE user_id = $1', [
+      (registration.body as { user: { id: string } }).user.id,
+    ]);
     expect(pending.rows).toHaveLength(0);
 
     const deleted = await request(app).delete('/v1/me/photo')
       .set('Authorization', `Bearer ${accessToken}`);
     expect(deleted.status).toBe(204);
-    expect((await complete()).status).toBe(422);
     expect(objects.size).toBe(0);
   });
 
