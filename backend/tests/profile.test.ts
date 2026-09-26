@@ -138,6 +138,23 @@ class MemoryPhotoStorage implements ProfilePhotoStorage {
 }
 
 describe('ProfileService', () => {
+  it('immediately removes a failed pending upload and is safe to repeat', async () => {
+    const repository = new MemoryProfileRepository();
+    const storage = new MemoryPhotoStorage();
+    const service = new ProfileService({ repository, storage });
+    const upload = await service.createPhotoUpload({
+      userId: 'user-1', fileName: 'photo.jpg', contentType: 'image/jpeg', byteSize: 100,
+    });
+    storage.objects.set(upload.objectKey, { bytes: new Uint8Array(100), contentType: 'image/jpeg' });
+
+    await service.cancelPhotoUpload('user-1', upload.objectKey);
+    await service.cancelPhotoUpload('user-1', upload.objectKey);
+
+    expect(repository.uploads.has(upload.objectKey)).toBe(false);
+    expect(storage.objects.has(upload.objectKey)).toBe(false);
+    expect(storage.deleted).toEqual([upload.objectKey]);
+  });
+
   it('stores duration paces as displayed whole seconds and preserves decimal cycling speed', async () => {
     const service = new ProfileService({ repository: new MemoryProfileRepository(), storage: new MemoryPhotoStorage() });
     const profile = await service.updateProfile('user-1', {

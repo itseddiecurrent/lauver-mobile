@@ -405,6 +405,29 @@ paths:
           $ref: '#/components/responses/AuthError'
         '422':
           $ref: '#/components/responses/AuthError'
+  /v1/me/photo/cancel:
+    post:
+      operationId: cancelProfilePhotoUpload
+      summary: Remove a pending profile-photo upload after a failed client upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [objectKey]
+              properties:
+                objectKey:
+                  type: string
+                  maxLength: 512
+      responses:
+        '204':
+          description: The pending upload is removed; repeated cancellation is successful.
+        '401':
+          $ref: '#/components/responses/AuthError'
+        '422':
+          $ref: '#/components/responses/AuthError'
   /v1/me/photo:
     delete:
       operationId: deleteProfilePhoto

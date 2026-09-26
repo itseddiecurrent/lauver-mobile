@@ -107,6 +107,13 @@ export function installProfileRoutes(app: Express, dependencies: ProfileRouteDep
     });
   }));
 
+  app.post('/v1/me/photo/cancel', authenticated(dependencies.authService, async (user, request, response) => {
+    const body = parseBody(photoCompleteSchema, request, response);
+    if (body === null || dependencies.profileService.cancelPhotoUpload === undefined) return;
+    await dependencies.profileService.cancelPhotoUpload(user.id, body.objectKey);
+    response.status(204).send();
+  }));
+
   app.delete('/v1/me/photo', authenticated(dependencies.authService, async (user, _request, response) => {
     await dependencies.profileService.deletePhoto(user.id);
     response.status(204).send();

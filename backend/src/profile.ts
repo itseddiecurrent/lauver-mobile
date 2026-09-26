@@ -103,6 +103,7 @@ export interface ProfileServicing {
     requiredHeaders: { 'Content-Type': string };
   }>>;
   completePhotoUpload(userId: string, objectKey: string): Promise<ProfileResponse>;
+  cancelPhotoUpload?(userId: string, objectKey: string): Promise<void>;
   deletePhoto(userId: string): Promise<void>;
   deletePhotoById?(userId: string, photoId: string): Promise<void>;
   reorderPhotos?(userId: string, photoIds: string[]): Promise<ProfileResponse>;
@@ -310,6 +311,15 @@ export class ProfileService implements ProfileServicing {
     }
     await this.processPhotoCleanup();
     return this.getOwnProfile(userId);
+  }
+
+  async cancelPhotoUpload(userId: string, objectKey: string): Promise<void> {
+    const upload = await this.#repository.findPhotoUpload(objectKey, userId);
+    // Idempotent by design: it is safe to retry after a lost response or race
+    // a successful confirmation.
+    if (upload === null) return;
+    await this.#storage.deleteObject(objectKey);
+    await this.#repository.discardPhotoUpload(objectKey, userId);
   }
 
   async deletePhoto(userId: string): Promise<void> {

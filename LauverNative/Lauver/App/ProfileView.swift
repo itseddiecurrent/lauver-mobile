@@ -19,6 +19,7 @@ struct ProfilePhotoSaveOutcome {
 private struct PhotoUploadAttempt {
     let id: String
     let photoID: String?
+    let profile: WorkoutProfile?
     let errorMessage: String?
 }
 
@@ -66,7 +67,8 @@ final class ProfileViewModel: ObservableObject {
         draft: ProfileDraft,
         photoEdits: [ProfilePhotoEdit],
         retryOnlyID: String? = nil,
-        deletedPhotoIDs: Set<String> = []
+        deletedPhotoIDs: Set<String> = [],
+        onEditsChanged: (@MainActor ([ProfilePhotoEdit]) -> Void)? = nil
     ) async -> ProfilePhotoSaveOutcome {
         guard !isSaving else { return ProfilePhotoSaveOutcome(saved: false, edits: photoEdits) }
         isSaving = true
@@ -86,59 +88,67 @@ final class ProfileViewModel: ObservableObject {
             let tickets = requests.isEmpty ? [] : try await service.createPhotoUploadTickets(requests)
             let ticketByID = Dictionary(uniqueKeysWithValues: tickets.map { ($0.clientID, $0) })
 
-            // Upload and confirm in small batches. The signed PUT and confirm
-            // request are independent per photo, so waiting for one photo to
-            // finish before starting the next makes a 9-photo save needlessly
-            // slow. Keep the limit at four to avoid saturating the device or
-            // storage service, while preserving each edit's original order.
+            // Each PUT/confirm pair is independent. Settle each item as soon
+            // as it completes so successful photos are visible immediately;
+            // a failing item must never roll back a completed sibling.
             for index in edits.indices where ticketByID[edits[index].id] != nil {
                 edits[index].isUploading = true
                 edits[index].uploadError = nil
             }
+            onEditsChanged?(edits)
             let concurrencyLimit = 4
-            var attempts: [PhotoUploadAttempt] = []
+            var failedCount = 0
             for batchStart in stride(from: 0, to: pending.count, by: concurrencyLimit) {
                 let batchEnd = min(batchStart + concurrencyLimit, pending.count)
                 let batch = Array(pending[batchStart..<batchEnd])
-                let batchAttempts = await withTaskGroup(of: PhotoUploadAttempt.self, returning: [PhotoUploadAttempt].self) { group in
+                await withTaskGroup(of: PhotoUploadAttempt.self) { group in
                     for edit in batch {
                         group.addTask { [service] in
                             guard let ticket = ticketByID[edit.id], let photo = edit.upload else {
-                                return PhotoUploadAttempt(id: edit.id, photoID: nil, errorMessage: "Photo upload failed.")
+                                return PhotoUploadAttempt(id: edit.id, photoID: nil, profile: nil, errorMessage: "Photo upload failed.")
                             }
                             do {
                                 let upload = try await service.uploadPhoto(photo, using: ticket)
                                 return PhotoUploadAttempt(
                                     id: edit.id,
                                     photoID: upload.photoID,
+                                    profile: upload.profile,
                                     errorMessage: upload.photoID == nil ? "Photo confirmation failed." : nil
                                 )
                             } catch {
                                 return PhotoUploadAttempt(
                                     id: edit.id,
                                     photoID: nil,
+                                    profile: nil,
                                     errorMessage: (error as? LocalizedError)?.errorDescription ?? "Photo upload failed."
                                 )
                             }
                         }
                     }
-                    var results: [PhotoUploadAttempt] = []
-                    for await result in group { results.append(result) }
-                    return results
+                    for await attempt in group {
+                        guard let index = edits.firstIndex(where: { $0.id == attempt.id }) else { continue }
+                        if let photoID = attempt.photoID, let uploadedProfile = attempt.profile {
+                            profile = uploadedProfile
+                            edits[index].uploadedPhotoID = photoID
+                            edits[index].uploadError = nil
+                            edits[index].isUploading = false
+                        } else {
+                            // A failed PUT or confirmation leaves a pending object.
+                            // Reclaim it now instead of waiting for its expiry.
+                            if let ticket = ticketByID[attempt.id] {
+                                try? await service.cancelPhotoUpload(objectKey: ticket.objectKey)
+                            }
+                            edits.remove(at: index)
+                            failedCount += 1
+                        }
+                        onEditsChanged?(edits)
+                    }
                 }
-                attempts.append(contentsOf: batchAttempts)
-            }
-            for attempt in attempts {
-                guard let index = edits.firstIndex(where: { $0.id == attempt.id }) else { continue }
-                edits[index].uploadedPhotoID = attempt.photoID
-                edits[index].uploadError = attempt.errorMessage
-                edits[index].isUploading = false
             }
 
             let originalIDs = Set((profile?.photos ?? []).map(\.id))
             let retainedExistingIDs = Set(edits.compactMap { edit in
-                if edit.uploadedPhotoID == nil { return edit.existing?.id ?? edit.replacementOf }
-                return edit.existing?.id
+                edit.uploadedPhotoID ?? edit.existing?.id ?? edit.replacementOf
             })
             let removedIDs = originalIDs.subtracting(retainedExistingIDs).subtracting(deletedPhotoIDs)
             for photoID in removedIDs {
@@ -154,6 +164,8 @@ final class ProfileViewModel: ObservableObject {
                 profile = try await service.getOwnProfile()
             }
 
+            // Convert transient successful uploads into durable editor entries
+            // once the final ordering response contains their references.
             if let freshProfile = profile {
                 for index in edits.indices {
                     guard let photoID = edits[index].uploadedPhotoID,
@@ -165,9 +177,12 @@ final class ProfileViewModel: ObservableObject {
                     edits[index].uploadedPhotoID = nil
                 }
             }
-            let failed = edits.contains { $0.uploadError != nil }
-            if failed { errorMessage = "Some photos could not be uploaded. Retry them individually." }
-            return ProfilePhotoSaveOutcome(saved: !failed, edits: edits)
+
+            if failedCount > 0 {
+                errorMessage = "\(failedCount) photo\(failedCount == 1 ? "" : "s") could not be uploaded and \(failedCount == 1 ? "was" : "were") removed. Successful photos were saved."
+            }
+            onEditsChanged?(edits)
+            return ProfilePhotoSaveOutcome(saved: failedCount == 0, edits: edits)
         } catch {
             capture(error)
             // Keep successful upload/confirm results when a later operation
@@ -449,13 +464,22 @@ private struct EditProfileView: View {
                                                     draft: draft,
                                                     photoEdits: editorPhotos,
                                                     retryOnlyID: photo.id,
-                                                    deletedPhotoIDs: pendingDeletedPhotoIDs
+                                                    deletedPhotoIDs: pendingDeletedPhotoIDs,
+                                                    onEditsChanged: { editorPhotos = $0 }
                                                 )
                                                 editorPhotos = outcome.edits
                                             }
                                         }
                                         .font(.caption.weight(.semibold))
                                         .accessibilityIdentifier("profile-photo-retry-\(photo.id)")
+                                    } else if photo.isUploading {
+                                        Text("Uploading…")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    } else if photo.uploadedPhotoID != nil {
+                                        Text("Uploaded")
+                                            .font(.caption2.weight(.semibold))
+                                            .foregroundStyle(.green)
                                     }
                                 }
                                 Spacer()
@@ -583,7 +607,8 @@ private struct EditProfileView: View {
                             let outcome = await viewModel.savePhotoEdits(
                                 draft: draft,
                                 photoEdits: editorPhotos,
-                                deletedPhotoIDs: pendingDeletedPhotoIDs
+                                deletedPhotoIDs: pendingDeletedPhotoIDs,
+                                onEditsChanged: { editorPhotos = $0 }
                             )
                             editorPhotos = outcome.edits
                             if outcome.saved {

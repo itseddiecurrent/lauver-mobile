@@ -367,6 +367,7 @@ protocol ProfileServicing {
     func uploadPhotoWithReference(_ photo: ProfilePhoto) async throws -> PhotoUploadResult
     func createPhotoUploadTickets(_ requests: [PhotoUploadRequest]) async throws -> [PhotoUploadTicket]
     func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult
+    func cancelPhotoUpload(objectKey: String) async throws
     func deletePhoto(photoID: String) async throws
     func reorderPhotos(_ photoIDs: [String]) async throws -> WorkoutProfile
 }
@@ -395,6 +396,10 @@ extension ProfileServicing {
     func uploadPhoto(_ photo: ProfilePhoto, using ticket: PhotoUploadTicket) async throws -> PhotoUploadResult {
         _ = ticket
         return try await uploadPhotoWithReference(photo)
+    }
+
+    func cancelPhotoUpload(objectKey: String) async throws {
+        _ = objectKey
     }
 }
 
@@ -687,6 +692,13 @@ final class ProfileService: ProfileServicing, AccountDeletionServicing, Discover
         let uploadStem = URL(fileURLWithPath: ticket.objectKey).deletingPathExtension().lastPathComponent
         let photoID = envelope.profile.photos.first { $0.url.deletingPathExtension().lastPathComponent == uploadStem }?.id
         return PhotoUploadResult(profile: envelope.profile, photoID: photoID)
+    }
+
+    func cancelPhotoUpload(objectKey: String) async throws {
+        let body = try encoder.encode(PhotoCompletePayload(objectKey: objectKey))
+        let _: EmptyResponse = try await authenticatedRequest { token in
+            APIRequest(method: .post, path: "/v1/me/photo/cancel", body: body, headers: Self.jsonAuthorization(token), allowsConnectionRetry: true)
+        }
     }
 
     func deletePhoto() async throws {

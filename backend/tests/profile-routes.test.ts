@@ -119,6 +119,23 @@ describe('profile routes', () => {
     }]);
   });
 
+  it('cancels only the authenticated user\'s pending upload', async () => {
+    const cancelPhotoUpload = vi.fn().mockResolvedValue(undefined);
+    const response = await request(createTestApp({
+      authService: authenticated,
+      profileService: createProfileServiceStub({ cancelPhotoUpload }),
+    }))
+      .post('/v1/me/photo/cancel')
+      .set('Authorization', 'Bearer verified-access-token')
+      .send({ objectKey: 'profile-photo-uploads/trusted-user-id/pending.jpg' });
+
+    expect(response.status).toBe(204);
+    expect(cancelPhotoUpload).toHaveBeenCalledWith(
+      'trusted-user-id',
+      'profile-photo-uploads/trusted-user-id/pending.jpg',
+    );
+  });
+
   it('rejects a tenth photo before creating upload URLs', async () => {
     const createPhotoUploads = vi.fn();
     const photos = Array.from({ length: 10 }, (_, index) => ({

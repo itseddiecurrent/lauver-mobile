@@ -68,6 +68,7 @@ export function createProfileServiceStub(overrides: Partial<ProfileServicing> = 
     updateProfile: unavailable,
     createPhotoUpload: unavailable,
     completePhotoUpload: unavailable,
+    cancelPhotoUpload: unavailable,
     deletePhoto: unavailable,
     processPhotoCleanup: unavailable,
     ...overrides,
