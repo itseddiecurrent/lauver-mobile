@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Keep the Render PostgreSQL binding as a rollback fallback until the Supabase
-# cutover has been verified. Once SUPABASE_DATABASE_URL is configured in Render,
-# it becomes the sole Prisma database and is isolated in the native schema.
-if [[ -n "${SUPABASE_DATABASE_URL:-}" ]]; then
-  export DATABASE_URL="$(node --input-type=module -e '
-    const url = new URL(process.env.SUPABASE_DATABASE_URL);
-    if (!url.searchParams.has("sslmode")) url.searchParams.set("sslmode", "require");
-    url.searchParams.set("options", "-c search_path=native,public");
-    process.stdout.write(url.toString());
-  ')"
+# Supabase native is the only production datastore. Never silently fall back
+# to a Render PostgreSQL binding: doing so would split profile/photo state.
+if [[ -z "${SUPABASE_DATABASE_URL:-}" ]]; then
+  echo 'SUPABASE_DATABASE_URL is required; refusing to start without Supabase.' >&2
+  exit 1
 fi
+
+export DATABASE_URL="$(node --input-type=module -e '
+  const url = new URL(process.env.SUPABASE_DATABASE_URL);
+  if (!url.searchParams.has("sslmode")) url.searchParams.set("sslmode", "require");
+  url.searchParams.set("options", "-c search_path=native,public");
+  process.stdout.write(url.toString());
+')"
 
 npm run db:migrate:deploy
 exec npm start

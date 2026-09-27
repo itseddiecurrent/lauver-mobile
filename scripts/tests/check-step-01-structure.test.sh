@@ -54,6 +54,12 @@ if rg --quiet 'preDeployCommand|maxShutdownDelaySeconds' "$repo_root/render.yaml
 fi
 rg --quiet 'autoDeployTrigger: checksPass' "$repo_root/render.yaml"
 rg --quiet 'healthCheckPath: /healthz' "$repo_root/render.yaml"
+rg --quiet 'SUPABASE_DATABASE_URL is required' "$repo_root/backend/scripts/start-render.sh"
+rg --quiet 'SUPABASE_DATABASE_URL' "$repo_root/render.yaml"
+if rg --quiet 'fromDatabase:|lauver-postgres-staging' "$repo_root/render.yaml"; then
+  echo 'Step 01 structure check failed: Render PostgreSQL fallback must not be configured.' >&2
+  exit 1
+fi
 rg --quiet 'USER node' "$repo_root/backend/Dockerfile"
 rg --quiet 'TEST_DATABASE_URL=.*_test' "$repo_root/backend/.env.example"
 

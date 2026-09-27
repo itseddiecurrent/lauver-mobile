@@ -85,20 +85,7 @@ services:
       # Configure the object-storage endpoint, region, bucket, access-key ID,
       # secret access key, and public CDN/base URL directly in Render before
       # enabling profile photo storage.
-      # Keep the generated Render database as a rollback fallback. After the
-      # Supabase native schema is applied and data is copied, set this secret
-      # in Render; start-render.sh promotes it to DATABASE_URL at runtime.
+      # Supabase native is the sole application datastore. start-render.sh
+      # requires this encrypted secret and sets search_path=native,public.
       - key: SUPABASE_DATABASE_URL
         sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: lauver-postgres-staging
-          property: connectionString
-
-databases:
-  - name: lauver-postgres-staging
-    databaseName: lauver_staging
-    user: lauver
-    region: singapore
-    plan: free
-    ipAllowList: []
