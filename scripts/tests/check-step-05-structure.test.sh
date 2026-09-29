@@ -34,6 +34,8 @@ fi
 rg --quiet 'cityLatitude' "$repo_root/backend/prisma/schema.prisma"
 rg --quiet 'PhotosPicker' "$repo_root/LauverNative/Lauver/App/ProfileView.swift"
 rg --quiet 'MKLocalSearchCompleter' "$repo_root/LauverNative/Lauver/Core/Profile/ProfileService.swift"
+rg --quiet 'OBJECT_STORAGE_FORCE_PATH_STYLE[[:space:]]*$' "$repo_root/render.yaml"
+rg --quiet 'value: true' "$repo_root/render.yaml"
 
 if rg --quiet 'OBJECT_STORAGE_(SECRET_ACCESS_KEY|ACCESS_KEY_ID)' "$repo_root/LauverNative"; then
   echo 'Step 05 structure check failed: object-storage credentials must not appear in iOS.' >&2

@@ -81,7 +81,9 @@ services:
       - key: OBJECT_STORAGE_PUBLIC_BASE_URL
         sync: false
       - key: OBJECT_STORAGE_FORCE_PATH_STYLE
-        value: false
+        # Supabase's S3 gateway lives below a path prefix and must not receive
+        # virtual-host bucket requests; those fail its TLS/SNI handshake.
+        value: true
       # Configure the object-storage endpoint, region, bucket, access-key ID,
       # secret access key, and public CDN/base URL directly in Render before
       # enabling profile photo storage.
