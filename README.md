@@ -2,6 +2,58 @@
 
 This repository contains the legacy React Native prototype plus the new native iOS MVP and its Node.js backend. The marketing website at [lauver.ai](https://lauver.ai/) is maintained separately and is not rebuilt here.
 
+## Project status
+
+Lauver helps people find workout partners, match, message, and organize events.
+The active implementation is a **native SwiftUI iOS app and an Express API**.
+This is a work in progress, with substantial MVP functionality implemented and
+release acceptance still unfinished. Android and web scripts belong to the older
+Expo prototype; they do not build the native MVP.
+
+This overview was reviewed against the repository on **2026-10-22**. Test results
+below are historical evidence from September 2026, not a fresh certification of
+staging or production.
+
+| Area | Implemented in the repository | Remaining qualification |
+| --- | --- | --- |
+| App foundation | SwiftUI shell, typed API client, Keychain sessions, staging/production schemes, theme and English/Simplified Chinese resources | Physical-device and release checks remain necessary |
+| Authentication | Email/password, refresh/logout, password reset, Apple and Firebase integration paths | Provider credentials and reset-email delivery depend on environment configuration |
+| Profiles and discovery | Editable workout profiles, photos, city-level location privacy, distance/pace/sport filters and pagination | Photo storage requires configured object storage |
+| Match | Deterministic candidates, Like/Pass, mutual matches and accessible actions | Live account/session prerequisites affect end-to-end tests |
+| Messages | Stream Chat integration, token/channel access, block enforcement and localized empty states | Manual empty-channel localization check remains open |
+| Events | Create, browse, filter, edit, join/leave, capacity checks, cancellation and reporting | Device and staging acceptance depends on fixture setup |
+| Connected apps | Read-only Strava OAuth/summaries and opt-in HealthKit workout-summary import/deletion | Real provider authorization/revocation and HealthKit need device/provider checks |
+| Safety and administration | Block/unblock, reports, moderation routes and account deletion with external cleanup retries | Production provider cleanup must be verified with configured services |
+| Delivery | CI guardrails, backend tests/build, PostgreSQL integration tests, native tests, Render configuration and TestFlight instructions | Upload/processing, store materials, public API cutover and final owner sign-off remain open in the recorded evidence |
+
+The [final release test report](artifacts/acceptance/final-test-report.md) records
+190 backend unit tests, 71 PostgreSQL integration tests and 109 physical-device
+native tests passing on 2026-09-21. The later
+[chat localization follow-up](artifacts/acceptance/step-15-chat-localization.md)
+records a full device UI run with **20 passed, 5 skipped and 3 failed** due to
+staging prerequisites/data assertions. These results must not be described as a
+fully passing release suite. Evidence files can refer to private or ignored logs,
+result bundles and IPAs that are not included in a clone.
+
+The older root planning/checkpoint files and `src/` describe earlier work and can
+be stale. Use implementation code, the REST contract and dated acceptance records
+together when deciding whether a feature is ready. The separately maintained
+marketing website is outside this repository.
+
+## Start here
+
+- [Contributing](CONTRIBUTING.md): issue, branch, implementation, verification and review workflow.
+- [Raising and triaging issues](docs/issue-workflow.md): Bug, Feature and Task reports with acceptance criteria.
+- [Local development](docs/local-development.md): choose the native app, backend or legacy prototype.
+- [Agent guidance](AGENTS.md): repository rules for coding assistants.
+- [REST API contract](openapi/mvp.yaml) and [backend notes](backend/README.md).
+- [TestFlight release guide](docs/testflight-release.md) and [acceptance records](artifacts/acceptance/).
+- [MVP specification](mvp.md): detailed scope; this existing document is primarily in Chinese.
+
+The sections below retain the detailed setup, integration contracts and dated
+handoff notes. External service status in those notes is historical and must be
+rechecked before a deployment.
+
 ## Runtime backend and Supabase status
 
 The current SwiftUI MVP (`LauverNative`, `Lauver-Staging` and `Lauver-Production`) uses the Express API configured by `API_BASE_URL`; staging points to `https://lauver-api-staging.onrender.com`. Supabase PostgreSQL's `native` schema is the sole production datastore: Render requires its encrypted `SUPABASE_DATABASE_URL` and refuses startup without it. Pushing `origin/main` triggers the Render deployment. Render `/healthz` and `/readyz` are the release readiness checks.
